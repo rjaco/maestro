@@ -13,7 +13,7 @@
       "author": {
         "name": "Maestro Contributors"
       },
-      "source": ".",
+      "source": "./plugins/maestro",
       "category": "development"
     }
   ]
