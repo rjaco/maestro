@@ -186,7 +186,7 @@ Dispatch an independent QA reviewer to catch issues the implementer missed.
 
 ```yaml
 name: qa-reviewer
-model: sonnet
+model: opus
 tools: [Read, Bash, Grep, Glob]
 maxTurns: 30
 ```

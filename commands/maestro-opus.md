@@ -80,6 +80,9 @@ Extract flags from `$ARGUMENTS`. Everything that is not a flag is the VISION des
 | `--until-pause` | OPUS_MODE=until_pause | — |
 | `--skip-research` | SKIP_RESEARCH=true | false |
 | `--resume` | handled in Step 1 | — |
+| `--start-from MN` | CURRENT_MILESTONE=MN | — |
+
+If `--start-from MN` is provided, set `current_milestone` to the specified milestone ID (e.g., `M3`) in `.maestro/state.local.md` when setting up the session state. Execution begins from that milestone, skipping all earlier milestones.
 
 If no mode flag is provided, default to `milestone_pause`.
 

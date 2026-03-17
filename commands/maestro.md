@@ -42,6 +42,7 @@ Usage:
 
 Subcommands:
   /maestro-init      Initialize Maestro for this project (run first!)
+  /maestro-opus      Magnum Opus — build entire products autonomously
   /maestro-status    View progress, resume, pause, or abort
 
 Flags:
@@ -60,6 +61,10 @@ Examples:
 ```
 
 Stop here. Do not proceed without a task description.
+
+## Step 2.5: Route Subcommands
+
+If the first word of `$ARGUMENTS` is `opus`, strip it and route to the `/maestro-opus` command with the remaining arguments. This allows both `/maestro opus "Build X"` and `/maestro-opus "Build X"` to work identically.
 
 ## Step 3: Parse Flags from $ARGUMENTS
 

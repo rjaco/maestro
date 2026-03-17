@@ -95,7 +95,7 @@ Suggest concrete ways to reduce cost if the estimate is high:
 - **Downgrade models** — If some stories are recommended for Opus but could work with Sonnet, note the savings.
 - **Skip optional phases** — Research and preview are skippable. Note their cost share.
 - **Reduce scope** — If the feature has 8 stories, suggest which stories could be deferred without breaking the core feature.
-- **Use yolo mode** — Skipping QA review saves roughly 30% of total cost (with the tradeoff of less validation).
+- **Use yolo mode** — Auto-approves checkpoints between stories, saving interaction overhead (~15% faster). QA review still runs in all modes.
 
 ### Step 6: Confirm
 

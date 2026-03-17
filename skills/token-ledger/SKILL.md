@@ -57,7 +57,7 @@ These are estimates. Actual pricing may vary. Use a 60/40 input/output split as 
 If `cost_tracking.forecast` is `true`, before a feature starts:
 
 1. Count the number of stories in the feature.
-2. Estimate tokens per story based on complexity (small: ~5K, medium: ~15K, large: ~40K).
+2. Estimate tokens per story based on complexity (simple: ~20K, medium: ~35K, complex: ~50K).
 3. Add QA review overhead (roughly 30% of implementation tokens, at Opus pricing).
 4. Log the forecast in the ledger as a `forecast` phase row.
 

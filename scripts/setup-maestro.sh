@@ -38,35 +38,18 @@ fi
 # --- state.md ---
 
 if [[ ! -f "$MAESTRO_DIR/state.md" ]]; then
-  if [[ -f "$TEMPLATE_DIR/state.md" ]]; then
-    cp "$TEMPLATE_DIR/state.md" "$MAESTRO_DIR/state.md"
-  else
-    cat > "$MAESTRO_DIR/state.md" << 'STATE_EOF'
----
-maestro_version: "1.0.0"
-active: false
-session_id: ""
-feature: ""
-mode: checkpoint
-layer: execution
-current_story: 0
-total_stories: 0
-phase: ""
-qa_iteration: 0
-max_qa_iterations: 5
-self_heal_iteration: 0
-max_self_heal: 3
-model_override: ""
-worktree_path: ""
-started_at: ""
-last_updated: ""
-token_spend: 0
-estimated_remaining: 0
----
+  cat > "$MAESTRO_DIR/state.md" << 'STATE_EOF'
+# Maestro Project State
 
-No active Maestro session. Use /maestro to start.
+## Current Focus
+(initialized — run /maestro to start building)
+
+## Features Completed
+(none yet)
+
+## Tech Debt
+(none identified)
 STATE_EOF
-  fi
   created "$MAESTRO_DIR/state.md"
 else
   skipped "$MAESTRO_DIR/state.md"
@@ -95,10 +78,11 @@ dev_loop:
 
 # Model routing
 models:
-  strategy: opus               # Vision, research, architecture
-  implementation: sonnet        # Code generation, dev-loop
-  qa: sonnet                   # Quality review
-  quick: haiku                 # Linting, formatting, simple tasks
+  planning: opus               # Decomposition, architecture, roadmaps
+  execution: sonnet            # Code generation, dev-loop
+  review: sonnet               # Quality review
+  simple: haiku                # Linting, formatting, simple tasks
+  research: sonnet             # Web research, competitive analysis
 
 # Opus (Magnum Opus) defaults
 opus:
@@ -137,35 +121,15 @@ fi
 
 if [[ ! -f "$MAESTRO_DIR/trust.yaml" ]]; then
   cat > "$MAESTRO_DIR/trust.yaml" << 'TRUST_EOF'
-# Maestro Progressive Trust Metrics
-# Tracks reliability of autonomous execution.
-# Updated automatically by Maestro after each dev-loop cycle.
-
-trust_level: 1                 # 1-5, starts conservative
-autonomy: supervised           # supervised | semi-auto | autonomous
-
-# Performance metrics (updated by Maestro)
-metrics:
-  total_stories_completed: 0
-  total_qa_passes_first_try: 0
-  total_qa_rejections: 0
-  total_self_heals: 0
-  total_self_heal_failures: 0
-  total_aborts: 0
-  consecutive_successes: 0
-  last_failure_reason: ""
-
-# Trust thresholds
-thresholds:
-  level_2: 5                   # Stories to reach level 2
-  level_3: 15                  # Stories to reach level 3
-  level_4: 30                  # Stories to reach level 4
-  level_5: 50                  # Stories to reach level 5
-  first_try_rate_min: 0.6      # Min QA first-try pass rate for level-up
-  abort_rate_max: 0.1          # Max abort rate before level-down
-
-# History log
-history: []
+total_stories: 0
+qa_first_pass_rate: 0.00
+self_heal_success_rate: 0.00
+average_qa_iterations: 0.0
+trust_level: novice
+stories_by_mode:
+  yolo: 0
+  checkpoint: 0
+  careful: 0
 TRUST_EOF
   created "$MAESTRO_DIR/trust.yaml"
 else
@@ -212,7 +176,7 @@ info "Maestro initialized successfully."
 printf '\n'
 printf "  ${BOLD}Directory:${RESET}  %s/\n" "$MAESTRO_DIR"
 printf "  ${BOLD}Files:${RESET}\n"
-printf "    state.md     — Session state (copied to state.local.md at runtime)\n"
+printf "    state.md     — Persistent project state (history, focus, tech debt)\n"
 printf "    config.yaml  — Project configuration\n"
 printf "    trust.yaml   — Progressive trust metrics\n"
 printf "    notes.md     — Project notes and learnings\n"

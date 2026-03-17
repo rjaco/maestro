@@ -219,7 +219,7 @@ When you run `/maestro init`, Maestro scans your project and builds a comprehens
 - **Testing** — framework, coverage expectations, test locations
 - **Style** — linting rules, formatting preferences, commit message conventions
 
-This profile is stored in `.maestro/project-dna.md` and injected into every agent so they write code that looks like YOUR code, not generic boilerplate.
+This profile is stored in `.maestro/dna.md` and injected into every agent so they write code that looks like YOUR code, not generic boilerplate.
 
 ---
 
@@ -243,12 +243,12 @@ Maestro follows the Agent Skills open standard and the superpowers implementer p
 
 | Phase | Status | What It Includes |
 |-------|--------|-----------------|
-| **Phase 1: Foundation** | In development | Core dev loop, init, decompose, QA, git craft, token ledger, hooks |
-| **Phase 2: Strategy Layer** | Planned | Research agents, competitive analysis, architecture design, skill factory |
-| **Phase 3: Magnum Opus** | Planned | Autonomous product builder, deep interview, mega research, milestone loop |
-| **Phase 4: Self-Learning** | Planned | Friction detection, improvement proposals, meta-rules, progressive trust |
-| **Phase 5: Agent Teams** | Planned | Parallel agents with shared task lists, inter-agent messaging, worktree isolation |
-| **Phase 6: Watch Mode** | Planned | Continuous monitoring, scheduled tasks, event-driven story creation |
+| **Phase 1: Core Loop + Init** | Complete | Core dev loop, init, decompose, QA, git craft, token ledger, hooks |
+| **Phase 2: Strategy + Research** | Complete | Research agents, competitive analysis, architecture design, skill factory |
+| **Phase 3: Context Engine + Specialists** | Complete | Context tiers, specialist agents, progressive context injection |
+| **Phase 4: Magnum Opus** | Complete | Autonomous product builder, deep interview, mega research, milestone loop |
+| **Phase 5: Community + Polish** | Complete | Friction detection, improvement proposals, meta-rules, progressive trust |
+| **Phase 6: Agent Teams + Parallelism** | Planned | Parallel agents with shared task lists, inter-agent messaging, worktree isolation |
 
 ---
 
@@ -258,8 +258,9 @@ Maestro stores all state and artifacts in a `.maestro/` directory at your projec
 
 ```
 .maestro/
-  state.md              # Current execution state (active stories, progress)
-  project-dna.md        # Auto-discovered project profile
+  state.md              # Project history (what's been built)
+  state.local.md        # Active session state (gitignored)
+  dna.md                # Auto-discovered project profile
   vision.md             # Product vision (from /maestro opus interview)
   roadmap.md            # Milestone roadmap with dependency graph
   architecture.md       # Architecture decisions and diagrams
