@@ -1,7 +1,20 @@
 {
-  "plugins": {
-    "maestro": {
-      "path": "."
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "maestro-orchestrator",
+  "description": "Full-stack autonomous development orchestrator for Claude Code",
+  "owner": {
+    "name": "Maestro Contributors"
+  },
+  "plugins": [
+    {
+      "name": "maestro",
+      "description": "Full-stack autonomous development orchestrator. Build features with /maestro, build entire products with /maestro opus (Magnum Opus).",
+      "version": "1.0.0",
+      "author": {
+        "name": "Maestro Contributors"
+      },
+      "source": ".",
+      "category": "development"
     }
-  }
+  ]
 }
