@@ -1,7 +1,7 @@
 ---
 description: "View Maestro progress, resume paused work, abort, or pause"
 argument-hint: "[resume|abort|pause]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
+allowed-tools: Read Write Edit Bash Glob Grep
 ---
 
 # Maestro Status — Progress, Resume, Abort, Pause

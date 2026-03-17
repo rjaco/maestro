@@ -1,6 +1,6 @@
 ---
 description: "Initialize Maestro for this project — auto-discovers tech stack, creates project DNA"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
+allowed-tools: Read Write Edit Bash Glob Grep
 ---
 
 # Maestro Init — Project Initialization

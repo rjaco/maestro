@@ -1,7 +1,7 @@
 ---
 description: "View and edit model assignments per task type"
 argument-hint: "[show|set TASK MODEL]"
-allowed-tools: ["Read", "Write", "Edit", "Bash"]
+allowed-tools: Read Write Edit Bash
 ---
 
 # Maestro Model — Model Assignment Manager
