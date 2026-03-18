@@ -180,7 +180,7 @@ isolation: worktree      # Git worktree per agent
 
 **`/maestro` (no subcommand)** auto-classifies and routes to the right layer.
 
-**`/maestro opus`** enters Autonomous Mode — the mega-loop that builds entire products.
+**`/maestro magnum-opus`** enters Autonomous Mode — the mega-loop that builds entire products.
 
 ---
 
@@ -197,7 +197,7 @@ Everything described above — research, architecture, decomposition, dev-loop, 
 Magnum Opus is not a black box. It's a **collaborative product builder** — an AI product team you can steer while it drives.
 
 ```
-USER: /maestro opus "personal finance dashboard with budget tracking"
+USER: /maestro magnum-opus "personal finance dashboard with budget tracking"
 
         │ (one-time setup — deep interview)
         ▼
@@ -419,10 +419,10 @@ USER: /maestro opus "personal finance dashboard with budget tracking"
 | **Time Cap** | `--hours 4` | Runs for N hours, then pauses | "Build while I sleep" |
 | **Until Pause** | `--until-pause` | Runs indefinitely until user says `/maestro pause` | Continuous improvement, monitoring mode |
 
-### The `/maestro opus` Command
+### The `/maestro magnum-opus` Command
 
 ```
-/maestro opus "Build a personal finance dashboard with budget tracking"
+/maestro magnum-opus "Build a personal finance dashboard with budget tracking"
   [--full-auto]           # No stops between milestones
   [--milestone-pause]     # Pause between milestones (default)
   [--budget $N]           # Token budget cap
@@ -646,7 +646,7 @@ Magnum Opus can run for hours. Context management is critical:
 Magnum Opus is fully resumable:
 
 ```
-/maestro opus --resume
+/maestro magnum-opus --resume
 
 Resuming from state file...
   Vision: "Personal finance dashboard with budget tracking"
@@ -658,7 +658,7 @@ Continuing M2 story 3...
 ```
 
 If the session is closed and restarted:
-1. `/maestro opus --resume` reads `.maestro/state.local.md`
+1. `/maestro magnum-opus --resume` reads `.maestro/state.local.md`
 2. Re-loads vision.md + current milestone definition
 3. Picks up at the exact story and phase where it left off
 4. No lost work — everything is committed via git craft
@@ -668,7 +668,7 @@ If the session is closed and restarted:
 ```
 $ claude
 
-> /maestro opus "SaaS dashboard for fleet management" --full-auto --hours 8 --budget $50
+> /maestro magnum-opus "SaaS dashboard for fleet management" --full-auto --hours 8 --budget $50
 
 Starting autonomous build...
 
@@ -798,7 +798,7 @@ When the user types while Magnum Opus is running, the orchestrator classifies th
 ### The Conversation Experience
 
 ```
-> /maestro opus "Build a personal finance dashboard"
+> /maestro magnum-opus "Build a personal finance dashboard"
 
 Starting Magnum Opus...
 
@@ -1002,10 +1002,10 @@ New roadmap approved? [yes/adjust]
 
 ---
 
-### The `/maestro opus` Command
+### The `/maestro magnum-opus` Command
 
 ```
-/maestro opus "description"
+/maestro magnum-opus "description"
   [--full-auto]           # No stops between milestones
   [--milestone-pause]     # Pause between milestones (default)
   [--budget $N]           # Token budget cap
@@ -1492,7 +1492,7 @@ cost_tracking:
 ```
 /maestro "Add login page" --no-cost-tracking     # Disable all cost tracking
 /maestro "Add login page" --no-forecast           # Skip forecast, keep ledger
-/maestro opus "Build SaaS" --budget $50           # Implies all tracking ON
+/maestro magnum-opus "Build SaaS" --budget $50           # Implies all tracking ON
 ```
 
 | Setting | What's Saved | What's Lost |
@@ -2113,11 +2113,11 @@ The immediately useful, shareable MVP.
 
 ### Phase 4: Magnum Opus — 12 files
 
-The crown jewel. `/maestro opus` builds entire products from vision to launch, with live conversation.
+The crown jewel. `/maestro magnum-opus` builds entire products from vision to launch, with live conversation.
 
 | File | Purpose |
 |------|---------|
-| `commands/maestro-opus.md` | `/maestro opus` — Magnum Opus product builder |
+| `commands/maestro-opus.md` | `/maestro magnum-opus` — Magnum Opus product builder |
 | `skills/opus-loop/SKILL.md` | Mega-loop orchestration (milestone-driven) |
 | `skills/opus-loop/deep-interview.md` | 10-dimension adaptive vision interview |
 | `skills/opus-loop/mega-research.md` | 8-dimension parallel research sprint |
@@ -2249,7 +2249,7 @@ Updated after every story completion and feature ship. Skipped entirely when `--
 
 ### Phase 4 Verification (Autonomous Mode)
 
-22. **Vision synthesis:** `/maestro opus "simple todo app"` → clarifying questions → vision.md
+22. **Vision synthesis:** `/maestro magnum-opus "simple todo app"` → clarifying questions → vision.md
 23. **Mega research:** 8 parallel research agents produce 8 docs in .maestro/research/
 24. **Roadmap generation:** Vision + research → milestone definitions with acceptance criteria
 25. **Auto execution:** Milestones execute autonomously (stories → QA → commit → next)
@@ -2258,7 +2258,7 @@ Updated after every story completion and feature ship. Skipped entirely when `--
 28. **Time cap:** `--hours 1` stops execution after 1 hour
 29. **Full auto:** `--full-auto` continues between milestones without user interaction
 30. **Milestone pause:** Default pauses between milestones for user review
-31. **Resume:** Close session → `/maestro opus --resume` → continues from exact position
+31. **Resume:** Close session → `/maestro magnum-opus --resume` → continues from exact position
 32. **Safety:** 5 consecutive failures → PAUSE + failure log + ask user
 33. **Fix cycles:** Milestone fails → auto-generate fix stories → re-evaluate (max 3 cycles)
 34. **North Star:** Feature goal re-injected at each phase (verify no drift)
@@ -2334,13 +2334,13 @@ Updated after every story completion and feature ship. Skipped entirely when `--
 > "Maestro is the first Claude Code plugin that builds entire products autonomously — and lets you talk to it while it works. Deep interview, mega research, milestone-driven execution, self-learning agents, live conversation channel. Redirect mid-flight. Pivot the whole project. A self-improving product team that gets smarter every time you use it."
 
 **The tweets that write themselves:**
-- "Went to sleep. Woke up to a working SaaS dashboard. /maestro opus --full-auto --hours 8. Total cost: $47.80."
-- "The craziest part of /maestro opus isn't the autonomous building. It's that I can TALK to it while it works. Said 'add dark mode' mid-flight and it just... did."
+- "Went to sleep. Woke up to a working SaaS dashboard. /maestro magnum-opus --full-auto --hours 8. Total cost: $47.80."
+- "The craziest part of /maestro magnum-opus isn't the autonomous building. It's that I can TALK to it while it works. Said 'add dark mode' mid-flight and it just... did."
 - "My /maestro implementer now passes QA 87% on first try. It literally learned my project's patterns across sessions."
-- "/maestro opus interviewed me for 5 minutes, researched 12 competitors, built 23 stories across 5 milestones, shipped a PR. The deep interview is where the magic starts."
+- "/maestro magnum-opus interviewed me for 5 minutes, researched 12 competitors, built 23 stories across 5 milestones, shipped a PR. The deep interview is where the magic starts."
 - "Mid-build I said 'actually pivot to an expense tracker' and Maestro said 'Keep the foundation, replace milestones 2-5?' The divergence handling is unreal."
 - "$3.20 in tokens for product consulting. The mega research found a monetization strategy I hadn't even considered."
-- "/maestro opus --budget $20 got me through 3 milestones. 'Build while I sleep, steer while I'm awake.'"
+- "/maestro magnum-opus --budget $20 got me through 3 milestones. 'Build while I sleep, steer while I'm awake.'"
 
 ---
 

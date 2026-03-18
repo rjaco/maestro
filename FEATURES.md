@@ -9,7 +9,7 @@
 ```bash
 /maestro init                    # Auto-detect your project and set up Maestro
 /maestro "Add user auth"         # Build a feature autonomously
-/maestro opus "Build a SaaS app" # Full product build with milestones
+/maestro magnum-opus "Build a SaaS app" # Full product build with milestones
 /maestro status                  # Check progress
 ```
 
@@ -20,7 +20,7 @@
 | Command | Usage | What It Does |
 |---------|-------|-------------|
 | `/maestro` | `/maestro "description"` | Build any feature — decompose, implement, review, commit |
-| `/maestro opus` | `/maestro opus "vision" --full-auto` | Magnum Opus — build entire products with milestones |
+| `/maestro magnum-opus` | `/maestro magnum-opus "vision" --full-auto` | Magnum Opus — build entire products with milestones |
 | `/maestro plan` | `/maestro plan "feature"` | Deep planning mode — brainstorm, explore, design, decompose |
 | `/maestro init` | `/maestro init` | Zero-config project detection — auto-discover stack, CI, tests, MCP |
 | `/maestro status` | `/maestro status` | View progress, current story, spend, phase |

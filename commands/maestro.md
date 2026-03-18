@@ -84,7 +84,7 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 
 | First word | Route to |
 |------------|----------|
-| `opus` | `/maestro opus` |
+| `opus` | `/maestro magnum-opus` |
 | `help` | `/maestro help` |
 | `config` | `/maestro config` |
 | `board` | `/maestro board` |

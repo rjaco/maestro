@@ -55,7 +55,7 @@ Use AskUserQuestion:
 ### `roadmap` — Roadmap Timeline
 
 1. Read `.maestro/roadmap.md` or milestone files
-2. If they don't exist: "No roadmap found. Use /maestro opus to generate milestones."
+2. If they don't exist: "No roadmap found. Use /maestro magnum-opus to generate milestones."
 3. Generate Mermaid Gantt chart
 
 ### `progress` — Progress Dashboard

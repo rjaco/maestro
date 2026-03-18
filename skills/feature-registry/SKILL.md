@@ -123,7 +123,7 @@ Context approaching the limit is a planned handoff, not a failure.
 
 ## Integration Points
 
-**opus-loop**: After each story completes, update registry entries for all ACs in that story. Between milestones, commit registry state as a resumability checkpoint. On `/maestro opus --resume`, read the registry instead of reconstructing from context.
+**opus-loop**: After each story completes, update registry entries for all ACs in that story. Between milestones, commit registry state as a resumability checkpoint. On `/maestro magnum-opus --resume`, read the registry instead of reconstructing from context.
 
 **decompose**: After writing story files, run registry generation. Log: "Registry generated: [N] requirements from [M] stories." Present the registry entry count in the approval summary alongside the story list.
 

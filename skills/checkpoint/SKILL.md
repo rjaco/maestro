@@ -93,7 +93,7 @@ Reverted to checkpoint: {name}
   State restored from: .maestro/checkpoints/{name}/
   Safety checkpoint: pre-revert-{timestamp}
 
-Run /maestro opus --resume to continue from this point.
+Run /maestro magnum-opus --resume to continue from this point.
 ```
 
 ## Cleanup

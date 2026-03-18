@@ -183,5 +183,5 @@ printf "    notes.md     — Project notes and learnings\n"
 printf '\n'
 printf "  ${BOLD}Next steps:${RESET}\n"
 printf "    Use ${CYAN}/maestro${RESET} to start building a feature.\n"
-printf "    Use ${CYAN}/maestro opus${RESET} to start a Magnum Opus session.\n"
+printf "    Use ${CYAN}/maestro magnum-opus${RESET} to start a Magnum Opus session.\n"
 printf '\n'
