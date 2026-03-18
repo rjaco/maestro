@@ -70,7 +70,7 @@ Display context-aware help. If `.maestro/state.local.md` exists, read it to show
     /maestro "Refactor the API layer" --careful --model opus
 
   Subcommands:
-    init · status · board · config · help
+    plan · init · status · board · config · help
     brain · doctor · history · model · opus
 
   Flags:
@@ -96,6 +96,7 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 | `brain` | `/maestro brain` |
 | `doctor` | `/maestro doctor` |
 | `history` | `/maestro history` |
+| `plan` | `/maestro plan` |
 | `init` | `/maestro init` |
 | `status` | `/maestro status` |
 | `model` | `/maestro model` |
