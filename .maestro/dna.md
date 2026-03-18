@@ -88,8 +88,8 @@
 - Commands: 19 slash commands
 - Profiles: 11 specialist profiles
 - Templates: 8 scaffolding templates
-- Hooks: 4 (Stop, Opus Loop, Notification, Branch Guard)
-- Scripts: 10 (setup, statusline, notify, service-installer, session-lock, security-drift, index-health, audio-alert, worktree-merge)
+- Hooks: 6 (Stop, Opus Loop, Notification, Branch Guard, StopFailure, PostCompact)
+- Scripts: 11 (setup, statusline, notify, service-installer, session-lock, security-drift, index-health, audio-alert, worktree-merge, context-check, health-dashboard)
 - Total files: ~270 markdown, 5 JSON, 14 shell scripts
 
 ## Branching Strategy

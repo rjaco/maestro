@@ -117,17 +117,21 @@ Run /maestro magnum-opus --resume to continue from this point.
 
 Every checkpoint writes a HANDOFF.md to `.maestro/HANDOFF.md`. This file is the primary mechanism for session state transfer — a new agent or a resumed session reads it as T1 context before doing anything else.
 
-### Format
+### Format (Community-Standard Schema)
+
+This format aligns with the convergent HANDOFF.md standard emerging across Claude Code community tools (Ralph Loop, ClaudeCTX, OpenClaw). Using a shared schema ensures cross-tool compatibility.
 
 ```markdown
 # HANDOFF — [Feature Name]
 
-**Session:** [session_id] | **Date:** [timestamp] | **Branch:** [git branch]
+**Session:** [session_id] | **Date:** [ISO timestamp] | **Branch:** [git branch]
+**Maestro Version:** [version] | **Mode:** [checkpoint|yolo|careful] | **Layer:** [execution|opus]
 
 ## Current State
 - Milestone: [N/M] — [milestone name]
 - Story: [N/M] — [story name]
 - Phase: [current phase]
+- Trust Level: [novice|apprentice|journeyman|expert]
 
 ## Decisions Made
 - [Decision 1 with rationale]
@@ -146,6 +150,17 @@ Every checkpoint writes a HANDOFF.md to `.maestro/HANDOFF.md`. This file is the 
 
 ## Context to Preserve
 - [Key fact that shouldn't be lost across session boundary]
+
+## Cost Summary
+- Tokens used this session: [N]K
+- Cost this session: ~$[N.NN]
+- Stories completed: [N]/[total]
+- QA first-pass rate: [N]%
+
+## Environment
+- Model: [primary model used]
+- Active MCP servers: [list if relevant]
+- Active worktrees: [count]
 ```
 
 ### Writing HANDOFF.md

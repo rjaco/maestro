@@ -1,4 +1,5 @@
 ---
+name: maestro
 description: "Full-stack orchestrator — build features or entire products autonomously"
 argument-hint: "DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast]"
 allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
@@ -75,8 +76,8 @@ Display context-aware help. If `.maestro/state.local.md` exists, read it to show
 
   Subcommands:
     plan · init · status · board · config · help
-    brain · doctor · history · model · opus
-    notify · viz · demo · quick-start
+    brain · doctor · history · model · opus · retro
+    notify · viz · demo · quick-start · spec
     cost-estimate · deps · rollback
 
   Flags:
@@ -113,6 +114,8 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 | `init` | `/maestro init` |
 | `status` | `/maestro status` |
 | `model` | `/maestro model` |
+| `retro` | `/maestro retro` |
+| `spec` | `/maestro spec` |
 
 ## Step 3: Parse Flags from $ARGUMENTS
 

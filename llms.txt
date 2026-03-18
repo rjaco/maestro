@@ -1,0 +1,78 @@
+# Maestro — Claude Code Plugin
+
+> Full-stack autonomous development orchestrator. Build features with `/maestro`. Build products with `/maestro magnum-opus`.
+
+## Overview
+
+Maestro is a Claude Code plugin that orchestrates autonomous software development across three layers: Vision & Strategy, Tactics & Architecture, and Execution. It decomposes features into stories, dispatches specialized agents, runs QA, and ships clean commits — while tracking cost and learning from every session.
+
+## Commands
+
+- /maestro "task" — Build a feature autonomously (decompose → implement → QA → commit)
+- /maestro magnum-opus "vision" — Build entire products (interview → research → roadmap → milestones)
+- /maestro init — Initialize for a project (auto-discover tech stack)
+- /maestro status — View progress, resume, pause, or abort
+- /maestro plan "task" — Deep planning with codebase exploration before execution
+- /maestro board — Kanban board view with external sync
+- /maestro brain — Second brain (Obsidian/Notion knowledge base)
+- /maestro doctor — Health diagnostics
+- /maestro config — View/edit configuration
+- /maestro model — View/change model assignments per task type
+- /maestro help [topic] — Contextual help and FAQ
+- /maestro viz — Mermaid diagrams and ASCII dashboards
+- /maestro deps — Story dependency graph
+- /maestro spec — Structured feature specifications
+- /maestro notify — Push notifications (Slack, Discord, Telegram)
+- /maestro history — Past sessions and cost analysis
+- /maestro cost-estimate — Token cost forecast before building
+- /maestro rollback — Revert changes with git + kanban sync
+- /maestro demo — Interactive walkthrough
+- /maestro quick-start — Pre-built task templates
+
+## Execution Modes
+
+- --yolo: Auto-approve everything, maximum speed
+- --checkpoint: Pause after each story for review (default)
+- --careful: Pause after each phase for granular control
+
+## 7-Phase Dev Loop
+
+VALIDATE → DELEGATE → IMPLEMENT → SELF-HEAL → QA → GIT CRAFT → CHECKPOINT
+
+## Agents
+
+- Implementer (Sonnet): TDD story implementation in isolated worktrees
+- QA Reviewer (Opus): Read-only skeptical code review with confidence scoring
+- Researcher (Sonnet): Web search + Playwright competitive analysis
+- Strategist (Opus): Marketing, growth, positioning
+- Fixer (Sonnet): Targeted error fixes during self-heal
+- Proactive (Haiku): Background monitoring, health checks
+
+## Key Skills (74 total)
+
+Core: dev-loop, opus-loop, decompose, delegation, classifier, context-engine, model-router
+Quality: multi-review, gcr-loop, test-gen, commit-score, git-craft, qa-reviewer, semantic-diff
+Intelligence: memory, retrospective, self-correct, feature-registry, steering, audit-log
+Safety: doom-loop, checkpoint, security-drift, index-health, speculative, rules-doctor
+Cost: cost-dashboard, token-ledger, forecast, benchmark
+Integration: kanban, brain, notify, webhooks, scheduler, watch, ci-watch, audio, remote-control
+
+## Integrations
+
+- Project Management: GitHub Issues, Asana, Jira, Linear
+- Knowledge Base: Obsidian, Notion
+- Notifications: Slack, Discord, Telegram
+- CI/CD: GitHub Actions, GitLab CI
+
+## Progressive Trust
+
+Novice → Apprentice → Journeyman → Expert (based on QA first-pass rate across stories)
+
+## File Structure
+
+.maestro/dna.md — Project DNA (tech stack, patterns, conventions)
+.maestro/config.yaml — Configuration
+.maestro/trust.yaml — Trust metrics
+.maestro/state.local.md — Active session state
+.maestro/stories/ — Story spec files
+.maestro/memory/ — Semantic + episodic memory

@@ -1,4 +1,5 @@
 ---
+name: magnum-opus
 description: "Magnum Opus — build entire products autonomously with live conversation. Deep interview, mega research, milestone-driven execution. In full-auto, runs an infinite research-and-improve cycle until paused."
 argument-hint: "VISION [--budget $N] [--hours N] [--skip-research] [--resume] [--start-from MN]"
 allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion

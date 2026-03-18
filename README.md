@@ -52,6 +52,10 @@ claude plugin install maestro
 | `/maestro viz` | Visual dashboards and Mermaid diagrams |
 | `/maestro demo` | Interactive demo — learn how Maestro works |
 | `/maestro quick-start` | Pick from pre-built task templates |
+| `/maestro spec "desc"` | Create structured feature specifications |
+| `/maestro deps` | Visualize story dependency graph |
+| `/maestro cost-estimate` | Estimate token cost before building |
+| `/maestro rollback` | Revert changes with git + kanban sync |
 
 ---
 
