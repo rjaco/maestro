@@ -36,7 +36,8 @@ fi
 # Look for .maestro/state.local.md in the working directory
 CWD=""
 if [[ -n "$SESSION_DATA" ]]; then
-  CWD=$(printf '%s' "$SESSION_DATA" | jq -r '.cwd // empty' 2>/dev/null || true)
+  # Parse cwd without jq — pure bash/grep
+  CWD=$(printf '%s' "$SESSION_DATA" | grep -o '"cwd"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || true)
 fi
 CWD="${CWD:-$(pwd)}"
 
