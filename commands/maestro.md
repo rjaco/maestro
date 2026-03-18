@@ -131,6 +131,8 @@ Extract these flags from `$ARGUMENTS`. Everything that is not a flag is the DESC
 | `--no-cost-tracking` | COST_TRACKING=false | true |
 | `--no-forecast` | FORECAST=false | true |
 | `--max-stories N` | MAX_STORIES=N | 8 |
+| `--framing` | RUN_FRAMING=true | false |
+| `--skip-clarify` | SKIP_CLARIFY=true | false |
 
 If no mode flag is provided, use AskUserQuestion to let the user pick:
 
@@ -176,6 +178,18 @@ Analyze the DESCRIPTION to determine the starting layer:
 
 **Direct execution** — everything else (features, bug fixes, UI work, API endpoints):
 - Proceed directly to forecast and decompose
+
+## Step 5.5: Product Framing (optional)
+
+If `--framing` was passed OR the classifier detects a vague/broad request:
+
+1. Invoke the `product-framing` skill with the DESCRIPTION
+2. The skill analyzes through 4 lenses: Expand, Hold, Reduce, Selective
+3. It recommends a framing mode and presents the analysis
+4. If the user accepts a reframed description, replace DESCRIPTION with it
+5. Continue to forecast and decompose with the refined description
+
+Skip this step if the request is already specific and well-scoped (e.g., "Fix the null check in auth.ts").
 
 ## Step 6: Forecast (unless --no-forecast)
 
