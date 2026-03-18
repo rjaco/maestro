@@ -169,6 +169,7 @@ Before creating any files, show a compact DNA preview that merges the user's fre
     Playwright       [detected (ok)] or [not found (x)]
     GitHub CLI       [detected (ok)] or [not found (x)]
     Obsidian CLI     [detected (ok)] or [not found (x)]
+```
 
 Use AskUserQuestion:
 - Question: "Does this look right?"

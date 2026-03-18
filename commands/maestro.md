@@ -90,6 +90,8 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 | `doctor` | `/maestro doctor` |
 | `history` | `/maestro history` |
 | `plan` | `/maestro plan` |
+| `notify` | `/maestro notify` |
+| `viz` | `/maestro viz` |
 | `init` | `/maestro init` |
 | `status` | `/maestro status` |
 | `model` | `/maestro model` |
