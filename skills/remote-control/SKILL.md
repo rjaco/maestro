@@ -33,7 +33,7 @@ The bot process is a long-running daemon (launchd / systemd) that bridges inboun
 
 ```ts
 import { Bot } from "grammy";
-import { query } from "@anthropic-ai/claude-code";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 
 const bot = new Bot(process.env.TELEGRAM_TOKEN!);
 bot.on("message:text", async (ctx) => {
@@ -56,7 +56,7 @@ Use HTML formatting (`<b>`, `<pre>`) for readable output. Pair with `bot.handleU
 
 ```ts
 import { Client, GatewayIntentBits } from "discord.js";
-import { query } from "@anthropic-ai/claude-code";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 
 const client = new Client({ intents: [GatewayIntentBits.MessageContent] });
 client.on("messageCreate", async (msg) => {
@@ -92,7 +92,7 @@ Pair with Tailscale for secure remote access without opening a public port.
 
 ```ts
 import express from "express";
-import { query } from "@anthropic-ai/claude-code";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 const app = express();
 app.use(express.json());
 app.post("/maestro", async (req, res) => {

@@ -96,6 +96,7 @@ Extract flags from `$ARGUMENTS`. Everything that is not a flag is the VISION des
 | `--resume` | handled in Step 1 | — |
 | `--start-from MN` | CURRENT_MILESTONE=MN | — |
 | `--full-auto` | SKIP_MODE_QUESTION=true, OPUS_MODE=full_auto | — |
+| `--daemon` | Starts the external daemon for 24/7 operation | — |
 
 If `--start-from MN` is provided, set `current_milestone` to the specified milestone ID (e.g., `M3`) in `.maestro/state.local.md` when setting up the session state. Execution begins from that milestone, skipping all earlier milestones.
 
@@ -433,3 +434,69 @@ of dispatching agents is a broken promise to the user.
 | Divergence | User fundamentally redirects | Invoke divergence-handler |
 | User PAUSE | Any time | Graceful stop after current story |
 | User STOP | Any time | Immediate halt, save state |
+
+## 24/7 Daemon Mode
+
+The Stop hook can keep the loop alive for several iterations, but Claude Code's `stop_hook_active` flag eventually forces exit. For true 24/7 operation (like OpenClaw), use the external daemon:
+
+### Start the Daemon
+
+```bash
+# Start the 24/7 loop
+./scripts/opus-daemon.sh
+
+# With options
+./scripts/opus-daemon.sh --interval 30    # 30s between iterations
+./scripts/opus-daemon.sh --max-iterations 50   # Stop after 50 iterations
+```
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────┐
+│  opus-daemon.sh (external process)          │
+│                                             │
+│  while active:                              │
+│    1. Read .maestro/state.local.md          │
+│    2. Call: claude --continue "..." --yes   │
+│    3. Wait for Claude to finish             │
+│    4. Check state again                     │
+│    5. If still active → loop back to 1     │
+│    6. If paused/completed → exit            │
+└─────────────────────────────────────────────┘
+```
+
+Each `claude` invocation is a fresh CLI process. This bypasses the `stop_hook_active` limitation because each process starts with `stop_hook_active: false`.
+
+### Stop the Daemon
+
+```bash
+# Graceful stop (sets active: false, waits for current iteration)
+./scripts/opus-daemon.sh --stop
+
+# Or send SIGTERM (same effect)
+kill $(cat .maestro/opus-daemon.pid)
+
+# Or from inside Claude:
+# Just say "PAUSE" and the daemon will see phase: paused on next check
+```
+
+### Why Not Just the Stop Hook?
+
+| Approach | Works for | Limitation |
+|----------|-----------|------------|
+| Stop hook alone | 2-5 iterations | `stop_hook_active` forces exit |
+| Daemon + Stop hook | Unlimited | Requires terminal running |
+| Daemon + systemd/launchd | True 24/7 | Setup required |
+
+### Install as System Service
+
+```bash
+# Linux (systemd)
+./scripts/service-installer.sh install opus-daemon
+
+# macOS (launchd)
+./scripts/service-installer.sh install opus-daemon --macos
+```
+
+The daemon logs to `.maestro/logs/daemon.log` for monitoring.

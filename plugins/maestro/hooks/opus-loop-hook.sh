@@ -44,6 +44,9 @@ CONSECUTIVE_FAILURES=$(yaml_val "consecutive_failures")
 MAX_CONSECUTIVE_FAILURES=$(yaml_val "max_consecutive_failures")
 SESSION_ID=$(yaml_val "session_id")
 
+# Parse stop_hook_active flag — Claude Code sets this true on consecutive Stop events
+STOP_HOOK_ACTIVE=$(echo "$HOOK_INPUT" | grep -o '"stop_hook_active"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o 'true\|false' || echo "false")
+
 # Session isolation — only loop for the session that started the Opus run
 HOOK_SESSION=""
 if [[ -n "$HOOK_INPUT" ]]; then
@@ -114,36 +117,24 @@ case "$OPUS_MODE" in
     ;;
 esac
 
+# === STOP_HOOK_ACTIVE GUARD ===
+# When Claude Code sets stop_hook_active=true it IGNORES our "block" decision.
+# We cannot prevent the exit, but we write a handoff record so the daemon can resume.
+if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
+  mkdir -p .maestro/logs
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] stop_hook_active forced exit. Daemon should resume." >> .maestro/logs/daemon.log
+  # Do NOT set active=false — the daemon needs it active to continue.
+  printf '{"decision":"approve","reason":"stop_hook_active forced — daemon will resume"}\n'
+  exit 0
+fi
+
 # === BUILD THE LOOP PROMPT ===
 # This is the key: re-inject the Opus orchestration prompt so Claude
 # continues working on the next milestone/story automatically.
 
-SYSTEM_MSG="Maestro Magnum Opus autonomous loop active."
-SYSTEM_MSG="$SYSTEM_MSG Feature: ${FEATURE:-unknown}."
-SYSTEM_MSG="$SYSTEM_MSG Milestone: ${CURRENT_MILESTONE:-?}/${TOTAL_MILESTONES:-?}."
-SYSTEM_MSG="$SYSTEM_MSG Story: ${CURRENT_STORY:-?}/${TOTAL_STORIES:-?}."
-SYSTEM_MSG="$SYSTEM_MSG Phase: ${PHASE:-unknown}."
-SYSTEM_MSG="$SYSTEM_MSG Mode: full_auto (INFINITE LOOP)."
-SYSTEM_MSG="$SYSTEM_MSG Do NOT stop. Continue the Magnum Opus loop."
-SYSTEM_MSG="$SYSTEM_MSG Re-read .maestro/vision.md for North Star."
-SYSTEM_MSG="$SYSTEM_MSG Execute the next milestone/story via the dev-loop."
-SYSTEM_MSG="$SYSTEM_MSG Dispatch implementer agents in worktrees."
-SYSTEM_MSG="$SYSTEM_MSG Run validation, QA review, git craft."
-SYSTEM_MSG="$SYSTEM_MSG INFINITE LOOP: When all current milestones are complete, DO NOT stop."
-SYSTEM_MSG="$SYSTEM_MSG Instead: research new improvements, generate new milestones, and continue building."
-SYSTEM_MSG="$SYSTEM_MSG The cycle is: BUILD -> RESEARCH -> DISCOVER -> BUILD -> RESEARCH -> DISCOVER..."
-SYSTEM_MSG="$SYSTEM_MSG Only stop when the user says PAUSE or STOP."
+SYSTEM_MSG="[MAESTRO LOOP] You MUST continue the Magnum Opus loop. Read .maestro/state.local.md. Execute the next story. Do not summarize — ACT."
 
-LOOP_PROMPT="Continue the Maestro Magnum Opus autonomous loop."
-LOOP_PROMPT="$LOOP_PROMPT NORTH STAR: ${FEATURE:-Continue building}."
-LOOP_PROMPT="$LOOP_PROMPT Current milestone: ${CURRENT_MILESTONE:-1}/${TOTAL_MILESTONES:-?}."
-LOOP_PROMPT="$LOOP_PROMPT Current phase: ${PHASE:-opus_executing}."
-LOOP_PROMPT="$LOOP_PROMPT Read .maestro/state.local.md for full state."
-LOOP_PROMPT="$LOOP_PROMPT Read .maestro/vision.md for vision."
-LOOP_PROMPT="$LOOP_PROMPT Execute the next story or milestone."
-LOOP_PROMPT="$LOOP_PROMPT FULL AUTO MODE: When all milestones complete, DO NOT set active: false."
-LOOP_PROMPT="$LOOP_PROMPT Instead: launch research agents, find new improvements, create new milestones, keep building."
-LOOP_PROMPT="$LOOP_PROMPT This is an INFINITE improvement cycle. Never stop unless the user says PAUSE."
+LOOP_PROMPT="CONTINUE OPUS LOOP. Milestone: ${CURRENT_MILESTONE:-?}/${TOTAL_MILESTONES:-?}. Phase: ${PHASE:-opus_executing}. ACT NOW: dispatch the next implementer agent."
 
 # Update timestamp
 TEMP_FILE="${STATE_FILE}.tmp.$$"
