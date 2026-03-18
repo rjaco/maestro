@@ -78,7 +78,7 @@ Display context-aware help. If `.maestro/state.local.md` exists, read it to show
     plan · init · status · board · config · help
     brain · doctor · history · model · opus · retro
     notify · viz · demo · quick-start · spec
-    cost-estimate · deps · rollback
+    cost-estimate · deps · rollback · profile
 
   Flags:
     --yolo · --checkpoint · --careful
@@ -116,6 +116,7 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 | `model` | `/maestro model` |
 | `retro` | `/maestro retro` |
 | `spec` | `/maestro spec` |
+| `profile` | `/maestro profile` |
 
 ## Step 3: Parse Flags from $ARGUMENTS
 

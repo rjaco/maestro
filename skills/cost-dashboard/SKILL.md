@@ -148,6 +148,59 @@ If `cost_tracking` is absent or `dashboard` is `false`, only render on explicit 
 - **status/ command** — include a one-line cost summary in status output: `Cost: $2.47 / $5.00 (49%)`
 - **build-log/SKILL.md** — include cost-dashboard's BY PHASE table in the `## Cost Breakdown` section of each build log
 
+## SDK modelUsage Integration (v0.1.0+)
+
+The Agent SDK's `ResultMessage.modelUsage` provides per-model cost breakdowns that the cost dashboard should consume directly:
+
+```typescript
+// From SDK ResultMessage
+modelUsage: {
+  "claude-sonnet-4-6": {
+    costUSD: 0.52,
+    inputTokens: 18400,
+    outputTokens: 4200,
+    cacheReadInputTokens: 9100,
+    cacheCreationInputTokens: 3200
+  },
+  "claude-opus-4-6": {
+    costUSD: 1.85,
+    inputTokens: 8200,
+    outputTokens: 1800,
+    cacheReadInputTokens: 4100,
+    cacheCreationInputTokens: 0
+  }
+}
+```
+
+When available, prefer `modelUsage` over manual token-to-cost calculations. The SDK tracks actual billing amounts including cache discount rates, which manual calculations approximate.
+
+### Per-Agent Cost Attribution
+
+When `parent_tool_use_id` is set on a message, costs belong to that subagent. Track costs per agent type:
+
+```
+BY AGENT:
+  implementer  $1.42  57%  (4 dispatches, avg $0.36)
+  qa-reviewer  $0.45  18%  (4 dispatches, avg $0.11)
+  fixer        $0.35  14%  (2 dispatches, avg $0.18)
+  orchestrator $0.25  10%  (overhead)
+```
+
+### Plugin Data Fast Cache
+
+When `${CLAUDE_PLUGIN_DATA}` is available (v2.1.78+), store running cost totals for instant dashboard rendering without re-parsing the full costs.jsonl:
+
+```
+Key: maestro_cost_session_total    → "2.47"
+Key: maestro_cost_session_stories  → "5"
+Key: maestro_cost_budget_used_pct  → "49"
+Key: maestro_cost_model_opus       → "1.85"
+Key: maestro_cost_model_sonnet     → "0.52"
+Key: maestro_cost_model_haiku      → "0.10"
+```
+
+This enables sub-second dashboard renders for the status command instead of scanning the full JSONL log.
+
 ## Output Contract
 
 ```yaml
