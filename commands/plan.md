@@ -180,6 +180,16 @@ Use AskUserQuestion:
 
 Wait for confirmation. If the user adjusts, update the summary.
 
+### Artifact Output
+
+Write brainstorm results to `.maestro/plans/[SLUG]/brainstorm.md`:
+- Problem statement
+- Stakeholder analysis
+- Constraint identification
+- Initial scope definition
+
+This file survives context compaction and can be loaded independently.
+
 ## Phase 2: EXPLORE (skip if --quick or --no-explore)
 
 Goal: Understand the relevant parts of the codebase before designing.
@@ -230,6 +240,14 @@ Combine explorer results into a codebase analysis:
   Risks:
     - [potential conflict or complexity]
 ```
+
+### Artifact Output
+
+Write exploration results to `.maestro/plans/[SLUG]/codebase-analysis.md`:
+- File map of affected areas
+- Pattern inventory
+- Dependency graph
+- Technical constraints discovered
 
 ## Phase 2c: DEEP EXPLORATION (only if --deep)
 
@@ -342,6 +360,15 @@ Use AskUserQuestion:
 
 Wait for approval. If the user wants alternatives, propose a different approach and compare.
 
+### Artifact Output
+
+Write architecture decisions to `.maestro/plans/[SLUG]/architecture.md`:
+- Approach selection with rationale
+- Component boundaries
+- Data model changes
+- API contract changes
+- Interface definitions
+
 ## Phase 4: DECOMPOSE
 
 Goal: Break the approved architecture into executable stories.
@@ -394,6 +421,15 @@ Each story gets:
        depends_on: [3, 4]
 ```
 
+### Artifact Output
+
+Write each story to `.maestro/plans/[SLUG]/stories/NN-title.md` with FULL embedded context (not just references):
+- Requirements excerpt relevant to this story
+- Architecture decisions relevant to this story
+- Acceptance criteria in BDD format (Given/When/Then)
+- File paths to create/modify with expected changes
+- Interfaces to maintain or create
+
 ## Phase 5: REVIEW
 
 Goal: Validate the plan is realistic and complete.
@@ -430,6 +466,48 @@ Use AskUserQuestion:
   3. label: "Go back to architecture", description: "Redesign the approach"
 
 Auto-fix adds missing stories or adjusts plan based on findings.
+
+## Phase 5.5: READINESS GATE
+
+Before presenting the plan, validate completeness:
+
+### Readiness Checklist
+1. [ ] Every story has acceptance criteria (not just titles)
+2. [ ] Every story has file paths (create/modify/reference)
+3. [ ] Dependencies between stories form a valid DAG (no cycles)
+4. [ ] Architecture decisions reference existing code patterns
+5. [ ] No story references files that don't exist (unless creating them)
+6. [ ] Edge cases identified in Phase 2c are covered by at least one story
+7. [ ] Test strategy covers all modified code paths
+
+### Readiness Classification
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| PASS | All 7 checks pass | Proceed to present |
+| CONCERNS | 1-2 checks fail with minor gaps | Present with warnings |
+| FAIL | 3+ checks fail or critical gaps | Return to the failed phase |
+
+Display:
+```
++---------------------------------------------+
+| Readiness Gate                              |
++---------------------------------------------+
+  [✓] Acceptance criteria    7/7 stories
+  [✓] File paths             7/7 stories
+  [✓] Dependency DAG         valid (no cycles)
+  [✓] Architecture refs      all grounded
+  [!] Missing file refs      1 story refs nonexistent util
+  [✓] Edge case coverage     12/14 cases covered
+  [✓] Test coverage          all paths have tests
+
+  Status: CONCERNS (1 minor gap)
+  Note: Story 4 references utils/format.ts which doesn't
+        exist yet — verify it will be created in Story 2.
+```
+
+If FAIL, do NOT present the plan. Instead, identify which phase needs
+revisiting and return to it.
 
 ## Phase 6: PRESENT
 
@@ -488,6 +566,13 @@ Then show the summary box:
 
   Plan saved to: .maestro/plans/[slug].md
 ```
+
+After presenting the plan, tell the user:
+  "Plan artifacts saved to .maestro/plans/[SLUG]/"
+  "Review and edit any file before confirming execution."
+
+This mirrors Claude Code's Ctrl+G pattern — the user can edit
+plan artifacts directly before approving.
 
 Use AskUserQuestion:
 - Question: "Plan is ready. What would you like to do?"

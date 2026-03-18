@@ -293,15 +293,21 @@ Append to the bottom of `semantic.md` or `episodic.md`:
 
 The `PostCompact` hook (Claude Code v2.1.76) fires after context compaction. This is critical for memory — without it, the agent loses awareness of previously loaded memory after compaction.
 
+**Important:** The PostCompact hook itself cannot inject context. The actual
+re-injection happens via the `SessionStart` hook with `source: "compact"`.
+The PostCompact hook is used for logging/audit only. The SessionStart hook
+reads memory files and outputs them to STDOUT for context injection.
+
 ### How It Works
 
 When context is compacted:
-1. The `post-compact-hook.sh` fires and reads current session state
-2. It outputs a `systemMessage` containing:
-   - Current feature, mode, phase, story progress
+1. The `SessionStart` hook fires with `source: "compact"` — this is where re-injection happens
+2. `session-start-hook.sh` checks the source field from stdin hook input
+3. When source is "compact", it reads current session state and outputs plain text to STDOUT:
+   - Current feature, mode, layer, phase, story progress
    - North Star from `.maestro/vision.md`
-   - Recent notes from `.maestro/notes.md`
-3. This message is injected into the post-compaction context
+4. That STDOUT output is injected as Claude's context after resume
+5. The `post-compact-hook.sh` also fires but is used for audit logging only — it cannot inject context
 
 ### Memory Re-injection After Compaction
 
