@@ -56,6 +56,8 @@ claude plugin install maestro
 | `/maestro deps` | Visualize story dependency graph |
 | `/maestro cost-estimate` | Estimate token cost before building |
 | `/maestro rollback` | Revert changes with git + kanban sync |
+| `/maestro retro` | Weekly retrospective — stats, streaks, improvements |
+| `/maestro profile` | Switch configuration profiles |
 
 ---
 

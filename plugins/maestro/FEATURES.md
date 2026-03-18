@@ -1,6 +1,6 @@
 # Maestro — Complete Feature Guide
 
-> The most comprehensive Claude Code orchestration plugin. 74 skills, 21 commands, 11 scripts, 6 agents, 11 specialist profiles.
+> The most comprehensive Claude Code orchestration plugin. 75 skills, 23 commands, 11 scripts, 6 agents, 11 specialist profiles.
 
 ---
 
@@ -334,4 +334,4 @@ Auto-downgrade saves ~70% on token costs by routing simple tasks to cheaper mode
 
 ---
 
-*Last updated: 2026-03-18 | 74 skills, 21 commands, 11 scripts, 6 agents, 11 profiles*
+*Last updated: 2026-03-18 | 75 skills, 23 commands, 11 scripts, 6 agents, 11 profiles*

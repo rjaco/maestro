@@ -28,6 +28,8 @@ Maestro is a Claude Code plugin that orchestrates autonomous software developmen
 - /maestro rollback — Revert changes with git + kanban sync
 - /maestro demo — Interactive walkthrough
 - /maestro quick-start — Pre-built task templates
+- /maestro retro — Weekly retrospective with shipping stats and improvements
+- /maestro profile — Switch configuration profiles
 
 ## Execution Modes
 
@@ -48,7 +50,7 @@ VALIDATE → DELEGATE → IMPLEMENT → SELF-HEAL → QA → GIT CRAFT → CHECK
 - Fixer (Sonnet): Targeted error fixes during self-heal
 - Proactive (Haiku): Background monitoring, health checks
 
-## Key Skills (74 total)
+## Key Skills (75 total)
 
 Core: dev-loop, opus-loop, decompose, delegation, classifier, context-engine, model-router
 Quality: multi-review, gcr-loop, test-gen, commit-score, git-craft, qa-reviewer, semantic-diff
