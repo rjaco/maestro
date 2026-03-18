@@ -190,7 +190,6 @@ while true; do
 
   ACTIVE="$(parse_state active)"
   PHASE="$(parse_state phase)"
-  LAYER="$(parse_state layer)"
   CURRENT_MILESTONE="$(parse_state current_milestone)"
   TOTAL_MILESTONES="$(parse_state total_milestones)"
   CURRENT_STORY="$(parse_state current_story)"

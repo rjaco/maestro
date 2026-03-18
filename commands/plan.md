@@ -29,6 +29,14 @@ allowed-tools:
 ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
 ```
 
+This command ENHANCES Claude Code's native plan mode (EnterPlanMode tool).
+When the user runs /maestro plan, you MUST:
+1. First enter Claude Code's native plan mode via EnterPlanMode
+2. Use plan mode's structured exploration (read-only, no writes)
+3. Then layer Maestro's decomposition, cost estimation, and story generation on top
+
+This ensures plans have the SAME depth as native plan mode PLUS Maestro's story decomposition.
+
 You are Maestro in planning mode. Your job is to produce a thoroughly researched, validated implementation plan before any code is written. This goes beyond Claude Code's native plan mode by adding codebase exploration, architectural design, cost estimation, and story decomposition — all in one guided flow.
 
 ## Flags
@@ -38,6 +46,7 @@ You are Maestro in planning mode. Your job is to produce a thoroughly researched
 | `--quick` | Skip explore + architect phases (brainstorm → decompose → review) | off |
 | `--no-explore` | Skip codebase exploration (use when you already know the codebase) | off |
 | `--model opus` | Force Opus for all planning agents | sonnet |
+| `--deep` | Maximum exploration depth: read every file to be modified, trace all execution paths, map all dependencies | off |
 
 ## Step 0: Prerequisites
 
@@ -80,6 +89,7 @@ If `$ARGUMENTS` is empty, show help:
   Flags:
     --quick        Skip exploration and architecture
     --no-explore   Skip codebase exploration only
+    --deep         Maximum depth: read every affected file, trace all paths
     --model opus   Use Opus for all planning agents
 ```
 
@@ -219,6 +229,55 @@ Combine explorer results into a codebase analysis:
 
   Risks:
     - [potential conflict or complexity]
+```
+
+## Phase 2c: DEEP EXPLORATION (only if --deep)
+
+Goal: Exhaustive pre-architecture analysis so no surprises surface during implementation.
+
+When `--deep` is set, perform all of the following before entering Phase 3:
+
+1. **Read every file that will be modified** — not just files identified as likely candidates, but every file the implementation will touch. Open each one and read its full content.
+
+2. **Trace execution paths for affected code** — follow the call chain from entry point to data layer for each flow that will change. Document the path explicitly:
+   ```
+   Entry: routes/api/[endpoint].ts
+     → middleware/auth.ts (validates token)
+     → controllers/[name].ts (dispatches)
+     → services/[name].ts (business logic)
+     → models/[name].ts (data access)
+     → db/queries/[name].sql
+   ```
+
+3. **Map dependencies between files** — for each file to be modified, list what it imports and what imports it. Identify any shared state or side effects.
+
+4. **Identify all interfaces and contracts that must be maintained** — function signatures, API response shapes, event payloads, database schemas. Document the current contract so the plan can preserve it or explicitly plan the migration.
+
+5. **Document edge cases and error scenarios** — for each flow, identify:
+   - What happens when input is null/empty/malformed?
+   - What happens when an external service is unavailable?
+   - What happens under concurrent access?
+   - What are the failure modes and their user-visible effects?
+
+6. **List all tests that need updating** — scan the test directory for files that exercise the affected code. List each test file and what specifically will need to change.
+
+Present a deep analysis summary before proceeding to Phase 3:
+
+```
++---------------------------------------------+
+| Deep Analysis                               |
++---------------------------------------------+
+
+  Files Read:       [N] files fully read
+  Execution Paths:  [N] paths traced
+  Contracts:        [N] interfaces documented
+  Edge Cases:       [N] scenarios identified
+  Tests to Update:  [N] test files affected
+
+  Key Findings:
+    - [finding 1 — something non-obvious discovered]
+    - [finding 2 — a constraint or gotcha]
+    - [finding 3 — an opportunity to reuse something]
 ```
 
 ## Phase 3: ARCHITECT (skip if --quick)
@@ -376,6 +435,46 @@ Auto-fix adds missing stories or adjusts plan based on findings.
 
 Goal: Final presentation of the complete plan for approval.
 
+Display the full structured plan output:
+
+```
++---------------------------------------------+
+| Maestro Plan: [feature]                     |
++---------------------------------------------+
+
+## Architecture Analysis
+[How the feature fits into the existing codebase — which layers are affected, which are not]
+[Which patterns from the codebase this plan follows]
+[Which files are affected and WHY — not just a list, but the reasoning]
+
+## Detailed Design
+[Data model changes — new fields, tables, or schema migrations]
+[API contract changes — new endpoints, modified signatures, response shape changes]
+[Component/module structure — how the new code is organized]
+[State management approach — how data flows and where it lives]
+
+## Edge Cases & Error Handling
+[What happens when X fails? — cover every external dependency]
+[Empty state handling — first run, no data, zero results]
+[Concurrent access scenarios — race conditions, optimistic locking needs]
+[Rate limiting / throttling — if any external services are called]
+
+## Test Strategy
+[Unit tests needed — list specific functions/modules requiring unit coverage]
+[Integration tests needed — list flows requiring end-to-end validation]
+[E2E scenarios — user-facing flows to verify]
+[Tests requiring updates — existing tests that will break and why]
+
+## Story Breakdown
+[Decomposed stories with their dependency chain — matches Phase 4 output]
+
+## Risk Assessment
+[What could go wrong — ranked by likelihood × impact]
+[Rollback strategy — how to undo this if it causes problems in production]
+```
+
+Then show the summary box:
+
 ```
 +---------------------------------------------+
 | Plan Complete                               |
@@ -463,3 +562,5 @@ Phase 7: SAVE
 ```
 
 This is useful for small features where you already know the codebase and just want story decomposition with validation.
+
+Note: `--quick` and `--deep` are mutually exclusive. If both are passed, `--quick` takes precedence and a warning is shown.

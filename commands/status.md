@@ -106,6 +106,8 @@ Display comprehensive status using the template below.
 
   Cost      ~$[N.NN] spent | ~$[N.NN] estimated remaining
   Tokens    [N]K used
+  Context   [████████████░░░░] [N]% used ([N]K/[limit]K tokens)
+            Compaction: auto (triggers at ~95%)
   Time      [elapsed time]
 
   QA Rate   [qa_first_pass_rate]% first-pass
@@ -117,6 +119,15 @@ Notes for rendering:
 - If `layer` is `execution`, omit the Milestone line entirely.
 - If cost data is unavailable or `token_spend` is zero, show `Cost  (no data)`.
 - If `estimated_remaining` is not set, omit that portion of the Cost line.
+- **Context display:** Read the current session's token count to determine context usage. Calculate percentage as `(tokens_used / context_limit) * 100`. The context window limit for Claude is 200K tokens for standard sessions and 1M tokens for extended context sessions. Use 16-character progress bar (same rendering rules as the Progress bar). Show token counts in K (e.g., `145K/200K tokens`).
+- **Context advisory:** If context usage is above 80%, append a warning after the Context line:
+  ```
+            (!) Above 80% — consider /compact or starting a new session
+  ```
+  If context usage is above 95%, the warning becomes:
+  ```
+            (!!) Critical — compact now or start a new session
+  ```
 - For `Phase`, map internal phase names to human-readable labels:
   - `validate`, `decompose`, `research` → Validate
   - `delegate` → Delegate
