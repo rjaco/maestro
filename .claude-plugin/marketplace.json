@@ -3,39 +3,49 @@
   "name": "maestro-orchestrator",
   "description": "Full-stack autonomous development orchestrator for Claude Code",
   "owner": {
-    "name": "Maestro Contributors"
+    "name": "Maestro Contributors",
+    "url": "https://github.com/anthropics/maestro-orchestrator"
   },
   "metadata": {
     "description": "Build features with /maestro, entire products with /maestro magnum-opus. Kanban integration, second brain, session memory, notifications, and visual dashboards.",
-    "version": "1.2.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "maestro",
       "description": "Full-stack autonomous development orchestrator with kanban (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), session memory, notifications, and visual dashboards. Build features with /maestro, entire products with /maestro magnum-opus.",
-      "version": "1.2.0",
+      "version": "1.1.0",
       "author": {
-        "name": "Maestro Contributors"
+        "name": "Maestro Contributors",
+        "url": "https://github.com/anthropics/maestro-orchestrator"
       },
       "source": "./plugins/maestro",
-      "category": "development",
+      "categories": ["development", "productivity", "automation"],
       "license": "MIT",
       "keywords": [
         "orchestrator",
         "autonomous",
         "agents",
+        "strategy",
+        "architecture",
+        "execution",
+        "self-improving",
+        "magnum-opus",
         "kanban",
+        "second-brain",
+        "memory",
+        "TDD",
+        "quality-gates",
+        "multi-agent",
+        "Claude Code",
         "asana",
         "jira",
         "linear",
         "obsidian",
-        "notion",
-        "second-brain",
-        "memory",
-        "notifications",
-        "visualization"
+        "notion"
       ],
-      "repository": "https://github.com/rjaco/maestro-orchestrator"
+      "homepage": "https://github.com/anthropics/maestro-orchestrator",
+      "repository": "https://github.com/anthropics/maestro-orchestrator"
     }
   ]
 }

@@ -6,7 +6,7 @@
 # Install: Add to settings.json:
 #   "statusLine": {
 #     "type": "command",
-#     "command": "~/.claude/plugins/cache/maestro-orchestrator/maestro/1.0.0/scripts/statusline.sh"
+#     "command": "${CLAUDE_PLUGIN_ROOT}/scripts/statusline.sh"
 #   }
 
 set -euo pipefail

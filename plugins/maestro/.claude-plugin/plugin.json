@@ -1,10 +1,35 @@
 {
   "name": "maestro",
   "description": "Full-stack autonomous development orchestrator with kanban integration (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), and session memory. Build features with /maestro, build entire products with /maestro magnum-opus. Three-layer orchestration with self-improving agents, context management, and cost tracking.",
-  "version": "1.2.0",
+  "version": "1.1.0",
   "author": {
-    "name": "Maestro Contributors"
+    "name": "Maestro Contributors",
+    "url": "https://github.com/anthropics/maestro-orchestrator"
   },
   "license": "MIT",
-  "keywords": ["orchestrator", "autonomous", "agents", "strategy", "architecture", "execution", "self-improving", "magnum-opus", "kanban", "asana", "jira", "linear", "obsidian", "notion", "second-brain", "memory"]
+  "keywords": [
+    "orchestrator",
+    "autonomous",
+    "agents",
+    "strategy",
+    "architecture",
+    "execution",
+    "self-improving",
+    "magnum-opus",
+    "kanban",
+    "second-brain",
+    "memory",
+    "TDD",
+    "quality-gates",
+    "multi-agent",
+    "Claude Code",
+    "asana",
+    "jira",
+    "linear",
+    "obsidian",
+    "notion"
+  ],
+  "homepage": "https://github.com/anthropics/maestro-orchestrator",
+  "repository": "https://github.com/anthropics/maestro-orchestrator",
+  "categories": ["development", "productivity", "automation"]
 }
