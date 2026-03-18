@@ -1,11 +1,6 @@
 ---
 name: context-engine
 description: "Optimal context management engine. Composes right-sized context packages for each agent based on role, task, and relevance. Reduces token usage by 70-85% while improving agent performance."
-effort: low
-maxTurns: 3
-disallowedTools:
-  - Write
-  - Edit
 ---
 
 # Context Engine
@@ -144,6 +139,122 @@ QA History (212 tokens):
 
 **Result:** 3,412 tokens. Agent has everything it needs, nothing it doesn't. 86% reduction.
 
+## Concrete Implementation: How to Extract Context
+
+### CLAUDE.md Rule Parsing
+
+CLAUDE.md files contain project rules. To extract only relevant rules:
+
+1. **Split CLAUDE.md into rule blocks.** Each block is a paragraph, bullet point, or section that contains a single rule or set of related rules.
+
+2. **Tag each block with file paths it references.** Scan for patterns like:
+   - `src/app/api/` → tag as `api`
+   - `src/components/` → tag as `frontend`
+   - `*.test.*` or `__tests__/` → tag as `test`
+   - `supabase`, `database`, `migration` → tag as `data`
+   - No file references → tag as `general` (always include)
+
+3. **Match tags against story file paths.** If the story creates/modifies `src/app/api/v1/search/route.ts`:
+   - Include blocks tagged `api` (score 1.0)
+   - Include blocks tagged `general` (score 0.8)
+   - Exclude blocks tagged `frontend` (score 0.1)
+   - Exclude blocks tagged `test` unless story type is `test`
+
+4. **Always include these rule types regardless of matching:**
+   - Naming conventions (applies everywhere)
+   - Import style rules (applies everywhere)
+   - Security rules (applies everywhere)
+   - "NEVER" / "ALWAYS" rules (high-priority constraints)
+
+### File Content Extraction
+
+When including file contents in a context package:
+
+1. **Never include full files.** A 500-line file wastes budget and dilutes attention.
+
+2. **Use targeted extraction:**
+   ```
+   For each file in the story's Reference list:
+     a. Read the full file with the Read tool
+     b. Identify the relevant section:
+        - If the story says "follow the pattern in route.ts" → extract the GET handler (the pattern)
+        - If the story modifies a type → extract just that type definition + imports
+        - If the story calls a utility → extract the function signature + JSDoc
+     c. Include the relevant lines + 5 lines of surrounding context
+     d. Add a comment: "// from [file_path] lines [N-M]"
+   ```
+
+3. **Priority for what to extract:**
+   - **Signatures first**: Function signatures, type definitions, export statements
+   - **Patterns second**: One complete example of the pattern the story should follow
+   - **Implementation last**: Only if the agent needs to understand internal logic
+
+4. **Token budget per file:**
+   | Tier | Max tokens per file | Max files |
+   |------|-------------------|-----------|
+   | T3 | 500 tokens | 5 files |
+   | T2 | 1000 tokens | 8 files |
+   | T1 | 2000 tokens | 12 files |
+   | T4 | 200 tokens | 2 files |
+
+### Relevance Scoring Decision Tree
+
+For each context piece, follow this decision tree to compute a relevance score:
+
+```
+Is this piece a CLAUDE.md rule?
+  ├─ YES: Does it reference files this story touches?
+  │   ├─ YES → 1.0
+  │   └─ NO: Is it a general rule (naming, security, style)?
+  │       ├─ YES → 0.8
+  │       └─ NO → 0.1
+  │
+  ├─ Is this piece a code pattern from DNA?
+  │   ├─ Does it match story TYPE (backend pattern for backend story)?
+  │   │   ├─ YES → 0.9
+  │   │   └─ NO → 0.1
+  │   │
+  │   └─ Does it match a KEYWORD in story title/criteria?
+  │       ├─ YES → 0.7
+  │       └─ NO → 0.2
+  │
+  ├─ Is this piece a file content?
+  │   ├─ Is it in the story's Create/Modify/Reference list?
+  │   │   ├─ YES → 1.0
+  │   │   └─ NO: Is it in the same directory as a story file?
+  │   │       ├─ YES → 0.5
+  │   │       └─ NO → 0.0
+  │   │
+  │
+  ├─ Is this piece QA feedback?
+  │   ├─ From this story (re-dispatch)? → 1.0
+  │   ├─ From same-type story in this milestone? → 0.6
+  │   └─ From different type? → 0.0
+  │
+  └─ Is this piece a project lesson from memory?
+      ├─ Does it match story type or keywords? → 0.7
+      └─ General lesson? → 0.4
+```
+
+### Injecting Retrospective Lessons
+
+When `.maestro/state.local.md` contains a `tuning` section with `qa_gotchas` or `self_heal_gotchas`:
+
+1. Add these to EVERY implementer context package under a "Project Lessons" section:
+   ```markdown
+   ## Project Lessons (from prior milestones)
+   - Always validate null inputs in API route handlers
+   - Include rate limit tests for /api/ endpoints
+   - Use optional chaining for strict null checks
+   ```
+
+2. Cap lessons at 200 tokens (5-6 concrete rules). If more exist, prioritize by:
+   - Recency (newer lessons first)
+   - Relevance (lessons matching story type first)
+   - Confidence (higher confidence lessons first)
+
+3. Position lessons AFTER task instructions but BEFORE code patterns — rules are more important than examples.
+
 ## Adaptive Escalation
 
 When an agent returns `NEEDS_CONTEXT` with a description of what is missing:
@@ -163,182 +274,20 @@ Log each escalation:
   New total: 4,612 tokens (still within T3 budget)
 ```
 
-## Cross-Session Intelligence
+## Context Caching Between Stories
 
-Tracks which files were accessed, which context packages worked, and uses that history to improve context selection in future sessions. Inspired by Windsurf's Cascade memory model.
+When dispatching multiple stories in the same milestone, many context pieces are reused. Avoid re-computing:
 
-### File Access Pattern Tracking
+1. **Cache the CLAUDE.md rule parse** — rules don't change between stories. Parse once, reuse.
+2. **Cache the DNA patterns** — project DNA is stable within a milestone.
+3. **Cache file signatures** — type definitions and function signatures change only when a story modifies them. After a story is DONE, invalidate only the files it modified.
+4. **Don't cache QA history** — this grows with each story and must be fresh.
 
-At the end of every session, append learned file patterns to `.maestro/memory/context-history.md`. The file is human-readable and manually editable.
-
-**Storage format:**
-
-```markdown
-## File Access Patterns
-- [auth features] → src/auth/*, src/middleware/*, tests/auth/*
-- [API endpoints] → src/routes/*, src/validators/*, tests/api/*
-- [UI components] → src/components/*, src/styles/*, tests/components/*
-- [database] → src/db/*, src/models/*, prisma/*, tests/db/*
-- [payments] → src/billing/*, src/webhooks/stripe/*, tests/billing/*
-
-## Pattern Hit Rates
-<!-- Format: feature-type | file-glob | sessions-included | sessions-useful | hit-rate -->
-- [auth features] | src/auth/* | 12 | 11 | 0.92
-- [auth features] | src/middleware/* | 12 | 9 | 0.75
-- [API endpoints] | src/routes/* | 18 | 18 | 1.00
-- [API endpoints] | src/validators/* | 18 | 14 | 0.78
-- [UI components] | src/styles/* | 7 | 4 | 0.57
-
-## Session Log
-<!-- One line per session with outcome -->
-- 2026-03-17 | story:auth-refresh | feature:auth | outcome:QA_PASS | package:3412t | missing:none
-- 2026-03-17 | story:search-api | feature:API endpoints | outcome:NEEDS_CONTEXT | package:2800t | missing:src/cache/manager.ts
-- 2026-03-16 | story:login-form | feature:UI components | outcome:QA_PASS | package:5100t | missing:none
-```
-
-**Feature-type detection:** Classify the current story's feature type by matching keywords from the story title and acceptance criteria against known feature types. If no match is found, classify as `unknown` and record without pre-including files.
-
-| Keyword signals | Feature type |
-|----------------|--------------|
-| auth, login, session, token, permission, role | auth features |
-| route, endpoint, API, REST, GraphQL, request, response | API endpoints |
-| component, UI, form, modal, page, layout, style | UI components |
-| database, query, migration, schema, model, ORM | database |
-| payment, billing, subscription, invoice, stripe | payments |
-
-### Learning Signals
-
-The context engine updates `.maestro/memory/context-history.md` based on three outcome signals:
-
-**Signal 1 — NEEDS_CONTEXT (negative signal):**
-When an implementer returns `NEEDS_CONTEXT`, record which files were missing. These files were under-represented in the context package.
-
-```
-Action: Append to Session Log with outcome:NEEDS_CONTEXT and missing:<file-path>
-Action: Increment sessions-included for existing patterns, do NOT increment sessions-useful
-Action: If the missing file belongs to a recognizable glob, add a new Pattern Hit Rate entry
-```
-
-**Signal 2 — QA passes first try (positive signal):**
-When a QA reviewer returns DONE on the first attempt (no prior self-heal or NEEDS_CONTEXT in the same story), record the context package as "good".
-
-```
-Action: Append to Session Log with outcome:QA_PASS and missing:none
-Action: Increment both sessions-included and sessions-useful for all globs that were included
-```
-
-**Signal 3 — Self-heal succeeds (error-to-file mapping):**
-When self-heal resolves an error, record the error category → file mapping. This improves T4 fix packages.
-
-```
-Action: Append to Session Log with outcome:SELF_HEAL_PASS
-Action: Record the error type and which file contained the fix under a ## Self-Heal Patterns section
-```
-
-**Self-heal pattern format:**
-
-```markdown
-## Self-Heal Patterns
-- [TypeScript type error] → src/types/*, tsconfig.json
-- [ESLint rule violation] → .eslintrc.*, src/**/*.ts (file where error occurred)
-- [missing import] → src/lib/*, src/utils/*, package.json
-- [test assertion failure] → tests/*, src/<file-under-test>
-```
-
-### Context Prediction
-
-Before composing a context package for a T3 implementer or T4 fix agent, check `.maestro/memory/context-history.md` for pre-established patterns.
-
-**Prediction algorithm:**
-
-1. Detect the story's feature type from keyword signals (see table above).
-2. Look up all Pattern Hit Rate entries for that feature type.
-3. Collect file globs where `hit-rate > 0.7`.
-4. Resolve those globs against the current project tree (use `git ls-files`).
-5. Score the resolved files using the normal relevance filter (Step 3).
-6. Pre-include any file that scores above the T3 threshold (0.5) AND has a hit-rate above 0.7.
-7. Label these files as `[predicted]` in the assembled package so the implementer knows they were added proactively.
-
-**Confidence log entry:**
-
-```
-[2026-03-18T09:10:00] Story 07-auth-refresh | Prediction: auth features
-  Pre-included (hit-rate ≥ 0.70): src/auth/session.ts(0.92), src/middleware/auth.ts(0.75)
-  Skipped (hit-rate < 0.70): src/auth/oauth.ts(0.50)
-  Predicted tokens: +612 | New total: 4,024 (within T3 budget)
-```
-
-**When no history exists:** Skip prediction entirely. Do not pre-include any files on guesses. Build history first.
-
-**When history exists but hit-rate is below 0.7 for all files:** Skip prediction. Include only what the standard relevance filter selects.
-
-### Recent Changes Awareness
-
-At session start, check for files modified since the last recorded session in `.maestro/memory/context-history.md`.
-
-**Step-by-step:**
-
-1. Read the last session date from the Session Log (most recent entry).
-2. Run: `git log --since="<last-session-date>" --name-only --pretty=format: | sort -u`
-3. Collect the resulting file list as "recently changed files".
-4. When composing any context package, cross-reference the story's file list against recently changed files.
-5. If any file the story touches was also recently changed, flag it in the package.
-
-**Flag format in composed package:**
-
-```
-Files (flagged):
-  src/auth/session.ts [lines 1-60] — [RECENTLY CHANGED: modified since last session]
-  src/middleware/auth.ts [lines 10-45]
-```
-
-**Warn the implementer:**
-
-Prepend a warning block to the context package when any flagged file is present:
-
-```
-[!] RECENT CHANGES DETECTED
-The following files were modified since the last recorded session and may conflict
-with assumptions in this story:
-  - src/auth/session.ts (changed 2026-03-17)
-Review these files carefully before implementing. Interfaces or behaviors may have shifted.
-```
-
-**If no session log exists yet:** Skip recent-changes check. There is no baseline to diff against.
-
-### Integration with Memory Skill
-
-The memory skill and context engine serve complementary roles. They do not duplicate each other.
-
-| Concern | Memory Skill | Context Engine |
-|---------|-------------|----------------|
-| Scope | Semantic facts about the project (decisions, constraints, patterns, why) | Tactical file-level context for a specific agent dispatch |
-| Storage | `.claude/agent-memory/` | `.maestro/memory/context-history.md` |
-| Lifetime | Persistent across all sessions, manually curated | Persistent across sessions, auto-updated by outcomes |
-| Input to agent | "What to do and why" — project knowledge, conventions, rationale | "Where to do it" — the exact files, line ranges, and interfaces needed |
-| Updated by | User edits, agent memory writes | Context engine itself, based on NEEDS_CONTEXT / QA_PASS / SELF_HEAL signals |
-
-**Composition rule:** When building a T3 or T4 package, pull semantic facts from the memory skill first (constraints, conventions, rationale), then layer file-level context from the context engine on top. The memory skill is read-only input to the context engine's Step 3 (relevance filter) — facts stored in memory can raise the relevance score of related files.
-
-**Example:** If memory contains "auth refresh uses sliding window expiry — see src/auth/session.ts", and the current story is tagged `auth features`, that memory fact boosts the relevance score of `src/auth/session.ts` even before the prediction step runs.
-
-## MCP Tool Search — 85% Context Reduction
-
-Claude Code v2.1.76 introduced MCP Tool Search (lazy loading for tool definitions). When enabled, MCP tool descriptions are NOT loaded into the initial context — they are fetched on demand via the `ToolSearch` tool only when needed.
-
-**Impact:** In projects with many MCP servers, tool definitions can consume 77K+ tokens of context. With Tool Search, this drops to ~8.7K. This is an **85% reduction** in context overhead.
-
-**How to leverage in Maestro:**
-
-1. **For SDK-based agents:** Pass `tools: ["ToolSearch", ...]` instead of listing all MCP tools.
-2. **For plugin-level configuration:** Skills that interact with MCP servers should use `ToolSearch` to discover available tools rather than pre-loading all definitions.
-3. **Context budget impact:** When calculating tier budgets, subtract MCP tool overhead if Tool Search is enabled. T3/T4 agents gain significant headroom.
-
-**Recommendation:** Add `ToolSearch` to all agent `allowed-tools` lists to enable on-demand tool discovery.
+Implementation: Keep a `context_cache` dict in the orchestrator's working memory. Key by file path + hash. Invalidate entries when a story modifies the source file.
 
 ## Integration Points
 
 - **Invoked by:** `delegation` skill (every agent dispatch)
-- **Reads from:** `.maestro/dna.md`, `.maestro/stories/`, `.maestro/state.local.md`, project CLAUDE.md, source files, `.maestro/memory/context-history.md`
-- **Writes to:** `.maestro/context-log.md` (append-only log), `.maestro/memory/context-history.md` (cross-session learning)
+- **Reads from:** `.maestro/dna.md`, `.maestro/stories/`, `.maestro/state.local.md`, project CLAUDE.md, source files, `.maestro/memory/semantic.md`
+- **Writes to:** `.maestro/context-log.md` (append-only log)
 - **References:** `references/tier-definitions.md`, `references/relevance-rules.md`, `references/budget-profiles.md`

@@ -49,10 +49,19 @@ if [[ -z "$frontmatter" ]]; then
   allow_exit "Empty Maestro frontmatter"
 fi
 
-# Helper to extract a YAML value (simple key: value parsing)
+# Helper to extract a YAML value (handles colons in values by splitting on first colon only)
 yaml_val() {
   local key="$1"
-  printf '%s\n' "$frontmatter" | grep -E "^${key}:" | head -1 | sed "s/^${key}:[[:space:]]*//" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/" | xargs
+  local line
+  line=$(printf '%s\n' "$frontmatter" | grep -E "^${key}:" | head -1)
+  [[ -z "$line" ]] && echo "" && return
+  # Remove key and first colon, trim leading whitespace
+  local val="${line#*:}"
+  val="${val#"${val%%[![:space:]]*}"}"
+  # Strip surrounding quotes
+  val="${val%\"}" ; val="${val#\"}"
+  val="${val%\'}" ; val="${val#\'}"
+  printf '%s' "$val"
 }
 
 # --- Check active state ---
@@ -75,8 +84,7 @@ fi
 
 current_session_id=""
 if [[ -n "$hook_input" ]]; then
-  # Parse session_id without jq — pure bash/grep
-  current_session_id=$(printf '%s' "$hook_input" | grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || true)
+  current_session_id=$(printf '%s' "$hook_input" | jq -r '.session_id // empty' 2>/dev/null || true)
 fi
 
 if [[ -n "$state_session_id" && -n "$current_session_id" && "$state_session_id" != "$current_session_id" ]]; then

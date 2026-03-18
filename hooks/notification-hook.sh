@@ -12,16 +12,29 @@ if [[ ! -f "$STATE_FILE" ]]; then
   exit 0
 fi
 
-# Parse active status
-active=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | grep '^active:' | head -1 | sed 's/active:[[:space:]]*//' | xargs 2>/dev/null || echo "false")
+# Parse frontmatter
+frontmatter=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE" 2>/dev/null || true)
+
+yaml_val() {
+  local key="$1"
+  local line
+  line=$(printf '%s\n' "$frontmatter" | grep -E "^${key}:" | head -1)
+  [[ -z "$line" ]] && echo "" && return
+  local val="${line#*:}"
+  val="${val#"${val%%[![:space:]]*}"}"
+  val="${val%\"}" ; val="${val#\"}"
+  val="${val%\'}" ; val="${val#\'}"
+  printf '%s' "$val"
+}
+
+active=$(yaml_val "active")
 
 if [[ "$active" != "true" ]]; then
   exit 0
 fi
 
-# Parse feature and phase
-feature=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | grep '^feature:' | head -1 | sed 's/feature:[[:space:]]*//' | sed 's/^"\(.*\)"$/\1/' | xargs 2>/dev/null || echo "")
-phase=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | grep '^phase:' | head -1 | sed 's/phase:[[:space:]]*//' | xargs 2>/dev/null || echo "")
+feature=$(yaml_val "feature")
+phase=$(yaml_val "phase")
 
 # Only notify on checkpoint/paused phases (when user action is needed)
 case "$phase" in

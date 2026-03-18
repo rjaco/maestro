@@ -6,7 +6,7 @@
 # Install: Add to settings.json:
 #   "statusLine": {
 #     "type": "command",
-#     "command": "~/.claude/plugins/cache/maestro-orchestrator/maestro/1.0.0/scripts/statusline.sh"
+#     "command": "${CLAUDE_PLUGIN_ROOT}/scripts/statusline.sh"
 #   }
 
 set -euo pipefail
@@ -36,8 +36,7 @@ fi
 # Look for .maestro/state.local.md in the working directory
 CWD=""
 if [[ -n "$SESSION_DATA" ]]; then
-  # Parse cwd without jq — pure bash/grep
-  CWD=$(printf '%s' "$SESSION_DATA" | grep -o '"cwd"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || true)
+  CWD=$(printf '%s' "$SESSION_DATA" | jq -r '.cwd // empty' 2>/dev/null || true)
 fi
 CWD="${CWD:-$(pwd)}"
 
@@ -59,7 +58,14 @@ frontmatter=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | sed '1d;$d')
 
 yaml_val() {
   local key="$1"
-  printf '%s\n' "$frontmatter" | grep -E "^${key}:" | head -1 | sed "s/^${key}:[[:space:]]*//" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/" | xargs 2>/dev/null || echo ""
+  local line
+  line=$(printf '%s\n' "$frontmatter" | grep -E "^${key}:" | head -1)
+  [[ -z "$line" ]] && echo "" && return
+  local val="${line#*:}"
+  val="${val#"${val%%[![:space:]]*}"}"
+  val="${val%\"}" ; val="${val#\"}"
+  val="${val%\'}" ; val="${val#\'}"
+  printf '%s' "$val"
 }
 
 active=$(yaml_val "active")

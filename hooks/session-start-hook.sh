@@ -1,58 +1,92 @@
 #!/usr/bin/env bash
-# SessionStart hook — Re-inject critical Maestro state on session start.
-# Fires on every session start (startup, resume, compact, clear).
-# When source is "compact", outputs state summary to STDOUT for context injection.
-# This is the correct pattern for post-compaction re-injection.
-
 set -euo pipefail
 
-STATE_FILE=".maestro/state.local.md"
-VISION_FILE=".maestro/vision.md"
+# Maestro SessionStart Hook
+# Detects Maestro state and injects context at session start.
+# Lets every new session know if Maestro is initialized and what state it's in.
 
 # Read hook input from stdin
-INPUT=$(cat)
+HOOK_INPUT=""
+if [[ ! -t 0 ]]; then
+  HOOK_INPUT=$(cat 2>/dev/null || true)
+fi
 
-# Check if this is a post-compaction resume
-SOURCE=$(echo "$INPUT" | grep -o '"source":[[:space:]]*"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || echo "")
+# Get working directory
+CWD=""
+if [[ -n "$HOOK_INPUT" ]]; then
+  CWD=$(printf '%s' "$HOOK_INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
+fi
+CWD="${CWD:-$(pwd)}"
 
-# Only act on compact source
-if [ "$SOURCE" != "compact" ]; then
+DNA_FILE="$CWD/.maestro/dna.md"
+STATE_FILE="$CWD/.maestro/state.local.md"
+
+# No Maestro initialization? Silent exit.
+if [[ ! -f "$DNA_FILE" ]]; then
   exit 0
 fi
 
-# Only act if we have an active Maestro session
-if [ ! -f "$STATE_FILE" ]; then
-  exit 0
+# Build context message
+MSG=""
+
+# Check for active session
+if [[ -f "$STATE_FILE" ]]; then
+  FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE" 2>/dev/null || true)
+
+  yaml_val() {
+    local key="$1"
+    local line
+    line=$(printf '%s\n' "$FRONTMATTER" | grep -E "^${key}:" | head -1)
+    [[ -z "$line" ]] && echo "" && return
+    local val="${line#*:}"
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%\"}" ; val="${val#\"}"
+    val="${val%\'}" ; val="${val#\'}"
+    printf '%s' "$val"
+  }
+
+  ACTIVE=$(yaml_val "active")
+  FEATURE=$(yaml_val "feature")
+  PHASE=$(yaml_val "phase")
+  LAYER=$(yaml_val "layer")
+  CURRENT_STORY=$(yaml_val "current_story")
+  TOTAL_STORIES=$(yaml_val "total_stories")
+  CURRENT_MILESTONE=$(yaml_val "current_milestone")
+  TOTAL_MILESTONES=$(yaml_val "total_milestones")
+
+  if [[ "$ACTIVE" == "true" ]]; then
+    MSG="Maestro has an ACTIVE session."
+    MSG="$MSG Feature: ${FEATURE:-unknown}."
+    MSG="$MSG Phase: ${PHASE:-unknown}."
+
+    if [[ "$LAYER" == "opus" ]]; then
+      MSG="$MSG Mode: Magnum Opus."
+      MSG="$MSG Milestone: ${CURRENT_MILESTONE:-?}/${TOTAL_MILESTONES:-?}."
+    fi
+
+    if [[ -n "$TOTAL_STORIES" ]] && [[ "$TOTAL_STORIES" != "0" ]]; then
+      MSG="$MSG Story: ${CURRENT_STORY:-?}/${TOTAL_STORIES}."
+    fi
+
+    MSG="$MSG Use /maestro status for details or /maestro opus --resume to continue."
+  elif [[ "$PHASE" == "completed" ]]; then
+    MSG="Maestro: last session completed (${FEATURE:-unknown}). Run /maestro for a new task."
+  elif [[ "$PHASE" == "paused" ]]; then
+    MSG="Maestro: PAUSED session (${FEATURE:-unknown})."
+    if [[ "$LAYER" == "opus" ]]; then
+      MSG="$MSG Resume with /maestro opus --resume."
+    else
+      MSG="$MSG Resume with /maestro status."
+    fi
+  fi
+else
+  MSG="Maestro initialized for this project. Use /maestro to start orchestrating."
 fi
 
-ACTIVE=$(grep -m1 "^active:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "false")
-if [ "$ACTIVE" != "true" ]; then
-  exit 0
+# Only output if we have something to say
+if [[ -n "$MSG" ]]; then
+  # SessionStart hooks output is injected as a system message
+  printf '%s' "$MSG"
 fi
 
-# Extract state fields
-FEATURE=$(grep -m1 "^feature:" "$STATE_FILE" 2>/dev/null | sed 's/^feature:[[:space:]]*//' || echo "unknown")
-LAYER=$(grep -m1 "^layer:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "execution")
-MODE=$(grep -m1 "^mode:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "checkpoint")
-PHASE=$(grep -m1 "^phase:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "unknown")
-CURRENT_STORY=$(grep -m1 "^current_story:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "0")
-TOTAL_STORIES=$(grep -m1 "^total_stories:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "0")
-MILESTONE=$(grep -m1 "^current_milestone:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "1")
-TOTAL_MILESTONES=$(grep -m1 "^total_milestones:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "1")
-
-# Extract North Star from vision.md
-NORTH_STAR=""
-if [ -f "$VISION_FILE" ]; then
-  NORTH_STAR=$(grep -m1 "^## North Star" -A 2 "$VISION_FILE" 2>/dev/null | tail -1 || echo "")
-fi
-
-# Output plain text to STDOUT — this gets injected as Claude's context
-printf '[Maestro State Recovery]\n'
-printf 'Feature: %s\n' "$FEATURE"
-printf 'Mode: %s | Layer: %s | Phase: %s\n' "$MODE" "$LAYER" "$PHASE"
-printf 'Story: %s/%s | Milestone: %s/%s\n' "$CURRENT_STORY" "$TOTAL_STORIES" "$MILESTONE" "$TOTAL_MILESTONES"
-if [ -n "$NORTH_STAR" ]; then
-  printf 'North Star: %s\n' "$NORTH_STAR"
-fi
-printf 'Branch: development\n'
-printf 'Read .maestro/state.local.md for full state.\n'
+exit 0

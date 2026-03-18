@@ -60,11 +60,21 @@ Report only issues with confidence >= 80.
 
 ## Dispatch
 
-Launch all 3 as background agents in parallel:
+Launch all 3 as background agents in parallel.
+
+**Agent type selection:**
+- If the `feature-dev` plugin is installed, use `feature-dev:code-reviewer` for higher-quality reviews.
+- If `feature-dev` is not installed, use `maestro:maestro-qa-reviewer` with the focus-specific prompt appended to the standard QA prompt.
 
 ```
+# Preferred (if feature-dev plugin installed):
 Agent(subagent_type="feature-dev:code-reviewer", ...)
+
+# Fallback (always available):
+Agent(subagent_type="maestro:maestro-qa-reviewer", ...)
 ```
+
+**Note:** The `feature-dev` plugin (`feature-dev:code-reviewer`) is an optional dependency. Install it for best multi-review results: `claude plugin marketplace add feature-dev`. Maestro works without it.
 
 Each receives:
 - The git diff for the story's changes

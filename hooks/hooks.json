@@ -18,6 +18,39 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/branch-guard.sh"
           }
         ]
+      },
+      {
+        "matcher": {
+          "toolName": "Edit"
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/delegation-hook.sh"
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "toolName": "Write"
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/delegation-hook.sh"
+          }
+        ]
+      },
+      {
+        "matcher": {
+          "toolName": "NotebookEdit"
+        },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/delegation-hook.sh"
+          }
+        ]
       }
     ],
     "Stop": [

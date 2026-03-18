@@ -10,7 +10,7 @@ set -euo pipefail
 # Read hook input from stdin
 HOOK_INPUT=""
 if [[ ! -t 0 ]]; then
-  HOOK_INPUT=$(cat)
+  HOOK_INPUT=$(cat 2>/dev/null || true)
 fi
 
 STATE_FILE=".maestro/state.local.md"
@@ -22,11 +22,18 @@ if [[ ! -f "$STATE_FILE" ]]; then
 fi
 
 # Parse frontmatter
-FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE" 2>/dev/null)
+FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE" 2>/dev/null || true)
 
 yaml_val() {
   local key="$1"
-  echo "$FRONTMATTER" | grep "^${key}:" | head -1 | sed "s/^${key}:[[:space:]]*//" | sed 's/^"\(.*\)"$/\1/' | sed "s/^'\(.*\)'$/\1/" | xargs 2>/dev/null || echo ""
+  local line
+  line=$(printf '%s\n' "$FRONTMATTER" | grep -E "^${key}:" | head -1)
+  [[ -z "$line" ]] && echo "" && return
+  local val="${line#*:}"
+  val="${val#"${val%%[![:space:]]*}"}"
+  val="${val%\"}" ; val="${val#\"}"
+  val="${val%\'}" ; val="${val#\'}"
+  printf '%s' "$val"
 }
 
 ACTIVE=$(yaml_val "active")
@@ -44,13 +51,10 @@ CONSECUTIVE_FAILURES=$(yaml_val "consecutive_failures")
 MAX_CONSECUTIVE_FAILURES=$(yaml_val "max_consecutive_failures")
 SESSION_ID=$(yaml_val "session_id")
 
-# Parse stop_hook_active flag — Claude Code sets this true on consecutive Stop events
-STOP_HOOK_ACTIVE=$(echo "$HOOK_INPUT" | grep -o '"stop_hook_active"[[:space:]]*:[[:space:]]*\(true\|false\)' | grep -o 'true\|false' || echo "false")
-
 # Session isolation — only loop for the session that started the Opus run
 HOOK_SESSION=""
 if [[ -n "$HOOK_INPUT" ]]; then
-  HOOK_SESSION=$(echo "$HOOK_INPUT" | grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || true)
+  HOOK_SESSION=$(echo "$HOOK_INPUT" | jq -r '.session_id // ""' 2>/dev/null || true)
 fi
 if [[ -n "$SESSION_ID" ]] && [[ -n "$HOOK_SESSION" ]] && [[ "$SESSION_ID" != "$HOOK_SESSION" ]]; then
   printf '{"decision":"approve","reason":"Different session"}\n'
@@ -117,24 +121,31 @@ case "$OPUS_MODE" in
     ;;
 esac
 
-# === STOP_HOOK_ACTIVE GUARD ===
-# When Claude Code sets stop_hook_active=true it IGNORES our "block" decision.
-# We cannot prevent the exit, but we write a handoff record so the daemon can resume.
-if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
-  mkdir -p .maestro/logs
-  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] stop_hook_active forced exit. Daemon should resume." >> .maestro/logs/daemon.log
-  # Do NOT set active=false — the daemon needs it active to continue.
-  printf '{"decision":"approve","reason":"stop_hook_active forced — daemon will resume"}\n'
-  exit 0
-fi
-
 # === BUILD THE LOOP PROMPT ===
 # This is the key: re-inject the Opus orchestration prompt so Claude
 # continues working on the next milestone/story automatically.
 
-SYSTEM_MSG="[MAESTRO LOOP] You MUST continue the Magnum Opus loop. Read .maestro/state.local.md. Execute the next story. Do not summarize — ACT."
+SYSTEM_MSG="Maestro Opus autonomous loop active."
+SYSTEM_MSG="$SYSTEM_MSG Feature: ${FEATURE:-unknown}."
+SYSTEM_MSG="$SYSTEM_MSG Milestone: ${CURRENT_MILESTONE:-?}/${TOTAL_MILESTONES:-?}."
+SYSTEM_MSG="$SYSTEM_MSG Story: ${CURRENT_STORY:-?}/${TOTAL_STORIES:-?}."
+SYSTEM_MSG="$SYSTEM_MSG Phase: ${PHASE:-unknown}."
+SYSTEM_MSG="$SYSTEM_MSG Mode: ${OPUS_MODE}."
+SYSTEM_MSG="$SYSTEM_MSG Do NOT stop. Continue the Opus loop."
+SYSTEM_MSG="$SYSTEM_MSG Re-read .maestro/vision.md for North Star."
+SYSTEM_MSG="$SYSTEM_MSG Execute the next milestone/story via the dev-loop."
+SYSTEM_MSG="$SYSTEM_MSG Dispatch implementer agents in worktrees."
+SYSTEM_MSG="$SYSTEM_MSG Run validation, QA review, git craft."
+SYSTEM_MSG="$SYSTEM_MSG If all milestones complete, set phase: completed and active: false."
 
-LOOP_PROMPT="CONTINUE OPUS LOOP. Milestone: ${CURRENT_MILESTONE:-?}/${TOTAL_MILESTONES:-?}. Phase: ${PHASE:-opus_executing}. ACT NOW: dispatch the next implementer agent."
+LOOP_PROMPT="Continue the Maestro Opus autonomous loop."
+LOOP_PROMPT="$LOOP_PROMPT NORTH STAR: ${FEATURE:-Continue building}."
+LOOP_PROMPT="$LOOP_PROMPT Current milestone: ${CURRENT_MILESTONE:-1}/${TOTAL_MILESTONES:-?}."
+LOOP_PROMPT="$LOOP_PROMPT Current phase: ${PHASE:-opus_executing}."
+LOOP_PROMPT="$LOOP_PROMPT Read .maestro/state.local.md for full state."
+LOOP_PROMPT="$LOOP_PROMPT Read .maestro/vision.md for vision."
+LOOP_PROMPT="$LOOP_PROMPT Execute the next story or milestone."
+LOOP_PROMPT="$LOOP_PROMPT When all milestones are complete, set active: false and phase: completed."
 
 # Update timestamp
 TEMP_FILE="${STATE_FILE}.tmp.$$"
@@ -142,9 +153,13 @@ sed "s/^last_updated: .*/last_updated: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"/" "$ST
 mv "$TEMP_FILE" "$STATE_FILE"
 
 # Block the exit and re-inject the prompt
-# Escape special JSON characters in prompt and system message
-LOOP_PROMPT_ESC=$(printf '%s' "$LOOP_PROMPT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
-SYSTEM_MSG_ESC=$(printf '%s' "$SYSTEM_MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
-printf '{"decision":"block","reason":"%s","systemMessage":"%s"}\n' "$LOOP_PROMPT_ESC" "$SYSTEM_MSG_ESC"
+jq -n \
+  --arg prompt "$LOOP_PROMPT" \
+  --arg msg "$SYSTEM_MSG" \
+  '{
+    "decision": "block",
+    "reason": $prompt,
+    "systemMessage": $msg
+  }'
 
 exit 0
