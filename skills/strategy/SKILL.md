@@ -102,3 +102,17 @@ Write `.maestro/strategy.md` with all sections from Steps 2-7. Be specific throu
 
 - `.maestro/strategy.md` — Complete strategy document
 - Strategy findings inform `architecture` decisions (e.g., SEO requirements shape rendering strategy, content strategy shapes data model)
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: ".maestro/strategy.md"
+  required_sections:
+    - "## Positioning"
+    - "## Channels"
+    - "## Content Strategy"
+    - "## KPIs"
+    - "## Growth Experiments"
+  min_words: 500
+```

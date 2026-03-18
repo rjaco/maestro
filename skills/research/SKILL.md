@@ -137,3 +137,16 @@ Write `.maestro/research.md` with these sections:
 - `.maestro/research.md` — Full research report
 - `.maestro/research/screenshots/` — Visual captures (if Playwright available)
 - Research findings are consumed by `strategy` and `architecture` skills
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: ".maestro/research.md"
+  required_sections:
+    - "## Executive Summary"
+    - "## Key Findings"
+    - "## Competitor Matrix"
+    - "## Recommendations"
+  min_words: 500
+```

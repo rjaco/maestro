@@ -55,3 +55,38 @@ metrics:
 ## Continuity
 
 Living docs are the project's memory. They bridge sessions and agent instances. Write them as if the next reader has zero context about what just happened.
+
+## Documents Managed
+
+| Document | Updated When | What Changes |
+|----------|-------------|--------------|
+| `.maestro/state.md` | After each feature | Features completed, current focus |
+| `.maestro/roadmap.md` | After each milestone (Opus) | Milestone status, completion dates |
+| `.maestro/trust.yaml` | After each story | QA rate, trust level, commit scores |
+| `.maestro/token-ledger.md` | After each story | Token usage, cost data |
+
+## Rules
+
+1. Read before writing — never overwrite, always append/update in place
+2. Remove resolved issues from state
+3. Timestamp all milestone completions
+4. Never delete history — mark as completed, not removed
+5. Keep file sizes manageable — archive old sessions if > 500 lines
+
+## Integration
+
+- Called by dev-loop at CHECKPOINT phase
+- Called by ship skill after PR creation
+- Called by retrospective after analysis
+- Called by opus-loop between milestones
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: ".maestro/state.md"
+  required_sections:
+    - "## Features Completed"
+    - "## Current Session"
+    - "## History"
+```

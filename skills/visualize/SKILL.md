@@ -154,3 +154,14 @@ Visual cost comparison.
 - **opus-loop/SKILL.md**: After roadmap generation, auto-generate Gantt chart
 - **dev-loop/SKILL.md**: At checkpoint, update progress dashboard
 - **status command**: Include progress dashboard in status display
+
+## Output Contract
+
+Generated diagrams are inline (not separate files), so the contract validates the code block format:
+
+```yaml
+output_contract:
+  inline: true
+  required_format: "mermaid code block or ASCII art"
+  min_lines: 5
+```

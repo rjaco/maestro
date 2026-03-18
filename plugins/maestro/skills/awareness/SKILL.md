@@ -97,3 +97,14 @@ awareness:
 - Adds critical findings to `.maestro/notes.md` (picked up by dev-loop)
 - Feeds into daily briefing (brain skill)
 - Proactive agent can be dispatched for deeper analysis on Warning/Alert
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: ".maestro/logs/awareness-{date}-{time}.md"
+  required_sections:
+    - "## Summary"
+    - "## Findings"
+    - "## Recommendations"
+```

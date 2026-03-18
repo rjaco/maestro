@@ -140,3 +140,17 @@ Before finalizing, check:
 
 - `.maestro/architecture.md` — Complete architecture document
 - Architecture decisions inform `decompose` for story generation (data stories, API stories, frontend stories, infra stories)
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: ".maestro/architecture.md"
+  required_sections:
+    - "## Tech Stack"
+    - "## Data Model"
+    - "## API Design"
+    - "## Component Architecture"
+    - "## Infrastructure"
+  min_words: 500
+```

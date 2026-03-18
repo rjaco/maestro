@@ -61,3 +61,60 @@ Delta: +4%
 ```
 
 Save to token-ledger alongside cost data.
+
+## Test Templates
+
+### Unit Test
+
+```typescript
+import { describe, it, expect } from "vitest"
+import { functionName } from "../src/module"
+
+describe("functionName", () => {
+  it("should handle the happy path", () => {
+    const result = functionName(validInput)
+    expect(result).toEqual(expectedOutput)
+  })
+
+  it("should handle edge cases", () => {
+    expect(() => functionName(null)).toThrow()
+    expect(functionName("")).toEqual(defaultValue)
+  })
+})
+```
+
+### API Integration Test
+
+```typescript
+import { describe, it, expect } from "vitest"
+
+describe("POST /api/resource", () => {
+  it("should create a resource", async () => {
+    const res = await fetch("/api/resource", {
+      method: "POST",
+      body: JSON.stringify({ name: "test" }),
+    })
+    expect(res.status).toBe(201)
+  })
+
+  it("should reject invalid input", async () => {
+    const res = await fetch("/api/resource", {
+      method: "POST",
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(400)
+  })
+})
+```
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: "**/*.test.{ts,tsx,js,jsx}"
+  required_content:
+    - "describe("
+    - "it(" or "test("
+    - "expect("
+  min_tests_per_file: 2
+```

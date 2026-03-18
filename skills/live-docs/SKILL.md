@@ -81,3 +81,31 @@ Server Components (default):
 
 [End Live Docs]
 ```
+
+## Framework-Specific Injection Examples
+
+### Next.js App Router
+
+```
+[Live Docs: Next.js App Router]
+Route Handlers: export async function GET/POST/PUT/DELETE(request)
+Server Components: default, no useState/useEffect, async/await OK
+Client Components: add "use client" directive
+Metadata: export const metadata = { title, description }
+Loading: loading.tsx for Suspense boundaries
+Error: error.tsx for error boundaries
+[End Live Docs]
+```
+
+### Prisma
+
+```
+[Live Docs: Prisma Client]
+Query: prisma.user.findMany({ where, include, orderBy })
+Create: prisma.user.create({ data })
+Update: prisma.user.update({ where, data })
+Delete: prisma.user.delete({ where })
+Relations: include: { posts: true }
+Transactions: prisma.$transaction([...])
+[End Live Docs]
+```

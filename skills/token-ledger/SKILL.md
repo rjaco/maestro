@@ -64,3 +64,42 @@ If `cost_tracking.forecast` is `true`, before a feature starts:
 ## Data Source
 
 Token counts come from agent task completion notifications. Look for the `total_tokens` field in the task output. If unavailable, estimate from response length (roughly 1.3 tokens per word for English text).
+
+## Ledger Format
+
+```markdown
+# Token Ledger
+
+## Session: [session_id]
+Feature: [name]
+Date: [date]
+
+| Story | Phase | Model | Tokens | Cost |
+|-------|-------|-------|--------|------|
+| 01-schema | delegate | sonnet | 4,200 | $0.04 |
+| 01-schema | implement | sonnet | 28,400 | $0.26 |
+| 01-schema | qa_review | opus | 8,100 | $0.36 |
+| **Total** | | | **40,700** | **$0.66** |
+
+## Grand Total
+| Sessions | Stories | Tokens | Cost |
+|----------|---------|--------|------|
+| 3 | 10 | 187,400 | $8.15 |
+```
+
+## Integration
+
+- Updated by dev-loop at CHECKPOINT phase
+- Read by forecast skill for cost estimation
+- Read by history command for cost analysis
+- Read by retrospective for spending patterns
+- Read by benchmark for efficiency tracking
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: ".maestro/token-ledger.md"
+  required_sections:
+    - "## Grand Total"
+```

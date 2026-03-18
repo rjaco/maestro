@@ -78,3 +78,32 @@ After a successful commit, update `.maestro/state.local.md` with:
 - Story ID marked as completed
 - Completion timestamp
 - Any concerns flagged during QA review
+
+## Integration
+
+Called by dev-loop Phase 6 (GIT CRAFT):
+- Receives: list of files changed, story spec, acceptance criteria
+- Creates: conventional commit with full documentation
+- After commit: commit-score skill evaluates quality
+
+### Staging Rules
+
+1. Stage only files listed in the story spec
+2. Never stage: `.env`, credentials, `node_modules/`, `.maestro/state.local.md`
+3. If unexpected files changed, PAUSE and ask the user
+4. Use `git add` with specific file paths (never `git add .`)
+
+### Commit Message Template
+
+```
+type(scope): concise description
+
+- Files changed: [list]
+- Tests: [N] added, all passing
+- Acceptance criteria:
+  [x] Criterion 1
+  [x] Criterion 2
+
+Story: [NN-slug]
+Maestro session: [session_id first 8 chars]
+```

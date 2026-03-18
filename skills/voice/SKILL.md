@@ -71,3 +71,29 @@ When a message arrives as `[Voice transcribed]:` prefix (from Claude Code's voic
 2. Route to the appropriate command/skill
 3. Format the response for TTS (short, conversational, no tables/boxes)
 4. If the command requires interactive choices (AskUserQuestion), present options verbally: "Would you like to continue, review the changes, or abort?"
+
+## Integration
+
+### With Dev-Loop
+At checkpoint phase, if voice mode is active:
+- Use TTS-optimized response (short, no tables)
+- Read the story summary aloud
+- Ask "continue, review, or abort?" verbally
+
+### With Status Command
+When voice is active and user asks for status:
+- Speak: "You are working on [feature]. [N] of [M] stories done. Current phase is [phase]."
+
+### With Notifications
+Voice can complement notifications:
+- Audio chime for checkpoint (audio skill)
+- Spoken summary for feature completion (voice skill)
+
+## Configuration
+
+```yaml
+voice:
+  enabled: auto  # auto-detect when /voice is active
+  tts_optimization: true
+  max_response_sentences: 3
+```

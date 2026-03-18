@@ -126,3 +126,15 @@ Save score to `.maestro/logs/health-score.md`:
 - Included in daily briefing (brain skill)
 - Shown in `/maestro doctor` diagnostics
 - Tracked over time for trend analysis
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: ".maestro/logs/health-score.md"
+  required_sections:
+    - "## Health Score History"
+  required_frontmatter:
+    score: integer
+    rating: enum(excellent, good, fair, poor, critical)
+```

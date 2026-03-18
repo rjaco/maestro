@@ -119,3 +119,17 @@ If `.maestro/logs/` contains multiple logs, the build-log skill can generate a s
 ```
 
 This summary is useful for tracking project velocity and cost trends over time.
+
+## Output Contract
+
+```yaml
+output_contract:
+  file_pattern: ".maestro/logs/{session-id}.md"
+  required_sections:
+    - "## Session Info"
+    - "## Story Log"
+  required_frontmatter:
+    session_id: string
+    feature: string
+    started_at: date
+```
