@@ -5,6 +5,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/opus-loop-hook.sh"
+          },
+          {
+            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
           }
         ]
