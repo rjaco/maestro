@@ -142,6 +142,8 @@ You can use Dispatch for ad-hoc parallel tasks and Maestro for structured featur
 | `/maestro history` | Past sessions and cost analysis |
 | `/maestro notify` | Push notifications (Slack, Discord, Telegram) |
 | `/maestro viz` | Visual dashboards and Mermaid diagrams |
+| `/maestro demo` | Interactive demo — learn how Maestro works |
+| `/maestro quick-start` | Pick from pre-built task templates |
 
 ## Troubleshooting
 

@@ -347,6 +347,16 @@ webhooks:
   enabled: false
   poll_interval_minutes: 5
 
+# Audio feedback (Peon Ping-style alerts)
+audio:
+  enabled: true
+  provider: auto       # auto | terminal | macos | linux | none
+  events:
+    on_checkpoint: true
+    on_complete: true
+    on_error: true
+    on_qa_rejection: false
+
 # External integrations (auto-detected)
 integrations:
   kanban:

@@ -50,6 +50,8 @@ claude plugin install maestro
 | `/maestro plan "task"` | Deep planning with codebase exploration |
 | `/maestro notify` | Push notifications (Slack, Discord, Telegram) |
 | `/maestro viz` | Visual dashboards and Mermaid diagrams |
+| `/maestro demo` | Interactive demo — learn how Maestro works |
+| `/maestro quick-start` | Pick from pre-built task templates |
 
 ---
 

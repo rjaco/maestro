@@ -13,7 +13,7 @@ The user's feature description or request, provided via `$ARGUMENTS`.
 
 ## Classification Rules
 
-Analyze the request against three layers. Match the **primary intent**, not incidental keywords.
+Analyze the request against four layers. Match the **primary intent**, not incidental keywords.
 
 ### Layer 1 — Vision & Strategy
 
@@ -39,6 +39,24 @@ Analyze the request against three layers. Match the **primary intent**, not inci
 
 **Output artifacts:** code, tests, commits.
 
+### Layer 4 — Knowledge Work
+
+**Trigger words:** write, blog, article, content, copy, ad, campaign, email, newsletter, report, case study, whitepaper, presentation, social media, SEO, keywords, marketing, growth, funnel, conversion, A/B test, scenario, simulation, what-if, content calendar, editorial.
+
+**Route to:** Appropriate knowledge work skill based on specific intent:
+
+| Intent Pattern | Skill | Output |
+|---------------|-------|--------|
+| "Write a blog/article/post about..." | `content-pipeline` | `.maestro/content/` |
+| "Create ad copy/variations for..." | `marketing-automation` | `.maestro/campaigns/` |
+| "Build a content calendar..." | `content-pipeline` (calendar mode) | `.maestro/content-calendar.md` |
+| "Run a scenario analysis..." | `scenario-planning` | `.maestro/scenarios/` |
+| "Analyze campaign performance..." | `marketing-automation` (analysis mode) | Report output |
+
+**Validation:** Uses `content-validator` and `output-contracts` instead of code tests.
+
+**Output artifacts:** `.maestro/content/`, `.maestro/campaigns/`, `.maestro/scenarios/`
+
 ## Scope Detection
 
 After classifying the layer, assess the scope of the request:
@@ -48,6 +66,7 @@ After classifying the layer, assess the scope of the request:
 | Single concern, 1-3 files, clear boundary | **Single feature** | Route directly to the classified layer |
 | Multiple concerns, 4-10 files, one milestone | **Multi-story feature** | Route to `decompose` then `dev-loop` |
 | Multiple milestones, new product, full system, 10+ files | **Magnum Opus candidate** | Suggest autonomous mode |
+| Content/marketing task, no code involved | **Knowledge work** | Route to Layer 4 skills |
 
 If scope seems too large for a single feature, respond:
 
@@ -58,7 +77,7 @@ If scope seems too large for a single feature, respond:
 Present the classification to the user:
 
 ```
-Layer: [1/2/3] — [Vision & Strategy / Tactics & Architecture / Execution]
+Layer: [1/2/3/4] — [Vision & Strategy / Tactics & Architecture / Execution / Knowledge Work]
 Scope: [single feature / multi-story / magnum opus candidate]
 Skills: [comma-separated list of skills to invoke]
 Suggested mode: [yolo / checkpoint / careful]
