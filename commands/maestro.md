@@ -439,3 +439,5 @@ When all stories are done:
 - ALWAYS check .maestro/notes.md between stories for user context
 - If `.maestro/config.yaml` exists, respect its settings for cost_tracking, forecast, and budget_enforcement
 - Keep subagent context lean — only what the agent needs for THIS story (see Context Engine in plan)
+- **EXECUTE, DON'T PLAN**: After decomposition, IMMEDIATELY dispatch implementer agents. Never substitute a plan document for actual execution. The user invoked /maestro to BUILD, not to receive another markdown file. If your response doesn't include at least one Agent tool call, you are doing it wrong.
+- **DISPATCH, DON'T WRITE DIRECTLY**: All implementation MUST go through dispatched agents with `isolation: "worktree"`. The orchestrator reads state, composes context, dispatches agents, validates results, and manages git. It does NOT write implementation files directly.

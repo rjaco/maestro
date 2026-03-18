@@ -342,6 +342,38 @@ Files modified: [N]
 Ready to ship? Create a PR with /maestro ship
 ```
 
+## ANTI-PATTERN: "Plan Instead of Execute"
+
+**CRITICAL RULE — DO NOT VIOLATE:**
+
+The orchestrator (Claude) has a tendency to write a plan document and
+present it as "done" instead of actually dispatching agents and building.
+This violates the entire purpose of Opus mode.
+
+**FORBIDDEN behaviors:**
+- Writing a `.maestro/plans/*.md` file and stopping
+- Saying "plan saved for a future session"
+- Presenting a roadmap and asking "should I execute this later?"
+- Claiming "context is tight, let me save state" before executing ANY milestone
+- Substituting a markdown summary for actual agent dispatch
+
+**REQUIRED behavior:**
+- After roadmap approval, IMMEDIATELY start executing M1
+- Dispatch implementer agents via the Agent tool with `isolation: "worktree"`
+- NEVER stop between "plan" and "execute" — they are ONE continuous flow
+- If context is genuinely running low, execute at least ONE complete milestone
+  before saving state. A partial execution is infinitely more valuable than
+  a perfect plan document.
+- The opus-loop-hook.sh Stop hook will re-inject the prompt if context fills up.
+  Trust the hook. Do not preemptively save state.
+
+**The test:** If your response ends without having called the Agent tool
+at least once to dispatch an implementer, YOU ARE DOING IT WRONG.
+
+**Why this matters:** The user runs `/maestro opus` expecting autonomous
+execution, not another document. Every minute spent writing plans instead
+of dispatching agents is a broken promise to the user.
+
 ## Safety Valves
 
 | Valve | Threshold | Action |

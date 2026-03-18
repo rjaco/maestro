@@ -7,6 +7,20 @@ description: "Magnum Opus orchestration loop. Drives milestone-by-milestone exec
 
 The mega-loop that drives Magnum Opus mode. Executes milestones sequentially, each containing multiple stories, with quality gates, auto-fix cycles, retrospectives, and North Star anchoring between milestones.
 
+## EXECUTE, DON'T PLAN
+
+**This skill EXECUTES. It does NOT produce plan documents.**
+
+After decomposing a milestone into stories, the orchestrator MUST immediately
+dispatch implementer agents via the Agent tool. Writing a plan file and
+stopping is a violation of this skill's purpose.
+
+The flow is: decompose → dispatch Agent (isolation: "worktree") → validate → QA → commit → next story.
+There is NO step where you save a plan and wait. The loop is continuous.
+
+If you find yourself writing a `.maestro/plans/*.md` file instead of
+calling the Agent tool, STOP and re-read this section.
+
 ## Overview
 
 ```
