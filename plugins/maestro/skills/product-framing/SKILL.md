@@ -208,7 +208,7 @@ Items surfaced by Product Framing but explicitly deferred for later iterations.
 
 ## Integration with maestro.md
 
-Product Framing is invoked between **Step 5 (Classify)** and **Step 9 (Decompose)**.
+Product Framing is invoked at **Step 5.5**, immediately after **Step 5 (Classify)** and before **Step 6 (Forecast)**.
 
 In `maestro.md`, this hook point is:
 

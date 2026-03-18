@@ -67,7 +67,7 @@ const DESTRUCTIVE_PATTERNS: RegExp[] = [
 ]
 
 const agent = new Agent({
-  model: 'claude-opus-4-5',
+  model: 'claude-opus-4-6',
   hooks: {
     PreToolUse: async ({ tool, input }) => {
       if (tool !== 'Bash') return {}
@@ -107,7 +107,7 @@ const toolStartTimes = new Map<string, number>()
 const metricsLog: ToolMetrics[] = []
 
 const agent = new Agent({
-  model: 'claude-opus-4-5',
+  model: 'claude-opus-4-6',
   hooks: {
     PreToolUse: async ({ tool }) => {
       toolStartTimes.set(tool, Date.now())
@@ -152,7 +152,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
 const agent = new Agent({
-  model: 'claude-opus-4-5',
+  model: 'claude-opus-4-6',
   hooks: {
     Stop: async ({ session, reason }) => {
       const state = (session as any).state ?? {}
@@ -208,7 +208,7 @@ const activeAgents = new Map<string, AgentRecord>()
 const completionLog: Array<{ subagentId: string; durationMs: number; completedAt: string }> = []
 
 const agent = new Agent({
-  model: 'claude-opus-4-5',
+  model: 'claude-opus-4-6',
   hooks: {
     SubagentStart: async ({ subagentId, prompt }) => {
       activeAgents.set(subagentId, {
@@ -262,7 +262,7 @@ import * as path from 'node:path'
 const ARCHIVE_DIR = path.join(process.cwd(), '.maestro', 'compaction-archives')
 
 const agent = new Agent({
-  model: 'claude-opus-4-5',
+  model: 'claude-opus-4-6',
   hooks: {
     PreCompact: async ({ tokenCount, session }) => {
       await fs.mkdir(ARCHIVE_DIR, { recursive: true })
@@ -304,7 +304,7 @@ async function appendJournal(entry: Record<string, unknown>) {
 }
 
 const agent = new Agent({
-  model: 'claude-opus-4-5',
+  model: 'claude-opus-4-6',
   hooks: {
     WorktreeCreate: async ({ worktreePath, branch, session }: any) => {
       const entry = {
@@ -363,7 +363,7 @@ function classify(message: string): MaestroIntent {
 const classifiedLog: ClassifiedMessage[] = []
 
 const agent = new Agent({
-  model: 'claude-opus-4-5',
+  model: 'claude-opus-4-6',
   hooks: {
     UserMessage: async ({ message }) => {
       const intent = classify(message)
@@ -446,7 +446,7 @@ export const maestroHooks = {
 import { Agent } from '@anthropic-ai/agent-sdk'
 import { maestroHooks } from './hooks/sdk.js'
 
-const agent = new Agent({ model: 'claude-opus-4-5', hooks: maestroHooks })
+const agent = new Agent({ model: 'claude-opus-4-6', hooks: maestroHooks })
 ```
 
 Use SDK hooks when:

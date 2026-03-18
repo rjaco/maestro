@@ -76,7 +76,7 @@ Display context-aware help. If `.maestro/state.local.md` exists, read it to show
 
   Subcommands:
     plan · init · status · board · config · help
-    brain · doctor · history · model · opus · retro
+    brain · doctor · history · model · opus (magnum-opus) · retro
     notify · viz · demo · quick-start · spec
     cost-estimate · deps · rollback · profile
 
@@ -97,6 +97,7 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 | First word | Route to |
 |------------|----------|
 | `opus` | `/maestro magnum-opus` |
+| `magnum-opus` | `/maestro magnum-opus` |
 | `help` | `/maestro help` |
 | `config` | `/maestro config` |
 | `board` | `/maestro board` |
@@ -131,7 +132,7 @@ Extract these flags from `$ARGUMENTS`. Everything that is not a flag is the DESC
 | `--no-cost-tracking` | COST_TRACKING=false | true |
 | `--no-forecast` | FORECAST=false | true |
 | `--max-stories N` | MAX_STORIES=N | 8 |
-| `--framing` | RUN_FRAMING=true | false |
+| `--framing` | FRAMING=true | false |
 | `--skip-clarify` | SKIP_CLARIFY=true | false |
 
 If no mode flag is provided, use AskUserQuestion to let the user pick:
@@ -269,7 +270,7 @@ Mode: [MODE]
 
 ## Step 9: Decompose into Stories
 
-Invoke the decompose skill to break the DESCRIPTION into 2-8 stories (or up to MAX_STORIES).
+Invoke the decompose skill to break the DESCRIPTION into 2-8 stories (or up to MAX_STORIES). If `SKIP_CLARIFY` is true, pass `--skip-clarify` to the decompose skill to bypass Phase 0 (Clarify).
 
 For each story, create `.maestro/stories/NN-slug.md` using the story template format:
 

@@ -84,14 +84,17 @@ Gather data from:
 Track consecutive days with at least one Maestro commit:
 
 ```bash
-git log --format="%ad" --date=short | sort -u | awk '
-  BEGIN { streak = 0; max_streak = 0 }
+git log --format="%ad" --date=short | sort -ur | awk '
+  BEGIN { streak = 0; prev = "" }
   {
-    if (NR > 1 && (systime() - mktime($1)) <= 86400 * streak) streak++
-    else { if (streak > max_streak) max_streak = streak; streak = 1 }
+    split($1, d, "-")
+    cur = mktime(d[1] " " d[2] " " d[3] " 0 0 0")
+    if (prev != "" && (prev - cur) == 86400) streak++
+    else if (prev != "") { print streak + 1; streak = 0 }
+    prev = cur
   }
-  END { if (streak > max_streak) max_streak = streak; print streak, max_streak }
-'
+  END { print streak + 1 }
+' | head -1
 ```
 
 ## Improvement Proposals
