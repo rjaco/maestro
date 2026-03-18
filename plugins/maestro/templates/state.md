@@ -1,5 +1,5 @@
 ---
-maestro_version: "1.0.0"
+maestro_version: "2.0.0"
 active: false
 session_id: ""
 feature: ""

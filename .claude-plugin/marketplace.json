@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "maestro",
-      "description": "Full-stack autonomous development orchestrator. Build features with /maestro, build entire products with /maestro opus (Magnum Opus).",
-      "version": "1.0.0",
+      "description": "Full-stack autonomous development orchestrator with kanban (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), and session memory. Build features with /maestro, entire products with /maestro opus.",
+      "version": "1.1.0",
       "author": {
         "name": "Maestro Contributors"
       },

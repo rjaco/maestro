@@ -163,7 +163,7 @@ Update `.maestro/state.local.md` with Opus-specific fields:
 
 ```yaml
 ---
-maestro_version: "1.0.0"
+maestro_version: "1.1.0"
 active: true
 session_id: "[uuid]"
 feature: "[VISION summary, first line]"
@@ -220,7 +220,7 @@ While agents work in the background, stay responsive to the user. Classify every
 |--------|--------|
 | Status check | Show current milestone, story, phase, spend |
 | Information / context | Save to `.maestro/notes.md` with timestamp and milestone tag |
-| Complement / feedback | Acknowledge, save to notes |
+| Compliment / feedback | Acknowledge, save to notes |
 | Redirect / reprioritize | Invoke divergence-handler |
 | PAUSE | Graceful stop after current story completes |
 | STOP / URGENT | Immediate halt, save state |

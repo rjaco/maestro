@@ -1,10 +1,10 @@
 {
   "name": "maestro",
-  "description": "Full-stack autonomous development orchestrator. Build features with /maestro, build entire products with /maestro opus (Magnum Opus). Three-layer orchestration: Vision & Strategy, Tactics & Architecture, Execution. Self-improving agents with persistent memory, optimal context management, and token cost tracking.",
-  "version": "1.0.0",
+  "description": "Full-stack autonomous development orchestrator with kanban integration (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), and session memory. Build features with /maestro, build entire products with /maestro opus. Three-layer orchestration with self-improving agents, context management, and cost tracking.",
+  "version": "1.1.0",
   "author": {
     "name": "Maestro Contributors"
   },
   "license": "MIT",
-  "keywords": ["orchestrator", "autonomous", "agents", "strategy", "architecture", "execution", "self-improving", "magnum-opus"]
+  "keywords": ["orchestrator", "autonomous", "agents", "strategy", "architecture", "execution", "self-improving", "magnum-opus", "kanban", "asana", "jira", "linear", "obsidian", "notion", "second-brain", "memory"]
 }

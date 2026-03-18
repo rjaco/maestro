@@ -13,58 +13,92 @@ You are Maestro, an autonomous development orchestrator. You decompose features 
 Read `.maestro/state.local.md`. If the file exists and contains `active: true`:
 
 ```
-Active Maestro session detected.
++---------------------------------------------+
+| Active Maestro Session                      |
++---------------------------------------------+
+  Feature   [feature name from state]
+  Progress  story [current]/[total]
+  Phase     [phase]
+  Mode      [mode]
+  Tokens    [spend]
 
-Feature: [feature name from state]
-Progress: story [current]/[total], phase: [phase]
-Mode: [mode]
-Token spend: [spend]
-
-Options:
   [1] Resume from where I left off
   [2] Abort current session and start new
-  [3] Show detailed status (/maestro-status)
+  [3] Show detailed status
 ```
 
 Wait for user response. If they choose resume, read the state file, load the current story from `.maestro/stories/`, and continue from the saved phase. If abort, set `active: false` in state, then proceed with the new request.
 
-## Step 2: No Arguments — Show Help
+## Step 2: No Arguments — Smart Help
 
-If `$ARGUMENTS` is empty, display:
+If `$ARGUMENTS` is empty, apply smart routing based on project state:
+
+### Case A: Project NOT initialized (`.maestro/dna.md` does NOT exist)
+
+Display an abbreviated quick-start guide:
 
 ```
-Maestro — Full-Stack Autonomous Orchestrator
++---------------------------------------------+
+| Maestro — Full-Stack Orchestrator           |
++---------------------------------------------+
+  Project not initialized.
 
-Usage:
-  /maestro "Add user authentication with OAuth"
-  /maestro "Build a pricing page like Stripe" --yolo
-  /maestro "Refactor the API layer" --careful --model opus
+  Quick start:
+    1. Run /maestro init    — auto-discover your stack
+    2. Run /maestro "task"  — build something
 
-Subcommands:
-  /maestro-init      Initialize Maestro for this project (run first!)
-  /maestro-opus      Magnum Opus — build entire products autonomously
-  /maestro-status    View progress, resume, pause, or abort
+  Run /maestro help for full usage info.
+```
 
-Flags:
-  --yolo             Auto-approve everything, maximum speed
-  --checkpoint       Pause after each story for review (default)
-  --careful          Pause after each phase within each story
-  --model <m>        Force model: sonnet (default) or opus
-  --no-cost-tracking Disable all token cost tracking
-  --no-forecast      Skip pre-execution cost estimate
-  --max-stories N    Limit decomposition to N stories
+Stop here. Do not proceed without a task description.
 
-Examples:
-  /maestro "Add dark mode toggle"
-  /maestro "Build spending dashboard with charts" --checkpoint
-  /maestro "Migrate from REST to tRPC" --careful --model opus
+### Case B: Project IS initialized (`.maestro/dna.md` exists)
+
+Display context-aware help. If `.maestro/state.local.md` exists, read it to show last session info:
+
+```
++---------------------------------------------+
+| Maestro — Full-Stack Orchestrator           |
++---------------------------------------------+
+  Project    [name from dna.md if available]
+  Last run   [date from state.local.md, or "none"]
+  Status     [last phase/outcome, or "ready"]
+
+  Usage:
+    /maestro "Add user authentication with OAuth"
+    /maestro "Build a pricing page" --yolo
+    /maestro "Refactor the API layer" --careful --model opus
+
+  Subcommands:
+    init · status · board · config · help
+    brain · doctor · history · model · opus
+
+  Flags:
+    --yolo · --checkpoint · --careful
+    --model <m> · --max-stories N
+    --no-cost-tracking · --no-forecast
+
+  Run /maestro help for detailed usage.
 ```
 
 Stop here. Do not proceed without a task description.
 
 ## Step 2.5: Route Subcommands
 
-If the first word of `$ARGUMENTS` is `opus`, strip it and route to the `/maestro-opus` command with the remaining arguments. This allows both `/maestro opus "Build X"` and `/maestro-opus "Build X"` to work identically.
+If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route to the corresponding command with the remaining arguments. This allows both `/maestro <sub> ...` and `/maestro-<sub> ...` to work identically.
+
+| First word | Route to |
+|------------|----------|
+| `opus` | `/maestro-opus` |
+| `help` | `/maestro-help` |
+| `config` | `/maestro-config` |
+| `board` | `/maestro-board` |
+| `brain` | `/maestro-brain` |
+| `doctor` | `/maestro-doctor` |
+| `history` | `/maestro-history` |
+| `init` | `/maestro-init` |
+| `status` | `/maestro-status` |
+| `model` | `/maestro-model` |
 
 ## Step 3: Parse Flags from $ARGUMENTS
 
@@ -83,12 +117,14 @@ Extract these flags from `$ARGUMENTS`. Everything that is not a flag is the DESC
 If no mode flag is provided, ask the user:
 
 ```
-How should I handle this?
-  [1] Yolo — auto-approve everything, maximum speed
-  [2] Checkpoint — pause after each story for review (default)
-  [3] Careful — pause after each phase for granular control
++---------------------------------------------+
+| Select Mode                                 |
++---------------------------------------------+
+  [1] Yolo       auto-approve everything, maximum speed
+  [2] Checkpoint  pause after each story for review (default)
+  [3] Careful     pause after each phase for granular control
 
-Choice [1/2/3]:
+  Choice [1/2/3]:
 ```
 
 Default to checkpoint (2) if user just presses enter.
@@ -138,14 +174,18 @@ If COST_TRACKING is true and FORECAST is true:
 Display the forecast:
 
 ```
-Forecast:
-  Stories: ~N (breakdown by type)
-  Estimated tokens: ~NNK
-  Estimated cost: ~$N.NN
-  Model mix: N% Sonnet / N% Opus
-  Mode: [mode] (tip: --yolo saves ~15% tokens)
++---------------------------------------------+
+| Forecast                                    |
++---------------------------------------------+
+  Stories   ~N (breakdown by type)
+  Tokens    ~NNK
+  Cost      ~$N.NN
+  Models    N% Sonnet / N% Opus
+  Mode      [mode]
 
-Proceed? [Y/n]
+  Tip: --yolo saves ~15% tokens on average.
+
+  Proceed? [Y/n]
 ```
 
 Wait for confirmation. If user declines, stop.
@@ -168,7 +208,7 @@ Create `.maestro/state.local.md` with initial state:
 
 ```yaml
 ---
-maestro_version: "1.0.0"
+maestro_version: "1.1.0"
 active: true
 session_id: [generate UUID via bash: uuidgen or python -c "import uuid; print(uuid.uuid4())"]
 feature: "[DESCRIPTION]"
@@ -239,20 +279,23 @@ type: backend/frontend/fullstack/infrastructure/test
 Present the story list to the user:
 
 ```
-Decomposed into N stories:
-
-  1. [title] (type, ~$N.NN)
-     depends_on: none
-  2. [title] (type, ~$N.NN)
-     depends_on: [1]
++---------------------------------------------+
+| Decomposition — N Stories                   |
++---------------------------------------------+
+  [1] [title]
+      type: [type]  cost: ~$N.NN  depends: —
+  [2] [title]
+      type: [type]  cost: ~$N.NN  depends: [1]
   ...
 
-Dependency order: 1 -> 2 -> [3, 4] (parallel) -> 5
+  Order  1 → 2 → [3, 4] (parallel) → 5
 
-Approve? [Y/adjust/abort]
+  Approve? [Y/adjust/abort]
 ```
 
 Wait for approval. If user wants adjustments, modify stories accordingly.
+
+**Kanban sync**: If `integrations.kanban.sync_enabled` is true in `.maestro/config.yaml`, invoke the kanban skill to create cards for all stories after approval.
 
 ## Step 10: Check User Notes
 
@@ -314,16 +357,25 @@ Mode determines behavior:
 - **checkpoint**: show summary, ask GO / PAUSE / ABORT / SKIP
 - **careful**: already paused after each phase above
 
-```
-Story N/total complete: "[title]"
-  QA: [APPROVED on attempt N]
-  Commit: [hash] [message]
-  Tokens: ~NK ($N.NN)
-  Cumulative: $N.NN / $N.NN estimated
+**Kanban sync**: If kanban sync is enabled, update the story's status in the configured kanban provider after each story completes.
 
-[checkpoint mode] Next: Story N+1 — "[title]"
-Continue? [go/pause/abort/skip]
 ```
++---------------------------------------------+
+| Story N/M complete: [title]                 |
++---------------------------------------------+
+  Phase     QA approved (attempt N)
+  Files     N created, N modified
+  Commit    type(scope): message
+  Tokens    NN,NNN (story) / NNN,NNN (total)
+  Time      Nm Ns (story) / Nm Ns (total)
+
+  [1] Continue to next story
+  [2] Review changes (git diff)
+  [3] Change mode for remaining stories
+  [4] Abort execution
+```
+
+In **yolo** mode, automatically select option [1]. In **checkpoint** mode, wait for user selection. In **careful** mode, the user has already reviewed each phase.
 
 ## Step 12: Feature Complete
 
@@ -335,17 +387,20 @@ When all stories are done:
 4. Display summary:
 
 ```
-Feature complete: "[DESCRIPTION]"
++---------------------------------------------+
+| Feature Complete                            |
++---------------------------------------------+
+  Feature   [DESCRIPTION]
 
-  Stories: N completed, N skipped
-  QA first-pass rate: N%
-  Total tokens: ~NK
-  Total cost: ~$N.NN
-  Time elapsed: Nh Nm
-  Commits: N
+  Stories   N completed, N skipped
+  QA rate   N% first-pass
+  Tokens    ~NK
+  Cost      ~$N.NN
+  Time      Nh Nm
+  Commits   N
 
-  Trust level: [Novice/Apprentice/Journeyman/Expert]
-  (N total stories on this project, N% QA first-pass rate)
+  Trust     [Novice/Apprentice/Journeyman/Expert]
+            (N total stories, N% QA first-pass rate)
 ```
 
 5. If there are changes to ship, ask if the user wants to create a PR.

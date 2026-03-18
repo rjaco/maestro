@@ -63,10 +63,12 @@ Calculate time elapsed from `started_at` to now.
 
 Display comprehensive status:
 
+Read `.maestro/config.yaml` and check for an `integrations` section (e.g., `github`, `linear`, `slack`). Note which integrations are configured and their status.
+
 ```
-====================================
-  Maestro Session Status
-====================================
++---------------------------------------------+
+| Maestro Session Status                      |
++---------------------------------------------+
 
   Feature: [feature name]
   Session: [session_id, first 8 chars]
@@ -74,23 +76,57 @@ Display comprehensive status:
   Started: [started_at, human-readable]
   Elapsed: [Nh Nm]
 
+  Phase:
+    validate > delegate > [IMPLEMENT] > self-heal > qa > git > checkpoint
+    (Show the current phase in CAPS with brackets; others in lowercase.
+     Map phase values: validate, decompose/research -> validate;
+     delegate -> delegate; implement -> IMPLEMENT;
+     self_heal -> self-heal; qa_review -> qa;
+     git_craft -> git; checkpoint -> checkpoint.
+     Completed/paused/aborted show all lowercase with a note instead.)
+
   Progress:
-    Story:   [current_story] / [total_stories]
+    Story:   [current_story] / [total_stories]  (ok)
     Phase:   [phase]
-    QA:      iteration [qa_iteration] / [max_qa_iterations]
-    Heal:    iteration [self_heal_iteration] / [max_self_heal]
+    QA:      iteration [qa_iteration] / [max_qa_iterations]  (ok) or (!) if qa_iteration > 1
+    Heal:    iteration [self_heal_iteration] / [max_self_heal]  (ok) or (x) if at max
 
   Cost:
-    Spent:     ~[token_spend] tokens
-    Remaining: ~[estimated_remaining] tokens (estimated)
+    Spent:     ~[token_spend] tokens  (ok)
+    Remaining: ~[estimated_remaining] tokens (estimated)  (ok) or (!) if < 20% of budget
 
   Trust:
-    Level:          [trust_level]
+    Level:          [trust_level]  (ok) or (!) if low/probation
     Total stories:  [total_stories from trust.yaml]
     QA first-pass:  [qa_first_pass_rate]%
     Avg QA rounds:  [average_qa_iterations]
 
-====================================
+  Integrations:
+    (If `.maestro/config.yaml` has an `integrations` section, list each:)
+    github:  (ok) configured
+    linear:  (ok) configured
+    slack:   (x) not configured
+    (If no integrations section exists, show:)
+    No integrations configured.
+
++---------------------------------------------+
+```
+
+After the box, show quick-action options based on state:
+
+If session is active (not paused, not completed, not aborted):
+```
+  [1] Pause  [2] Abort
+```
+
+If session is paused:
+```
+  [1] Resume  [2] Abort
+```
+
+If session is completed:
+```
+  [1] Start new session  [2] View history
 ```
 
 If `layer` is `opus`, add Magnum Opus section:

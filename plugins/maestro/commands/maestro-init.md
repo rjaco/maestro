@@ -1,13 +1,59 @@
 ---
-description: "Initialize Maestro for this project — auto-discovers tech stack, creates project DNA"
+description: "Initialize Maestro for this project — inference-first onboarding that asks, scans, previews, then builds"
 allowed-tools: Read Write Edit Bash Glob Grep
 ---
 
-# Maestro Init — Project Initialization
+# Maestro Init — Inference-First Onboarding (v2.0.0)
 
-You are performing first-time Maestro setup for this project. Auto-discover everything about the codebase and create the project DNA — the foundation that every future Maestro agent will reference.
+You are performing first-time Maestro setup for this project. The flow is: **ask → scan → preview → build → stay available**. Combine the user's own description with codebase scanning to produce the project DNA.
 
-## Step 1: Auto-Detect Tech Stack
+## Step 1: Welcome and Ask
+
+### Check for existing DNA
+
+If `.maestro/dna.md` already exists, warn the user:
+
+```
+[maestro] Project DNA already exists.
+
+  [1] Regenerate (overwrites current DNA)
+  [2] Cancel
+```
+
+Wait for the user's response. If they choose cancel (2), stop immediately and do nothing.
+
+### Fresh init
+
+If this is a fresh init (no existing DNA), display:
+
+```
++---------------------------------------------+
+| Maestro Init                                |
++---------------------------------------------+
+
+[maestro] Tell me about your project in a few sentences.
+
+  What are you building? What stack are you using?
+  What matters most to you?
+
+  (i) I'll also scan your codebase to fill in the gaps.
+```
+
+Wait for the user's free-text response. Do NOT proceed until you have their answer.
+
+Once the user responds, parse their free-text answer to infer:
+- **Intent**: What they are building (app type, domain, purpose)
+- **Role**: Their role or perspective (frontend, backend, fullstack, etc.)
+- **Priorities**: What matters most (performance, DX, shipping speed, test coverage, etc.)
+- **Stack hints**: Any technologies they mention explicitly
+
+Carry these inferences forward — they take priority over auto-detection when there is a conflict, since the user knows their own project best.
+
+## Step 2: Scan Codebase
+
+Now combine the user's description with automated discovery. Run these sub-steps silently (no output to the user until the preview in Step 3).
+
+### 2a: Auto-Detect Tech Stack
 
 Read as many of these files as exist (skip missing ones silently):
 
@@ -36,7 +82,7 @@ Read as many of these files as exist (skip missing ones silently):
 
 Extract: framework, language, styling, database, deployment platform, test runner, package manager, and any distinctive tooling.
 
-## Step 2: Read Project Conventions
+### 2b: Read Project Conventions
 
 If `CLAUDE.md` exists, read it completely. Extract:
 - Explicit rules ("NEVER modify", "ALWAYS use")
@@ -47,7 +93,7 @@ If `CLAUDE.md` exists, read it completely. Extract:
 
 If `CLAUDE.md` does not exist, note that conventions will be inferred from code patterns.
 
-## Step 3: Scan Directory Structure
+### 2c: Scan Directory Structure
 
 Run these commands to map the project:
 
@@ -69,7 +115,7 @@ echo "Config Files: $(find . -maxdepth 2 -name '*.config.*' -o -name '.env*' 2>/
 
 Record the counts: components, pages, API routes, test files.
 
-## Step 4: Detect Patterns from Code
+### 2d: Detect Patterns from Code
 
 Sample 2-3 representative files from the codebase to detect patterns:
 
@@ -82,7 +128,76 @@ Sample 2-3 representative files from the codebase to detect patterns:
 - **Validation**: Zod, Yup, Joi, class-validator
 - **Testing patterns**: unit style, mocking approach, assertion library
 
-## Step 5: Generate Project DNA
+### 2e: Detect MCP Servers and CLI Tools
+
+Detect available integrations by checking for MCP tool prefixes and CLI tools in PATH.
+
+**MCP server detection** — check if any tools are available with these prefixes:
+- `mcp__asana__` → Asana project management
+- `mcp__atlassian__` → Atlassian (Jira/Confluence)
+- `mcp__linear__` → Linear issue tracking
+- `mcp__notion__` → Notion knowledge base
+- `mcp__plugin_playwright_playwright__` → Playwright browser automation
+
+**CLI tool detection** — run:
+```bash
+command -v gh >/dev/null 2>&1 && echo "gh_cli:found" || echo "gh_cli:missing"
+command -v obsidian >/dev/null 2>&1 && echo "obsidian_cli:found" || echo "obsidian_cli:missing"
+```
+
+Record each integration as detected or not detected. These will be shown in the preview and written to config.
+
+## Step 3: Preview and Confirm
+
+Before creating any files, show a compact DNA preview that merges the user's free-text input with scan results. Display:
+
+```
++---------------------------------------------+
+| Project DNA (inferred)                      |
++---------------------------------------------+
+  Stack     [framework] + [language] + [styling]
+  DB        [database or "none detected"]
+  Deploy    [platform or "not configured"]
+  Tests     [test runner] ([N] test files)
+  Patterns  [key patterns, comma-separated]
+
+  Integrations detected:
+    Asana            [detected (ok)] or [not found (x)]
+    Atlassian        [detected (ok)] or [not found (x)]
+    Linear           [detected (ok)] or [not found (x)]
+    Notion           [detected (ok)] or [not found (x)]
+    Playwright       [detected (ok)] or [not found (x)]
+    GitHub CLI       [detected (ok)] or [not found (x)]
+    Obsidian CLI     [detected (ok)] or [not found (x)]
+
+  Type "build it" to create, or tell me what to change.
+```
+
+Wait for the user's confirmation. If they say "build it" (or equivalent affirmative), proceed to Step 4. If they request changes, update the inferred data accordingly and re-display the preview. Repeat until confirmed.
+
+## Step 4: Build
+
+Once the user confirms, create all files and directories.
+
+### 4a: Create Directory Structure
+
+```bash
+mkdir -p .maestro/stories .maestro/logs .maestro/research .maestro/archive
+```
+
+Ensure `.maestro/state.local.md` is gitignored (it contains session-specific state):
+
+```bash
+# Add to .gitignore if not already present
+if ! grep -q '.maestro/state.local.md' .gitignore 2>/dev/null; then
+  echo '' >> .gitignore
+  echo '# Maestro session state (local only)' >> .gitignore
+  echo '.maestro/state.local.md' >> .gitignore
+  echo '.maestro/*.lock' >> .gitignore
+fi
+```
+
+### 4b: Generate Project DNA
 
 Create `.maestro/dna.md`:
 
@@ -133,9 +248,9 @@ Create `.maestro/dna.md`:
 - Test Files: [N]
 ```
 
-## Step 6: Create State and Config Files
+### 4c: Create State File
 
-Create `.maestro/state.md` (persistent project state, not session-specific):
+Create `.maestro/state.md`:
 
 ```markdown
 # Maestro Project State
@@ -147,13 +262,15 @@ Create `.maestro/state.md` (persistent project state, not session-specific):
 No active session.
 
 ## History
-- [timestamp] Maestro initialized
+- [timestamp] Maestro initialized (v2.0.0)
 ```
+
+### 4d: Create Config File (with integrations)
 
 Create `.maestro/config.yaml`:
 
 ```yaml
-# Maestro Configuration
+# Maestro Configuration (v2.0.0)
 # Edit these values to customize Maestro's behavior for this project.
 
 # Default execution mode: yolo | checkpoint | careful
@@ -177,13 +294,53 @@ quality:
   run_lint: true
   run_tests: true
 
+# Model assignments per task type
+models:
+  planning: opus         # Decomposition, architecture, roadmaps
+  execution: sonnet      # Story implementation, code writing
+  review: opus           # QA review, milestone evaluation
+  simple: haiku          # Fix agents, config changes, boilerplate
+  research: sonnet       # Web research, competitive analysis
+
 # Project-specific commands (auto-detected, override if needed)
 commands:
   build: null    # auto-detect from package.json / Makefile
   test: null     # auto-detect
   lint: null     # auto-detect
   typecheck: null  # auto-detect
+
+# Scheduler (cron-based tasks)
+scheduler:
+  enabled: false
+
+# External integrations (auto-detected)
+integrations:
+  kanban:
+    provider: null      # asana | linear | atlassian | null
+    auto_detected: []   # e.g. ["asana", "linear"]
+    sync_enabled: false
+    project_id: null
+  knowledge_base:
+    provider: null      # notion | obsidian | null
+    auto_detected: []   # e.g. ["notion"]
+    vault_path: null
+    sync_enabled: false
+  tools:
+    playwright: false   # true if Playwright MCP detected
+    github_cli: false   # true if `gh` found in PATH
+    obsidian_cli: false # true if `obsidian` found in PATH
 ```
+
+Populate the `integrations` section based on Step 2e detection results:
+- If Asana MCP tools were found, add `"asana"` to `kanban.auto_detected` and set `kanban.provider: asana`
+- If Linear MCP tools were found, add `"linear"` to `kanban.auto_detected` and set `kanban.provider: linear` (if no provider already set)
+- If Atlassian MCP tools were found, add `"atlassian"` to `kanban.auto_detected` and set `kanban.provider: atlassian` (if no provider already set)
+- If Notion MCP tools were found, add `"notion"` to `knowledge_base.auto_detected` and set `knowledge_base.provider: notion`
+- If Playwright MCP tools were found, set `tools.playwright: true`
+- If `gh` CLI was found, set `tools.github_cli: true`
+- If `obsidian` CLI was found, set `tools.obsidian_cli: true` and add `"obsidian"` to `knowledge_base.auto_detected`
+
+### 4e: Create Trust File
 
 Create `.maestro/trust.yaml`:
 
@@ -204,69 +361,58 @@ trust_level: novice
 #         journeyman (15-30, >75%) | expert (30+, >85%)
 ```
 
-## Step 7: Create Directory Structure
+## Step 5: Summary and Stay Available
 
-Create the `.maestro/` directory tree:
-
-```bash
-mkdir -p .maestro/stories .maestro/logs .maestro/research .maestro/archive
-```
-
-Ensure `.maestro/state.local.md` is gitignored (it contains session-specific state):
-
-```bash
-# Add to .gitignore if not already present
-if ! grep -q '.maestro/state.local.md' .gitignore 2>/dev/null; then
-  echo '' >> .gitignore
-  echo '# Maestro session state (local only)' >> .gitignore
-  echo '.maestro/state.local.md' >> .gitignore
-  echo '.maestro/*.lock' >> .gitignore
-fi
-```
-
-## Step 8: Print Discovery Summary
-
-Display a clear, informative summary of what was discovered and created:
+After all files are created, display a box-formatted summary:
 
 ```
-====================================
-  Maestro Initialized
-====================================
++---------------------------------------------+
+| Maestro Initialized                         |
++---------------------------------------------+
 
-  Project: [name]
-  Stack:   [framework] + [language] + [styling]
-  DB:      [database or "none detected"]
-  Deploy:  [platform or "not configured"]
-  Tests:   [test runner] ([N] test files)
-  Scale:   [N] components, [N] pages, [N] API routes
+  Project   [name]
+  Stack     [framework] + [language] + [styling]
+  DB        [database or "none detected"]
+  Deploy    [platform or "not configured"]
+  Tests     [test runner] ([N] test files)
+  Scale     [N] components, [N] pages, [N] API routes
 
-  Patterns:
-    - [pattern 1]
-    - [pattern 2]
-    - [pattern 3]
-
-  Sensitive areas:
-    - [path] ([reason])
+  Integrations:
+    [integration name]     (ok) or (x)
+    ...
 
   Created:
-    .maestro/dna.md          Project DNA (tech stack, patterns, conventions)
-    .maestro/config.yaml     Configuration (modes, quality gates, commands)
-    .maestro/trust.yaml      Trust metrics (starts at novice)
-    .maestro/state.md        Project state (persistent)
+    .maestro/dna.md          Project DNA
+    .maestro/config.yaml     Configuration (with integrations)
+    .maestro/trust.yaml      Trust metrics (novice)
+    .maestro/state.md        Project state
     .maestro/stories/        Story files directory
     .maestro/logs/           Session logs directory
     .maestro/research/       Research output directory
+    .maestro/archive/        Archive directory
 
-====================================
++---------------------------------------------+
+```
 
-  Ready! Try: /maestro "Add user authentication"
+Then display the stay-available message:
 
-====================================
+```
+[maestro] Ready. Ask me anything about how Maestro works,
+          or start building with /maestro "your feature"
+
+  Quick start:
+    /maestro "your feature"      Build something
+    /maestro help                Learn how Maestro works
+    /maestro doctor              Check installation health
+    /maestro config              View/edit settings
 ```
 
 ## Important Notes
 
 - Do NOT create `.maestro/state.local.md` during init — that is session-specific and created by `/maestro` when a feature is started.
-- If `.maestro/dna.md` already exists, warn the user and ask before overwriting: "Project DNA already exists. Regenerate? [Y/n]"
-- If the project has no recognizable tech stack files, still create the DNA with what can be inferred from directory structure and file extensions.
+- Always wait for user input at Step 1 (free-text description) and Step 3 (preview confirmation) before proceeding.
+- If the user requests changes in Step 3, update the preview and re-display. Do not proceed until they confirm.
+- If the project has no recognizable tech stack files, still create the DNA with what can be inferred from the user's description, directory structure, and file extensions.
 - Keep DNA concise — it will be injected into agent context. Every token counts.
+- The user's free-text description takes priority over auto-detection when there is a conflict.
+- Version is 2.0.0 for state and config file headers.

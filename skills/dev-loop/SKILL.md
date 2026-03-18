@@ -327,7 +327,7 @@ Overall: 11/23 stories done | $4.80 spent | 2h 15m elapsed
 
 ## Token Tracking
 
-If cost tracking is enabled (`.maestro/config.md` or `dna.md`), log per-phase token usage:
+If cost tracking is enabled (`.maestro/config.yaml` or `dna.md`), log per-phase token usage:
 
 ```
 .maestro/state.local.md:

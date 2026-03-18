@@ -1,0 +1,3 @@
+# Maestro session state (local only)
+.maestro/state.local.md
+.maestro/*.lock

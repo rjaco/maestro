@@ -2,26 +2,25 @@
 
 **Full-Stack Autonomous Development Orchestrator for Claude Code**
 
-Build features with `/maestro`. Build entire products with `/maestro opus`.
+Build features with `/maestro`. Build entire products with `/maestro opus`. Track progress on your kanban board. Persist knowledge in your second brain.
 
 ---
 
 ## What is Maestro?
 
-Maestro is a Claude Code plugin that orchestrates autonomous software development across three layers: **Vision and Strategy** (product research, competitive analysis, market positioning), **Tactics and Architecture** (decomposition, dependency graphs, tech stack decisions), and **Execution** (implement, self-heal, QA review, git craft). Each layer delegates to purpose-built agents that receive exactly the context they need — no more, no less.
+Maestro is a Claude Code plugin that orchestrates autonomous software development across three layers: **Vision and Strategy** (product research, competitive analysis, market positioning), **Tactics and Architecture** (decomposition, dependency graphs, tech stack decisions), and **Execution** (implement, self-heal, QA review, git craft). Each layer delegates to purpose-built agents that receive exactly the context they need.
 
-Maestro tracks token costs, learns from every session, and progressively earns your trust through demonstrated reliability. When it hits a wall, it pauses and asks — it does not guess.
-
-**Key differentiator:** The first Claude Code plugin that handles Vision, Strategy, Architecture, AND Execution — then learns from every session.
+Maestro tracks token costs, learns from every session, and progressively earns your trust through demonstrated reliability. It integrates with your existing tools — Asana, Jira, Linear, GitHub Issues for project management, and Obsidian or Notion as a persistent knowledge base.
 
 ---
 
 ## Quick Start
 
 ```bash
+# Install the plugin
 claude plugin install maestro
 
-# Initialize for your project (auto-discovers tech stack, patterns, architecture)
+# Initialize for your project
 /maestro init
 
 # Build a feature
@@ -37,266 +36,192 @@ claude plugin install maestro
 
 | Command | Description |
 |---------|-------------|
-| `/maestro "task"` | Build a feature — auto-decomposes, implements, QA reviews, commits |
-| `/maestro opus "vision"` | Magnum Opus — build entire products autonomously with live conversation |
-| `/maestro init` | Initialize Maestro for your project (auto-discovers tech stack) |
-| `/maestro status` | View progress, resume, pause, or abort the current run |
-
-When you run `/maestro "task"` without a subcommand, Maestro auto-classifies the request and routes it to the right layer. A one-liner fix goes straight to execution. A vague product idea triggers the full interview-research-roadmap pipeline.
-
----
-
-## Magnum Opus (`/maestro opus`)
-
-The autonomous product builder. This is what a $200/hour product consultant does — but for a few dollars in tokens.
-
-### How It Works
-
-**1. Deep Interview** — Maestro asks as many questions as needed to understand your project across 10 dimensions: core purpose, target audience, scope, competitive landscape, business model, technical context, design and UX, integrations, success criteria, and constraints. The interview adapts: detailed answers get fewer follow-ups; vague answers get deeper probing; "I don't know" gets concrete options to choose from.
-
-**2. Mega Research Sprint** — 8 parallel research agents fan out to investigate competitors (with screenshots), evaluate tech stacks, design architecture, plan SEO and content strategy, analyze monetization options, map integrations, build user personas, and draft a launch strategy. Output: a synthesized research brief that informs every decision downstream.
-
-**3. Roadmap Generation** — From the vision and research, Maestro generates a milestone-driven roadmap with dependency graphs, acceptance criteria, and token budget estimates per milestone.
-
-**4. Autonomous Execution Loop** — For each milestone: decompose into stories, run the dev loop (implement, self-heal, QA, commit), evaluate against acceptance criteria, run an Opus quality gate on the combined diff, checkpoint, and continue. Between milestones, Maestro re-reads the vision (North Star anchoring) to prevent goal drift.
-
-**5. Live Conversation Channel** — Talk to Maestro while it builds. Add context. Redirect priorities. Ask questions. Pivot the entire approach. Pause the workers or let them keep going while you steer.
-
-### Sub-Modes
-
-```
-/maestro opus "Build a SaaS dashboard"
-  [--full-auto]           # No stops between milestones
-  [--milestone-pause]     # Pause between milestones (default)
-  [--budget $N]           # Token budget cap — pauses when reached
-  [--hours N]             # Time cap — pauses after N hours
-  [--until-pause]         # Runs until you say /maestro pause
-  [--skip-research]       # Skip research (use existing .maestro/research/)
-  [--start-from M3]       # Resume from a specific milestone
-```
+| `/maestro "task"` | Build a feature autonomously |
+| `/maestro opus "vision"` | Build an entire product (Magnum Opus) |
+| `/maestro init` | Initialize for this project |
+| `/maestro status` | View progress, resume, pause, abort |
+| `/maestro model` | View/change model assignments |
+| `/maestro help [topic]` | Contextual help and FAQ |
+| `/maestro doctor` | Health check and diagnostics |
+| `/maestro config` | View/edit configuration |
+| `/maestro board` | Kanban board view |
+| `/maestro brain` | Second brain operations |
+| `/maestro history` | Past sessions and cost analysis |
 
 ---
 
 ## Three-Layer Architecture
 
 ```
-                    /maestro "task"
-                         |
-                   [Auto-Classifier]
-                         |
-          +--------------+--------------+
-          |              |              |
-          v              v              v
-  +---------------+ +----------------+ +----------------+
-  |   LAYER 1     | |    LAYER 2     | |    LAYER 3     |
-  |   Vision &    | |   Tactics &    | |   Execution    |
-  |   Strategy    | |  Architecture  | |                |
-  |               | |                | |                |
-  | - Research    | | - Decompose    | | - Dev Loop     |
-  | - Competitors | | - Dependencies | | - Self-Heal    |
-  | - Market      | | - Forecast     | | - QA Review    |
-  | - Strategy    | | - Skill Create | | - Git Craft    |
-  | - Vision      | | - Architecture | | - Preview      |
-  |               | |                | | - Ship         |
-  +-------+-------+ +-------+--------+ +-------+--------+
-          |                  |                  |
-          v                  v                  v
-    .maestro/           .maestro/           Code, tests,
-    vision.md           stories/            commits, PRs
-    research/           architecture.md
+User Request
+    |
+    v
+[Classifier] --> routes to the right layer
+    |
+    +---> Layer 1: Vision & Strategy
+    |       research, strategy, opus-loop
+    |
+    +---> Layer 2: Tactics & Architecture
+    |       decompose, architecture, forecast
+    |
+    +---> Layer 3: Execution
+            dev-loop, git-craft, ship, preview
 ```
 
-Layer 1 produces the **why**. Layer 2 produces the **what**. Layer 3 produces the **how**.
+### Execution: 7-Phase Dev Loop
+
+For each story in dependency order:
+
+```
+VALIDATE > DELEGATE > IMPLEMENT > SELF-HEAL > QA > GIT > CHECKPOINT
+```
+
+1. **Validate** — Check prerequisites and dependencies
+2. **Delegate** — Build right-sized context, select model
+3. **Implement** — Dispatch implementer agent (TDD)
+4. **Self-Heal** — Run checks, auto-fix failures (up to 3x)
+5. **QA Review** — Dispatch QA reviewer (read-only, separate agent)
+6. **Git Craft** — Create documentation-quality commit
+7. **Checkpoint** — User review (mode-dependent)
+
+### Execution Modes
+
+| Mode | Behavior |
+|------|----------|
+| `--yolo` | Auto-approve everything, maximum speed |
+| `--checkpoint` | Pause after each story for review (default) |
+| `--careful` | Pause after each phase for granular control |
 
 ---
 
-## The Dev Loop (7 Phases)
+## Magnum Opus
 
-Every feature Maestro builds goes through the same disciplined loop:
+Build entire products with `/maestro opus "vision"`.
 
-| Phase | What Happens |
+1. **Deep Interview** — 10-dimension adaptive vision interview
+2. **Research Sprint** — 8 parallel research agents (competitors, tech, architecture)
+3. **Roadmap** — Milestone-driven plan with cost estimates
+4. **Build Loop** — Decompose, implement, evaluate, auto-fix per milestone
+5. **Live Chat** — Talk to Maestro while it builds
+
+---
+
+## Integrations
+
+### Kanban (Project Management)
+
+Sync stories with your project management tool. Stories appear as cards, status updates flow bidirectionally.
+
+```
+/maestro config set integrations.kanban.provider github
+/maestro board
+```
+
+| Provider | Setup |
+|----------|-------|
+| GitHub Issues | `gh` CLI (no extra setup) |
+| Asana | Asana MCP Server |
+| Jira | Atlassian MCP Server |
+| Linear | Linear MCP Server |
+
+### Second Brain (Knowledge Base)
+
+Persist decisions, learnings, and session summaries across sessions.
+
+```
+/maestro brain connect
+/maestro brain search "authentication"
+/maestro brain tldr
+```
+
+| Provider | Setup |
+|----------|-------|
+| Obsidian | Enable CLI in Obsidian Settings |
+| Notion | Notion MCP Server |
+
+### Diagnostics
+
+```
+/maestro doctor
+```
+
+Checks: core files, config, trust metrics, git status, hooks, MCP servers, integrations.
+
+---
+
+## Progressive Trust
+
+Maestro tracks reliability and adapts behavior:
+
+| Level | Requirement |
 |-------|-------------|
-| **Validate** | Confirm the story is well-defined and the codebase is in a clean state |
-| **Delegate** | Select the right agent and inject only the context it needs |
-| **Implement** | Write code, following project conventions discovered during init |
-| **Self-Heal** | If tests or type checks fail, auto-fix up to 3 times before escalating |
-| **QA Review** | Independent agent reviews the diff for bugs, style violations, security |
-| **Git Craft** | Atomic, well-messaged commits — not one giant "WIP" commit |
-| **Checkpoint** | Update state, token ledger, and learning memory |
+| Novice | < 5 stories |
+| Apprentice | 5-15 stories, > 60% QA first-pass |
+| Journeyman | 15-30 stories, > 75% QA rate |
+| Expert | 30+ stories, > 85% QA rate |
 
-If QA rejects 5 times or self-heal fails 3 times, Maestro pauses and asks for human guidance. It never pushes broken code hoping you will not notice.
-
----
-
-## Context Engine
-
-Each agent gets exactly the right context — not too much, not too little. This is how Maestro achieves 70-85% token reduction compared to naive approaches that dump the entire codebase into every prompt.
-
-| Tier | Agent Type | Context Budget | What Gets Injected |
-|------|-----------|---------------|-------------------|
-| T0 | Orchestrator | 15-25K tokens | Project state, roadmap, active milestone |
-| T1 | Strategic | 10-15K tokens | Vision, research brief, architecture |
-| T2 | Architect | 8-12K tokens | Relevant source files, type definitions, patterns |
-| T3 | Implementer | 4-8K tokens | Story spec, target files, test expectations |
-| T4 | Fix Agent | 1-3K tokens | Error message, failing file, fix instructions |
-
-Context is loaded atomically and progressively — skills and project knowledge are injected on-demand, not all at once.
-
----
-
-## Self-Learning
-
-Maestro gets better at building YOUR project over time.
-
-**Friction Detection** — Six signal types are captured from every session:
-
-- `COMMAND_FAILURE` — a tool call or shell command failed
-- `USER_CORRECTION` — you told Maestro it was wrong
-- `SKILL_SUPPLEMENT` — a missing capability was needed
-- `VERSION_ISSUE` — dependency or API version mismatch
-- `REPETITION` — the same fix was applied more than once
-- `TONE_ESCALATION` — frustration signals in user messages
-
-**Improvement Proposals** — Detected friction is classified, and Maestro generates improvement proposals with confidence scores (0.60-0.95). High-confidence proposals are auto-applied. Lower-confidence ones are presented for approval.
-
-**Meta-Rules** — Rules that teach Maestro how to write better rules. This is the layer that makes self-improvement compound rather than plateau.
-
-**Progressive Trust** — Four trust levels based on demonstrated reliability:
-
-| Level | Autonomy | Earned By |
-|-------|----------|-----------|
-| Novice | Asks before every major action | Default for new projects |
-| Apprentice | Executes stories autonomously, pauses at milestones | 5+ successful stories |
-| Journeyman | Full milestone autonomy with quality gates | 20+ stories, low rejection rate |
-| Expert | Full-auto with budget-only guardrails | Sustained high quality across sessions |
-
-**Persistent Memory** — Agents maintain project-specific memory across sessions. The implementer that built your auth system yesterday remembers your patterns today.
+Higher trust unlocks more autonomy (yolo mode becomes default for Expert).
 
 ---
 
 ## Cost Tracking
 
-Token cost anxiety is real. Maestro makes it transparent.
+Maestro estimates costs before starting and tracks actual spend per story.
 
-**Before execution:**
 ```
-Forecast: "Add authentication" — 4 stories, ~$3.20
-  Story 1: DB schema + migrations    Sonnet  ~$0.60
-  Story 2: Auth API routes           Sonnet  ~$0.80
-  Story 3: Login/signup UI           Sonnet  ~$0.95
-  Story 4: Session middleware         Sonnet  ~$0.85
-Proceed? [Y/n]
+/maestro history cost
+/maestro model
 ```
 
-**After execution:**
-```
-Token Ledger — "Add authentication"
-  Actual: $2.81 (forecast: $3.20, saved 12%)
-  Breakdown: Implement $1.90 | QA $0.52 | Self-heal $0.22 | Git $0.17
-```
-
-Disable with `--no-cost-tracking` or `--no-forecast` if you prefer not to see it.
+Model costs (per million tokens):
+- Haiku: $0.80 / $4.00
+- Sonnet: $3.00 / $15.00
+- Opus: $15.00 / $75.00
 
 ---
 
-## Execution Modes
+## Session Memory
 
-| Mode | Flag | Behavior | Best For |
-|------|------|----------|----------|
-| **Yolo** | `--yolo` | Full auto. No confirmations. | High-trust projects, overnight runs |
-| **Checkpoint** | (default) | Pauses after each story for review | Most development work |
-| **Careful** | `--careful` | Pauses after every phase within each story | Learning Maestro, critical systems |
+Dual-sector memory persists across sessions:
+- **Semantic**: long-term facts, preferences, architecture decisions
+- **Episodic**: session context with salience decay (auto-prunes after ~10 sessions)
 
----
-
-## Project DNA (`/maestro init`)
-
-When you run `/maestro init`, Maestro scans your project and builds a comprehensive profile:
-
-- **Tech stack** — frameworks, languages, package managers, databases
-- **Patterns** — component conventions, file organization, naming standards
-- **Architecture** — data flow, API structure, rendering strategy
-- **Testing** — framework, coverage expectations, test locations
-- **Style** — linting rules, formatting preferences, commit message conventions
-
-This profile is stored in `.maestro/dna.md` and injected into every agent so they write code that looks like YOUR code, not generic boilerplate.
+Memory is injected into agent context for continuity.
 
 ---
 
-## Compatibility
+## Agents
 
-Maestro is designed to complement, not compete with, the Claude Code ecosystem.
-
-| Plugin | Relationship | How Maestro Uses It |
-|--------|-------------|-------------------|
-| **superpowers** | Extends | Uses subagent patterns and worktree conventions. Maestro adds strategy, research, and token tracking layers on top |
-| **ralph-loop** | Coexists | Different state files. Both can be installed. Use Ralph for non-Maestro loops |
-| **skill-creator** | Uses | Skill Factory delegates to skill-creator for generating project specialists |
-| **feature-dev** | Dispatches | Uses code-explorer for architecture phase, code-architect for design |
-| **pr-review-toolkit** | Dispatches | Uses review-pr in ship phase, code-reviewer in QA |
-
-Maestro follows the Agent Skills open standard and the superpowers implementer protocol. It requires Claude Code CLI or Claude Code Desktop.
-
----
-
-## Development Phases
-
-| Phase | Status | What It Includes |
-|-------|--------|-----------------|
-| **Phase 1: Core Loop + Init** | Complete | Core dev loop, init, decompose, QA, git craft, token ledger, hooks |
-| **Phase 2: Strategy + Research** | Complete | Research agents, competitive analysis, architecture design, skill factory |
-| **Phase 3: Context Engine + Specialists** | Complete | Context tiers, specialist agents, progressive context injection |
-| **Phase 4: Magnum Opus** | Complete | Autonomous product builder, deep interview, mega research, milestone loop |
-| **Phase 5: Community + Polish** | Complete | Friction detection, improvement proposals, meta-rules, progressive trust |
-| **Phase 6: Agent Teams + Parallelism** | Planned | Parallel agents with shared task lists, inter-agent messaging, worktree isolation |
+| Agent | Model | Role |
+|-------|-------|------|
+| Implementer | Sonnet | TDD story implementation |
+| QA Reviewer | Opus | Skeptical code review (read-only) |
+| Researcher | Sonnet | Competitive analysis, web research |
+| Strategist | Opus | Marketing, growth, positioning |
+| Fixer | Sonnet | Targeted error fixes (self-heal) |
+| Proactive | Haiku | Background monitoring, health checks |
 
 ---
 
 ## File Structure
 
-Maestro stores all state and artifacts in a `.maestro/` directory at your project root:
-
 ```
 .maestro/
-  state.md              # Project history (what's been built)
-  state.local.md        # Active session state (gitignored)
-  dna.md                # Auto-discovered project profile
-  vision.md             # Product vision (from /maestro opus interview)
-  roadmap.md            # Milestone roadmap with dependency graph
-  architecture.md       # Architecture decisions and diagrams
-  token-ledger.md       # Cumulative token spend tracking
-  research/             # Research sprint outputs (competitors, SEO, etc.)
-  stories/              # Story specs and completion status
-  logs/                 # Execution logs per milestone
-  learning/             # Friction signals and improvement proposals
+  dna.md              Project DNA (tech stack, patterns)
+  config.yaml         Configuration
+  trust.yaml          Trust metrics
+  state.md            Persistent project state
+  state.local.md      Session state (gitignored)
+  stories/            Story spec files
+  logs/               Session logs
+  research/           Research output
+  memory/
+    semantic.md       Long-term facts
+    episodic.md       Session context (decays)
 ```
-
----
-
-## Contributing
-
-PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-Check the development phases above to see what is actively being built. Phase 1 contributions are the highest priority. If you want to tackle something in a later phase, open an issue first to discuss the approach.
 
 ---
 
 ## License
 
-[MIT](LICENSE)
-
----
-
-## Acknowledgments
-
-Maestro builds on ideas, patterns, and lessons from across the Claude Code community:
-
-- **[superpowers](https://github.com/nicobailon/superpowers)** — subagent orchestration patterns and worktree conventions
-- **[ralph-loop](https://github.com/nicobailon/ralph-loop)** — stop-hook continuation loop that keeps agents running
-- **[claude-coach](https://github.com/lennartpollvogt/claude-coach)** — friction detection and 6-signal classification
-- **[claude-swarm](https://github.com/claudeswarm/claude-swarm)** — dependency graph decomposition and Opus quality gates
-- **[self-evolving-agent](https://github.com/mettamatt/self-evolving-agent)** — North Star anchoring, atomic loading, and PDCA loops
-- **[claude-meta](https://github.com/hiromichinomata/claude-meta)** — meta-rules that teach agents how to improve
-- **[Aider](https://github.com/paul-gauthier/aider)** — tree-sitter repo mapping and relevance-ranked context
-
-And the broader Claude Code community, whose plugins, experiments, and discussions shaped every design decision in Maestro.
+MIT

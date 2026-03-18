@@ -1,7 +1,7 @@
 ---
 project: ""
 generated_at: ""
-maestro_version: "1.0.0"
+maestro_version: "1.1.0"
 ---
 
 # Project DNA

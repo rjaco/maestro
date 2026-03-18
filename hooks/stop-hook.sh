@@ -4,7 +4,7 @@ set -euo pipefail
 # Maestro Stop Hook
 # Prevents session exit during active Maestro dev-loop.
 # Reads state from .maestro/state.local.md (NOT .claude/).
-# Outputs JSON: {"decision": "block"|"allow", "reason": "...", "systemMessage": "..."}
+# Outputs JSON: {"decision": "approve"|"block", "reason": "...", "systemMessage": "..."}
 
 STATE_FILE=".maestro/state.local.md"
 
@@ -12,7 +12,7 @@ STATE_FILE=".maestro/state.local.md"
 
 allow_exit() {
   local reason="${1:-No active Maestro session}"
-  printf '{"decision":"allow","reason":"%s"}\n' "$reason"
+  printf '{"decision":"approve","reason":"%s"}\n' "$reason"
   exit 0
 }
 

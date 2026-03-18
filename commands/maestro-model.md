@@ -33,8 +33,12 @@ models:
 
 ### No arguments or `show` — Display current assignments
 
+Read `.maestro/trust.yaml` and check for a `model_performance` section. This section contains per-model stats like `qa_first_pass_rate` and `avg_self_heal_cycles`.
+
 ```
-Model Assignments
++---------------------------------------------+
+| Model Assignments                           |
++---------------------------------------------+
 
   Task Type     Model      Used For
   ----------    -------    ----------------------------------------
@@ -43,6 +47,17 @@ Model Assignments
   review        opus       QA review, milestone eval, quality gates
   simple        haiku      Fix agents, config, boilerplate
   research      sonnet     Web research, competitive analysis
+
+  Performance (this project):
+    (If `.maestro/trust.yaml` has `model_performance` data, show each model:)
+    sonnet   [qa_first_pass_rate]% QA first-pass, [avg_self_heal_cycles] avg self-heal cycles
+    opus     [qa_first_pass_rate]% QA first-pass, [avg_self_heal_cycles] avg self-heal cycles
+    haiku    [qa_first_pass_rate]% QA first-pass, [avg_self_heal_cycles] avg self-heal cycles
+    (Only show models that have performance data recorded.
+     If no `model_performance` data exists, show:)
+    No performance data yet.
+
++---------------------------------------------+
 
 Cost reference (per million tokens):
   Haiku:   $0.80 input / $4.00 output
@@ -85,12 +100,18 @@ Valid models: haiku, sonnet, opus
 When changing a model assignment, show the estimated cost impact:
 
 ```
-Cost impact of changing [task] from [old] to [new]:
++---------------------------------------------+
+| Cost Impact Preview                         |
++---------------------------------------------+
+
+  Changing [task] from [old] to [new]:
 
   [task] typically uses ~[N]K tokens per feature.
   Old cost: ~$[N] per feature
   New cost: ~$[N] per feature
   Change:   [+/-]$[N] per feature ([+/-]N%)
+
++---------------------------------------------+
 
 Proceed? [Y/n]
 ```
