@@ -22,7 +22,8 @@ fi
 
 # Read error info from stdin (JSON)
 INPUT=$(cat)
-ERROR_TYPE=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','unknown'))" 2>/dev/null || echo "unknown")
+# Parse error type without python3 — pure bash/grep
+ERROR_TYPE=$(printf '%s' "$INPUT" | grep -o '"error"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"error"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || echo "unknown")
 
 # Get current doom_loop count
 CURRENT_COUNT=$(grep -m1 "doom_loop_count:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "0")

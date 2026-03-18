@@ -75,7 +75,8 @@ fi
 
 current_session_id=""
 if [[ -n "$hook_input" ]]; then
-  current_session_id=$(printf '%s' "$hook_input" | jq -r '.session_id // empty' 2>/dev/null || true)
+  # Parse session_id without jq — pure bash/grep
+  current_session_id=$(printf '%s' "$hook_input" | grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || true)
 fi
 
 if [[ -n "$state_session_id" && -n "$current_session_id" && "$state_session_id" != "$current_session_id" ]]; then
