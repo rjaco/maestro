@@ -71,7 +71,7 @@ Which approach? [1/2/3]
    - Move `.maestro/stories/` to `.maestro/archive/stories-[session_id]/`
 2. Update state: `active: false`, `phase: archived`
 3. Log the pivot to `.maestro/state.md` with timestamp and reason
-4. Invoke `/maestro opus` with the new vision description to start fresh
+4. Invoke `/maestro magnum-opus` with the new vision description to start fresh
 
 #### Option 2: Pivot in Place
 

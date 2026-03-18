@@ -43,6 +43,45 @@ Select the model based on task complexity signals:
 - If a `sonnet` agent fails twice, escalate to `opus`.
 - Never downgrade from a user-specified model.
 
+### Decision 2b: Complexity Re-evaluation (Auto-Downgrade)
+
+After the initial model assignment, re-evaluate complexity at dispatch time using simplicity signals before invoking the agent. This prevents over-spending when a story turns out to be simpler than initial classification suggested.
+
+**Simplicity signals — check each:**
+
+1. Story touches only 1 file
+2. Story follows an existing pattern exactly (the implementation is template-like)
+3. Story is purely additive — no refactoring, no deleted lines in non-test files
+4. Story is config or data only — no logic, no conditionals
+5. Story has a clear template in the codebase that can be lifted and adapted
+
+**Auto-downgrade rules:**
+
+| Signal Count | Action |
+|---|---|
+| 3 or more signals | Downgrade: `opus` → `sonnet`, or `sonnet` → `haiku` |
+| Exactly 2 signals | Log the observation; do not force a downgrade |
+| 0–1 signals | No change; keep the initially assigned model |
+
+**Safety constraints (always enforced):**
+
+- Never downgrade below the minimum model for the agent type. Each agent type has a floor: `orchestrator` and `architect` floor at `sonnet`; all others floor at `haiku`.
+- Never downgrade if the user explicitly specified a model (story `model` field or global `model_override`).
+- Never downgrade if the story is security-critical or has ambiguous requirements (those signals already push toward `opus`).
+
+**Logging requirement:**
+
+Every downgrade decision — forced or deferred — must be logged to `.maestro/state.local.md` with:
+- The model before and after the downgrade
+- Which simplicity signals fired
+- Whether the downgrade was applied or only noted
+
+Example log entry:
+```
+[Auto-downgrade] Story 07 | haiku (3 signals: single-file, additive, config-only) | sonnet → haiku applied
+[Auto-downgrade] Story 11 | 2 signals: single-file, additive | downgrade noted but not forced
+```
+
 ### Decision 3: What Context
 
 Invoke the Context Engine to compose the right-sized context package:
@@ -100,3 +139,87 @@ After each dispatch, log the token spend:
 - Running total for the session
 
 Feed this data to the `token-ledger` skill for budget tracking.
+
+## Cost Awareness
+
+Track cumulative spend per feature (a feature = one orchestration run or named milestone). At each checkpoint summary, include a cost delta line:
+
+| Spend vs. forecast | Action |
+|---|---|
+| More than 150% of forecast | Flag to user: "Spend is 50%+ over forecast — no auto-stop, but review model assignments" |
+| Within 50–150% of forecast | Normal; no action |
+| Below 50% of forecast | Note efficiency: "Spend is under half of forecast — consider whether scope changed" |
+
+**How to compute the forecast:**
+
+The `token-ledger` skill holds the per-story cost estimates produced at planning time. Sum estimates for all stories in the current milestone to get the forecast. Compare against actual running total.
+
+**Checkpoint summary format (cost delta line):**
+
+```
+Cost: $0.42 actual / $0.60 forecast (70% — on track)
+```
+
+or, if over threshold:
+
+```
+Cost: $0.91 actual / $0.60 forecast (152% — FLAG: over budget)
+```
+
+Do not halt execution based on cost alone. Flag and continue unless the user explicitly sets a budget ceiling in state.
+
+## Model Routing Optimization
+
+Use historical QA pass-rate data to progressively shift model assignments toward cheaper models when the project demonstrates they are sufficient.
+
+**Progressive downgrade patterns:**
+
+1. **Last-3 sonnet pattern:** If the last 3 stories dispatched to `sonnet` all received QA first-pass (no rework cycle), treat stories of similar complexity as candidates for `haiku` on next dispatch. Log the observation; apply on the next matching story.
+
+2. **Haiku 80% rule:** If `haiku` has achieved an 80%+ QA first-pass rate across all stories in this project so far, default `haiku` for any story initially classified as "standard" complexity (sonnet tier). Override still yields to user-specified models and the safety constraints from Decision 2b.
+
+**Tracking QA pass rates per model:**
+
+After each QA reviewer response, record in `.maestro/state.local.md`:
+```
+[QA result] Story 05 | model: sonnet | pass: true | first-pass: true
+[QA result] Story 06 | model: haiku  | pass: true | first-pass: false (1 rework cycle)
+```
+
+Compute running rates from these log lines when evaluating patterns above.
+
+**State fields to maintain:**
+
+```
+model_stats:
+  haiku:  { dispatched: 8, qa_first_pass: 7, rate: 0.875 }
+  sonnet: { dispatched: 5, qa_first_pass: 5, rate: 1.0 }
+  opus:   { dispatched: 1, qa_first_pass: 1, rate: 1.0 }
+```
+
+Reset per project (not per session). The orchestrator persists these in `.maestro/state.local.md`.
+
+## Token-Ledger Integration
+
+After each agent dispatch completes:
+
+1. Record actual token spend (input + output tokens, model, story ID) to the `token-ledger` skill.
+2. Retrieve the token-ledger's stored estimate for this story.
+3. Compute cost efficiency: `actual / estimate`. Values below 1.0 are under-budget; above 1.0 are over-budget.
+4. Feed the cost efficiency value back into model selection state:
+   - If efficiency < 0.6 for 3 consecutive stories at a given model tier: add one simplicity signal weight (lowers the threshold for future downgrades).
+   - If efficiency > 1.5 for any story: log a warning and flag the story's model assignment as a candidate for review.
+
+This feedback loop means Delegation becomes more conservative (cheaper) over time when stories are consistently under-budget, and more cautious when stories are regularly over-budget.
+
+**Token-ledger call pattern (after each dispatch):**
+```
+token-ledger record:
+  story_id: <id>
+  model: <model used>
+  input_tokens: <n>
+  output_tokens: <n>
+  estimated_tokens: <from planning>
+```
+
+See `skills/token-ledger/SKILL.md` for the full ledger protocol.

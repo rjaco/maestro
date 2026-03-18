@@ -1,0 +1,41 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "maestro-orchestrator",
+  "description": "Full-stack autonomous development orchestrator for Claude Code",
+  "owner": {
+    "name": "Maestro Contributors"
+  },
+  "metadata": {
+    "description": "Build features with /maestro, entire products with /maestro magnum-opus. Kanban integration, second brain, session memory, notifications, and visual dashboards.",
+    "version": "1.1.0"
+  },
+  "plugins": [
+    {
+      "name": "maestro",
+      "description": "Full-stack autonomous development orchestrator with kanban (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), session memory, notifications, and visual dashboards. Build features with /maestro, entire products with /maestro magnum-opus.",
+      "version": "1.1.0",
+      "author": {
+        "name": "Maestro Contributors"
+      },
+      "source": "./plugins/maestro",
+      "category": "development",
+      "license": "MIT",
+      "keywords": [
+        "orchestrator",
+        "autonomous",
+        "agents",
+        "kanban",
+        "asana",
+        "jira",
+        "linear",
+        "obsidian",
+        "notion",
+        "second-brain",
+        "memory",
+        "notifications",
+        "visualization"
+      ],
+      "repository": "https://github.com/rjaco/maestro-orchestrator"
+    }
+  ]
+}

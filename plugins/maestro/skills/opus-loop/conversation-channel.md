@@ -55,7 +55,7 @@ When an interrupting message is received:
 3. For `redirect` / `reprioritize`: Let the current story complete if possible, then pause to process the change.
 4. For `urgent-fix`: Attempt to cancel running agents. Save state immediately. Show what was in progress and what was interrupted.
 
-After any interruption, the session must be resumable via `/maestro opus --resume` or the `resume` keyword.
+After any interruption, the session must be resumable via `/maestro magnum-opus --resume` or the `resume` keyword.
 
 ## Status Response Format
 

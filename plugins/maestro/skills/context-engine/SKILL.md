@@ -158,9 +158,168 @@ Log each escalation:
   New total: 4,612 tokens (still within T3 budget)
 ```
 
+## Cross-Session Intelligence
+
+Tracks which files were accessed, which context packages worked, and uses that history to improve context selection in future sessions. Inspired by Windsurf's Cascade memory model.
+
+### File Access Pattern Tracking
+
+At the end of every session, append learned file patterns to `.maestro/memory/context-history.md`. The file is human-readable and manually editable.
+
+**Storage format:**
+
+```markdown
+## File Access Patterns
+- [auth features] → src/auth/*, src/middleware/*, tests/auth/*
+- [API endpoints] → src/routes/*, src/validators/*, tests/api/*
+- [UI components] → src/components/*, src/styles/*, tests/components/*
+- [database] → src/db/*, src/models/*, prisma/*, tests/db/*
+- [payments] → src/billing/*, src/webhooks/stripe/*, tests/billing/*
+
+## Pattern Hit Rates
+<!-- Format: feature-type | file-glob | sessions-included | sessions-useful | hit-rate -->
+- [auth features] | src/auth/* | 12 | 11 | 0.92
+- [auth features] | src/middleware/* | 12 | 9 | 0.75
+- [API endpoints] | src/routes/* | 18 | 18 | 1.00
+- [API endpoints] | src/validators/* | 18 | 14 | 0.78
+- [UI components] | src/styles/* | 7 | 4 | 0.57
+
+## Session Log
+<!-- One line per session with outcome -->
+- 2026-03-17 | story:auth-refresh | feature:auth | outcome:QA_PASS | package:3412t | missing:none
+- 2026-03-17 | story:search-api | feature:API endpoints | outcome:NEEDS_CONTEXT | package:2800t | missing:src/cache/manager.ts
+- 2026-03-16 | story:login-form | feature:UI components | outcome:QA_PASS | package:5100t | missing:none
+```
+
+**Feature-type detection:** Classify the current story's feature type by matching keywords from the story title and acceptance criteria against known feature types. If no match is found, classify as `unknown` and record without pre-including files.
+
+| Keyword signals | Feature type |
+|----------------|--------------|
+| auth, login, session, token, permission, role | auth features |
+| route, endpoint, API, REST, GraphQL, request, response | API endpoints |
+| component, UI, form, modal, page, layout, style | UI components |
+| database, query, migration, schema, model, ORM | database |
+| payment, billing, subscription, invoice, stripe | payments |
+
+### Learning Signals
+
+The context engine updates `.maestro/memory/context-history.md` based on three outcome signals:
+
+**Signal 1 — NEEDS_CONTEXT (negative signal):**
+When an implementer returns `NEEDS_CONTEXT`, record which files were missing. These files were under-represented in the context package.
+
+```
+Action: Append to Session Log with outcome:NEEDS_CONTEXT and missing:<file-path>
+Action: Increment sessions-included for existing patterns, do NOT increment sessions-useful
+Action: If the missing file belongs to a recognizable glob, add a new Pattern Hit Rate entry
+```
+
+**Signal 2 — QA passes first try (positive signal):**
+When a QA reviewer returns DONE on the first attempt (no prior self-heal or NEEDS_CONTEXT in the same story), record the context package as "good".
+
+```
+Action: Append to Session Log with outcome:QA_PASS and missing:none
+Action: Increment both sessions-included and sessions-useful for all globs that were included
+```
+
+**Signal 3 — Self-heal succeeds (error-to-file mapping):**
+When self-heal resolves an error, record the error category → file mapping. This improves T4 fix packages.
+
+```
+Action: Append to Session Log with outcome:SELF_HEAL_PASS
+Action: Record the error type and which file contained the fix under a ## Self-Heal Patterns section
+```
+
+**Self-heal pattern format:**
+
+```markdown
+## Self-Heal Patterns
+- [TypeScript type error] → src/types/*, tsconfig.json
+- [ESLint rule violation] → .eslintrc.*, src/**/*.ts (file where error occurred)
+- [missing import] → src/lib/*, src/utils/*, package.json
+- [test assertion failure] → tests/*, src/<file-under-test>
+```
+
+### Context Prediction
+
+Before composing a context package for a T3 implementer or T4 fix agent, check `.maestro/memory/context-history.md` for pre-established patterns.
+
+**Prediction algorithm:**
+
+1. Detect the story's feature type from keyword signals (see table above).
+2. Look up all Pattern Hit Rate entries for that feature type.
+3. Collect file globs where `hit-rate > 0.7`.
+4. Resolve those globs against the current project tree (use `git ls-files`).
+5. Score the resolved files using the normal relevance filter (Step 3).
+6. Pre-include any file that scores above the T3 threshold (0.5) AND has a hit-rate above 0.7.
+7. Label these files as `[predicted]` in the assembled package so the implementer knows they were added proactively.
+
+**Confidence log entry:**
+
+```
+[2026-03-18T09:10:00] Story 07-auth-refresh | Prediction: auth features
+  Pre-included (hit-rate ≥ 0.70): src/auth/session.ts(0.92), src/middleware/auth.ts(0.75)
+  Skipped (hit-rate < 0.70): src/auth/oauth.ts(0.50)
+  Predicted tokens: +612 | New total: 4,024 (within T3 budget)
+```
+
+**When no history exists:** Skip prediction entirely. Do not pre-include any files on guesses. Build history first.
+
+**When history exists but hit-rate is below 0.7 for all files:** Skip prediction. Include only what the standard relevance filter selects.
+
+### Recent Changes Awareness
+
+At session start, check for files modified since the last recorded session in `.maestro/memory/context-history.md`.
+
+**Step-by-step:**
+
+1. Read the last session date from the Session Log (most recent entry).
+2. Run: `git log --since="<last-session-date>" --name-only --pretty=format: | sort -u`
+3. Collect the resulting file list as "recently changed files".
+4. When composing any context package, cross-reference the story's file list against recently changed files.
+5. If any file the story touches was also recently changed, flag it in the package.
+
+**Flag format in composed package:**
+
+```
+Files (flagged):
+  src/auth/session.ts [lines 1-60] — [RECENTLY CHANGED: modified since last session]
+  src/middleware/auth.ts [lines 10-45]
+```
+
+**Warn the implementer:**
+
+Prepend a warning block to the context package when any flagged file is present:
+
+```
+[!] RECENT CHANGES DETECTED
+The following files were modified since the last recorded session and may conflict
+with assumptions in this story:
+  - src/auth/session.ts (changed 2026-03-17)
+Review these files carefully before implementing. Interfaces or behaviors may have shifted.
+```
+
+**If no session log exists yet:** Skip recent-changes check. There is no baseline to diff against.
+
+### Integration with Memory Skill
+
+The memory skill and context engine serve complementary roles. They do not duplicate each other.
+
+| Concern | Memory Skill | Context Engine |
+|---------|-------------|----------------|
+| Scope | Semantic facts about the project (decisions, constraints, patterns, why) | Tactical file-level context for a specific agent dispatch |
+| Storage | `.claude/agent-memory/` | `.maestro/memory/context-history.md` |
+| Lifetime | Persistent across all sessions, manually curated | Persistent across sessions, auto-updated by outcomes |
+| Input to agent | "What to do and why" — project knowledge, conventions, rationale | "Where to do it" — the exact files, line ranges, and interfaces needed |
+| Updated by | User edits, agent memory writes | Context engine itself, based on NEEDS_CONTEXT / QA_PASS / SELF_HEAL signals |
+
+**Composition rule:** When building a T3 or T4 package, pull semantic facts from the memory skill first (constraints, conventions, rationale), then layer file-level context from the context engine on top. The memory skill is read-only input to the context engine's Step 3 (relevance filter) — facts stored in memory can raise the relevance score of related files.
+
+**Example:** If memory contains "auth refresh uses sliding window expiry — see src/auth/session.ts", and the current story is tagged `auth features`, that memory fact boosts the relevance score of `src/auth/session.ts` even before the prediction step runs.
+
 ## Integration Points
 
 - **Invoked by:** `delegation` skill (every agent dispatch)
-- **Reads from:** `.maestro/dna.md`, `.maestro/stories/`, `.maestro/state.local.md`, project CLAUDE.md, source files
-- **Writes to:** `.maestro/context-log.md` (append-only log)
+- **Reads from:** `.maestro/dna.md`, `.maestro/stories/`, `.maestro/state.local.md`, project CLAUDE.md, source files, `.maestro/memory/context-history.md`
+- **Writes to:** `.maestro/context-log.md` (append-only log), `.maestro/memory/context-history.md` (cross-session learning)
 - **References:** `references/tier-definitions.md`, `references/relevance-rules.md`, `references/budget-profiles.md`

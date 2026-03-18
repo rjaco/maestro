@@ -2,7 +2,7 @@
 
 **Full-Stack Autonomous Development Orchestrator for Claude Code**
 
-Build features with `/maestro`. Build entire products with `/maestro opus`. Track progress on your kanban board. Persist knowledge in your second brain.
+Build features with `/maestro`. Build entire products with `/maestro magnum-opus`. Track progress on your kanban board. Persist knowledge in your second brain.
 
 ---
 
@@ -27,7 +27,7 @@ claude plugin install maestro
 /maestro "Add user authentication with email/password"
 
 # Build an entire product
-/maestro opus "Personal finance dashboard with budget tracking"
+/maestro magnum-opus "Personal finance dashboard with budget tracking"
 ```
 
 ---
@@ -37,7 +37,7 @@ claude plugin install maestro
 | Command | Description |
 |---------|-------------|
 | `/maestro "task"` | Build a feature autonomously |
-| `/maestro opus "vision"` | Build an entire product (Magnum Opus) |
+| `/maestro magnum-opus "vision"` | Build an entire product (Magnum Opus) |
 | `/maestro init` | Initialize for this project |
 | `/maestro status` | View progress, resume, pause, abort |
 | `/maestro model` | View/change model assignments |
@@ -101,7 +101,7 @@ VALIDATE > DELEGATE > IMPLEMENT > SELF-HEAL > QA > GIT > CHECKPOINT
 
 ## Magnum Opus
 
-Build entire products with `/maestro opus "vision"`.
+Build entire products with `/maestro magnum-opus "vision"`.
 
 1. **Deep Interview** — 10-dimension adaptive vision interview
 2. **Research Sprint** — 8 parallel research agents (competitors, tech, architecture)

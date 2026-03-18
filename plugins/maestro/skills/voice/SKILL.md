@@ -31,7 +31,7 @@ When the user speaks, Claude Code transcribes the audio. This skill helps Claude
 | "Abort" / "Cancel" | `/maestro status abort` |
 | "Send notification" / "Notify team" | `/maestro notify "[message]"` |
 | "Show diagram" / "Visualize" | `/maestro viz` |
-| "Start opus" / "Build product" | `/maestro opus "[vision]"` |
+| "Start opus" / "Build product" | `/maestro magnum-opus "[vision]"` |
 
 ## TTS-Optimized Responses
 

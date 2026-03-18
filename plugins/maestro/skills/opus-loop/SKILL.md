@@ -218,7 +218,7 @@ Log to `.maestro/logs/` via build-log skill. Save lessons to `.maestro/memory/se
 
 ### State Persistence
 
-Write all state to disk. If the session is interrupted (crash, network loss, user closes terminal), the next `/maestro opus --resume` will pick up from the last checkpoint.
+Write all state to disk. If the session is interrupted (crash, network loss, user closes terminal), the next `/maestro magnum-opus --resume` will pick up from the last checkpoint.
 
 ## Continuous Loop Mode
 

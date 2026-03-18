@@ -72,6 +72,12 @@ External services (or a lightweight receiver script) write events to `.maestro/w
 | `ci` | `deploy.completed` | Notify, log, run smoke tests |
 | `monitoring` | `alert.triggered` | Notify (high urgency), log |
 | `monitoring` | `alert.resolved` | Notify (low urgency), log |
+| `github` | `issue_comment.created` | Parse @maestro command, route to skill |
+| `deploy` | `deployment.succeeded` | Notify, log, run post-deploy checks |
+| `deploy` | `deployment.failed` | Notify (alert), log error |
+| `monitoring` | `error.created` | Create fix story, notify |
+| `monitoring` | `monitor.down` | Critical notification |
+| `monitoring` | `monitor.up` | Resolve notification |
 | `custom` | Any | Log to notes.md for dev-loop pickup |
 
 ## Polling Mechanism

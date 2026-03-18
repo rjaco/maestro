@@ -12,6 +12,17 @@ allowed-tools:
 
 # Maestro Viz
 
+**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+
+```
+███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
+████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
+██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
+██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
+██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
+╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+```
+
 Generate visual diagrams and dashboards for the current Maestro session or project.
 
 ## Step 1: Check Data
@@ -55,7 +66,7 @@ Use AskUserQuestion:
 ### `roadmap` — Roadmap Timeline
 
 1. Read `.maestro/roadmap.md` or milestone files
-2. If they don't exist: "No roadmap found. Use /maestro opus to generate milestones."
+2. If they don't exist: "No roadmap found. Use /maestro magnum-opus to generate milestones."
 3. Generate Mermaid Gantt chart
 
 ### `progress` — Progress Dashboard

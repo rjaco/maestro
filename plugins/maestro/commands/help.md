@@ -11,6 +11,17 @@ allowed-tools:
 
 # Maestro Help
 
+**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+
+```
+███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
+████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
+██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
+██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
+██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
+╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+```
+
 Provides contextual help using an embedded knowledge base. When called with no arguments, shows the topic list. When called with a topic, provides detailed guidance.
 
 ## No Arguments — Show Topic List
@@ -43,7 +54,7 @@ Provides contextual help using an embedded knowledge base. When called with no a
 ```
 Commands:
   /maestro "task"         Build a feature autonomously
-  /maestro opus "vision"  Build an entire product (Magnum Opus)
+  /maestro magnum-opus "vision"  Build an entire product (Magnum Opus)
   /maestro init           Initialize for this project
   /maestro status         View progress, resume, pause, abort
   /maestro model          View/change model assignments
@@ -58,7 +69,7 @@ Examples:
   /maestro "Add dark mode toggle"
   /maestro "Build pricing page" --yolo
   /maestro "Refactor API layer" --careful --model opus
-  /maestro opus "SaaS analytics dashboard"
+  /maestro magnum-opus "SaaS analytics dashboard"
 ```
 
 ### Topic: modes
@@ -92,7 +103,7 @@ Use flags to set mode:
 ```
 Magnum Opus — Build Entire Products
 
-  /maestro opus "Build a personal finance dashboard"
+  /maestro magnum-opus "Build a personal finance dashboard"
 
 How it works:
   1. Deep Interview — Maestro asks questions across 10

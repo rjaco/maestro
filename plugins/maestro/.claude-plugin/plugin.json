@@ -1,6 +1,6 @@
 {
   "name": "maestro",
-  "description": "Full-stack autonomous development orchestrator with kanban integration (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), and session memory. Build features with /maestro, build entire products with /maestro opus. Three-layer orchestration with self-improving agents, context management, and cost tracking.",
+  "description": "Full-stack autonomous development orchestrator with kanban integration (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), and session memory. Build features with /maestro, build entire products with /maestro magnum-opus. Three-layer orchestration with self-improving agents, context management, and cost tracking.",
   "version": "1.1.0",
   "author": {
     "name": "Maestro Contributors"

@@ -129,7 +129,7 @@ You can use Dispatch for ad-hoc parallel tasks and Maestro for structured featur
 | Command | Description |
 |---------|-------------|
 | `/maestro "task"` | Build a feature autonomously |
-| `/maestro opus "vision"` | Build an entire product (Magnum Opus) |
+| `/maestro magnum-opus "vision"` | Build an entire product (Magnum Opus) |
 | `/maestro plan "task"` | Deep planning with codebase exploration |
 | `/maestro init` | Initialize for this project |
 | `/maestro status` | View progress, resume, pause, abort |

@@ -32,4 +32,4 @@ consecutive_failures: 0
 max_consecutive_failures: 5
 ---
 
-No active Maestro session. Use /maestro to start building a feature, or /maestro opus to build an entire product.
+No active Maestro session. Use /maestro to start building a feature, or /maestro magnum-opus to build an entire product.

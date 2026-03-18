@@ -1,6 +1,6 @@
 ---
 name: notify
-description: "Push notifications to Slack, Discord, and Telegram on build events. Provider-agnostic notification system triggered by dev-loop, ship, and watch skills."
+description: "Push notifications to Slack, Discord, Telegram, and PagerDuty on build events. Provider-agnostic notification system triggered by dev-loop, ship, and watch skills."
 ---
 
 # Notification System
@@ -14,6 +14,7 @@ Push status updates to external channels when significant events occur during Ma
 | `slack` | `provider-slack.md` | Incoming Webhook URL | Create app at api.slack.com |
 | `discord` | `provider-discord.md` | Webhook URL | Channel Settings > Integrations |
 | `telegram` | `provider-telegram.md` | Bot API | Create bot via @BotFather |
+| `pagerduty` | `provider-pagerduty.md` | Events API v2 | Services > Integrations > Events API v2 |
 
 ## Configuration
 
@@ -30,6 +31,13 @@ notifications:
     telegram:
       bot_token: "123456:ABC..."
       chat_id: "987654321"
+    pagerduty:
+      routing_key: null
+      severity_map:
+        qa_rejection: warning
+        self_heal_failure: error
+        test_regression: error
+        consecutive_failures: critical
   triggers:
     on_story_complete: true
     on_feature_complete: true

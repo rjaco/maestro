@@ -70,7 +70,7 @@ After classifying the layer, assess the scope of the request:
 
 If scope seems too large for a single feature, respond:
 
-> This sounds like a multi-milestone project. Would you like to use `/maestro opus` for the full autonomous experience? It includes a deep interview, research sprint, architecture design, and iterative build cycles with checkpoints.
+> This sounds like a multi-milestone project. Would you like to use `/maestro magnum-opus` for the full autonomous experience? It includes a deep interview, research sprint, architecture design, and iterative build cycles with checkpoints.
 
 ## Output Format
 
