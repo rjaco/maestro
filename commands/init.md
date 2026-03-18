@@ -1,6 +1,6 @@
 ---
 description: "Initialize Maestro for this project — inference-first onboarding that asks, scans, previews, then builds"
-allowed-tools: Read Write Edit Bash Glob Grep
+allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
 ---
 
 # Maestro Init — Inference-First Onboarding (v2.0.0)
@@ -13,14 +13,14 @@ You are performing first-time Maestro setup for this project. The flow is: **ask
 
 If `.maestro/dna.md` already exists, warn the user:
 
-```
-[maestro] Project DNA already exists.
+Use AskUserQuestion:
+- Question: "Project DNA already exists. What would you like to do?"
+- Header: "Init"
+- Options:
+  1. label: "Regenerate", description: "Rescan codebase and overwrite current DNA"
+  2. label: "Cancel", description: "Keep existing DNA unchanged"
 
-  [1] Regenerate (overwrites current DNA)
-  [2] Cancel
-```
-
-Wait for the user's response. If they choose cancel (2), stop immediately and do nothing.
+If they choose Cancel, stop immediately and do nothing.
 
 ### Fresh init
 
@@ -170,10 +170,15 @@ Before creating any files, show a compact DNA preview that merges the user's fre
     GitHub CLI       [detected (ok)] or [not found (x)]
     Obsidian CLI     [detected (ok)] or [not found (x)]
 
-  Type "build it" to create, or tell me what to change.
-```
+Use AskUserQuestion:
+- Question: "Does this look right?"
+- Header: "Preview"
+- Options:
+  1. label: "Build it (Recommended)", description: "Create .maestro/ directory with this configuration"
+  2. label: "Request changes", description: "Tell me what to adjust before building"
+  3. label: "Cancel", description: "Abort initialization"
 
-Wait for the user's confirmation. If they say "build it" (or equivalent affirmative), proceed to Step 4. If they request changes, update the inferred data accordingly and re-display the preview. Repeat until confirmed.
+If they choose "Build it (Recommended)", proceed to Step 4. If they choose "Request changes", update the inferred data accordingly and re-display the preview. Repeat until confirmed. If they choose "Cancel", stop.
 
 ## Step 4: Build
 

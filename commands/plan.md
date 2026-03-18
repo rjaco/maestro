@@ -147,9 +147,14 @@ Collect answers and synthesize into a brief requirements summary:
 
   Out of scope:
     - [explicitly excluded items]
-
-  Does this capture it? [Y/adjust]
 ```
+
+Use AskUserQuestion:
+- Question: "Does this capture your requirements?"
+- Header: "Confirm"
+- Options:
+  1. label: "Yes, proceed (Recommended)", description: "Move to codebase exploration"
+  2. label: "Adjust", description: "Modify the requirements summary"
 
 Wait for confirmation. If the user adjusts, update the summary.
 
@@ -253,12 +258,16 @@ Agent: "Design the architecture for: [DESCRIPTION]
     (ok) [advantage 1]
     (ok) [advantage 2]
     (!)  [trade-off or risk]
-
-  [1] Approve architecture
-  [2] Discuss alternatives
-  [3] Modify approach
-  [4] Start over
 ```
+
+Use AskUserQuestion:
+- Question: "Approve this architecture?"
+- Header: "Architecture"
+- Options:
+  1. label: "Approve (Recommended)", description: "Lock architecture and decompose into stories"
+  2. label: "Discuss alternatives", description: "Explore a different approach"
+  3. label: "Modify", description: "Adjust specific aspects of this approach"
+  4. label: "Start over", description: "Go back to brainstorming"
 
 Wait for approval. If the user wants alternatives, propose a different approach and compare.
 
@@ -339,11 +348,15 @@ If validation finds issues:
     (!)  Missing: no test story for auth middleware
     (!)  Convention: project uses named exports, plan has default exports
     (ok) Requirements coverage: 5/5 criteria addressed
-
-  [1] Auto-fix issues and re-validate
-  [2] Continue as-is (I'll handle it)
-  [3] Go back to architecture
 ```
+
+Use AskUserQuestion:
+- Question: "Plan validation found issues. How to proceed?"
+- Header: "Validation"
+- Options:
+  1. label: "Auto-fix and re-validate (Recommended)", description: "Add missing stories and fix convention issues"
+  2. label: "Continue as-is", description: "Proceed with known issues"
+  3. label: "Go back to architecture", description: "Redesign the approach"
 
 Auto-fix adds missing stories or adjusts plan based on findings.
 
@@ -363,12 +376,16 @@ Goal: Final presentation of the complete plan for approval.
   Approach     [one-line architecture summary]
 
   Plan saved to: .maestro/plans/[slug].md
-
-  [1] Execute now (/maestro "execute plan [slug]")
-  [2] Execute with mode selection
-  [3] Save for later
-  [4] Revise plan
 ```
+
+Use AskUserQuestion:
+- Question: "Plan is ready. What would you like to do?"
+- Header: "Action"
+- Options:
+  1. label: "Execute now (Recommended)", description: "Start building with /maestro using checkpoint mode"
+  2. label: "Execute with mode selection", description: "Choose yolo, checkpoint, or careful mode first"
+  3. label: "Save for later", description: "Save plan to .maestro/plans/ without executing"
+  4. label: "Revise plan", description: "Go back and adjust the plan"
 
 ## Phase 7: SAVE
 

@@ -10,6 +10,7 @@ allowed-tools:
   - Glob
   - Grep
   - Skill
+  - AskUserQuestion
 ---
 
 # Maestro Brain
@@ -59,10 +60,13 @@ If not configured:
   Connect a knowledge base to persist decisions,
   learnings, and session summaries across sessions.
 
-  [1] Connect Obsidian vault
-  [2] Connect Notion workspace
-  [3] Learn more (/maestro help integrations)
-```
+Use AskUserQuestion:
+- Question: "Connect a knowledge base to persist decisions and learnings?"
+- Header: "Brain"
+- Options:
+  1. label: "Connect Obsidian vault", description: "Local markdown files, works offline, Obsidian users"
+  2. label: "Connect Notion workspace", description: "Cloud database, team collaboration, Notion users"
+  3. label: "Learn more", description: "See /maestro help integrations for details"
 
 ### `connect` — Interactive Setup
 
@@ -85,10 +89,13 @@ If not configured:
    [maestro] Detected: Obsidian CLI available
 
      Connect your Obsidian vault?
-     [1] Yes, auto-detect vault location
-     [2] Yes, specify path manually
-     [3] No, skip for now
-   ```
+   Use AskUserQuestion:
+   - Question: "Detected: [provider] available. Connect now?"
+   - Header: "Connect"
+   - Options:
+     1. label: "Yes, auto-detect path", description: "Search common vault locations automatically"
+     2. label: "Yes, specify path", description: "I'll provide the vault path manually"
+     3. label: "Skip", description: "Don't connect now"
 
 4. Delegate to the appropriate provider's `connect()` operation.
 
@@ -129,10 +136,13 @@ If not configured:
         "Built email/password login with 5 stories.
          Key decision: bcrypt for hashing..."
 
-     [1] Read a note (enter number)
-     [2] New search
-     [3] Inject results into current context
-   ```
+   Use AskUserQuestion:
+   - Question: "Found [N] results. What would you like to do?"
+   - Header: "Results"
+   - Options:
+     1. label: "Read full note", description: "View the complete content of a result"
+     2. label: "New search", description: "Search with different terms"
+     3. label: "Inject into context", description: "Load relevant findings into the current conversation"
 
 4. If user selects "Read a note", read the full note and display it.
 
@@ -146,11 +156,14 @@ If not configured:
    ```
    [maestro] What kind of note is this?
 
-     [1] Decision — architecture or design decision
-     [2] Research — findings worth preserving
-     [3] Learning — lesson learned or insight
-     [4] Other — general note
-   ```
+   Use AskUserQuestion:
+   - Question: "What kind of note is this?"
+   - Header: "Category"
+   - Options:
+     1. label: "Decision", description: "Architecture or design decision"
+     2. label: "Research", description: "Findings worth preserving"
+     3. label: "Learning", description: "Lesson learned or insight"
+     4. label: "General", description: "Other note"
 
 3. Generate content from the current conversation context:
    - Summarize the key points discussed
@@ -171,10 +184,13 @@ If not configured:
        {first 5 lines of content}
        ...
 
-     [1] Save as-is
-     [2] Edit before saving
-     [3] Cancel
-   ```
+   Use AskUserQuestion:
+   - Question: "Save this note to your knowledge base?"
+   - Header: "Save"
+   - Options:
+     1. label: "Save as-is (Recommended)", description: "Save to [category]/ with current content"
+     2. label: "Edit before saving", description: "Modify the content before saving"
+     3. label: "Cancel", description: "Don't save"
 
 5. Save via the brain skill's `save()` operation.
 
@@ -222,10 +238,13 @@ If not configured:
        - bcrypt for password hashing
        - Rate limiting on auth endpoints (10 req/min)
 
-     [1] Save to brain
-     [2] Edit before saving
-     [3] Cancel
-   ```
+   Use AskUserQuestion:
+   - Question: "Save this session summary to your knowledge base?"
+   - Header: "TLDR"
+   - Options:
+     1. label: "Save (Recommended)", description: "Save to summaries/ in your knowledge base"
+     2. label: "Edit first", description: "Modify the summary before saving"
+     3. label: "Cancel", description: "Don't save"
 
 5. Save to the knowledge base with category `summary`.
 

@@ -151,6 +151,11 @@ Show the user:
 
 Ask: "Ready to build? You can reorder, skip, add, or modify stories before execution begins."
 
+**Important**: Story approval MUST use AskUserQuestion:
+- Question: "Decomposed into [N] stories. Approve this plan?"
+- Header: "Stories"
+- Options: Approve and start (Recommended) / Adjust stories / Abort
+
 The user can:
 - **Approve** — Proceed to `dev-loop`
 - **Reorder** — Change execution sequence (within dependency constraints)

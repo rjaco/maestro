@@ -1,7 +1,7 @@
 ---
 description: "View Maestro progress, resume paused work, abort, or pause"
 argument-hint: "[resume|abort|pause]"
-allowed-tools: Read Write Edit Bash Glob Grep
+allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
 ---
 
 # Maestro Status — Progress, Resume, Abort, Pause
@@ -115,19 +115,31 @@ Read `.maestro/config.yaml` and check for an `integrations` section (e.g., `gith
 After the box, show quick-action options based on state:
 
 If session is active (not paused, not completed, not aborted):
-```
-  [1] Pause  [2] Abort
-```
+
+Use AskUserQuestion:
+- Question: "Session is active. What would you like to do?"
+- Header: "Action"
+- Options:
+  1. label: "Pause", description: "Save state and pause for later resumption"
+  2. label: "Abort", description: "End the session. Committed work is preserved."
 
 If session is paused:
-```
-  [1] Resume  [2] Abort
-```
+
+Use AskUserQuestion:
+- Question: "Session is paused. What would you like to do?"
+- Header: "Action"
+- Options:
+  1. label: "Resume (Recommended)", description: "Continue from story [current]/[total]"
+  2. label: "Abort", description: "End the session. Committed work is preserved."
 
 If session is completed:
-```
-  [1] Start new session  [2] View history
-```
+
+Use AskUserQuestion:
+- Question: "Session completed. What's next?"
+- Header: "Next"
+- Options:
+  1. label: "Start new session", description: "Begin a new feature with /maestro"
+  2. label: "View history", description: "See past sessions and cost analysis"
 
 If `layer` is `opus`, add Magnum Opus section:
 
@@ -211,19 +223,14 @@ If the session is completed, show:
 
 ### `abort` — Abort session
 
-1. Ask for confirmation:
-   ```
-   Abort current Maestro session?
+1. Ask for confirmation using AskUserQuestion:
 
-   Feature: [feature]
-   Progress: story [current]/[total], phase: [phase]
-   This will:
-     - Mark the session as aborted
-     - NOT revert any committed changes
-     - Uncommitted changes for the current story will remain in the working tree
-
-   Confirm abort? [Y/n]
-   ```
+   Use AskUserQuestion:
+   - Question: "Abort session? Committed work is preserved. Uncommitted changes for the current story remain in your working tree."
+   - Header: "Confirm"
+   - Options:
+     1. label: "Yes, abort", description: "Mark session as aborted"
+     2. label: "Cancel", description: "Go back, keep session active"
 
 2. If confirmed:
    - Update `.maestro/state.local.md`:

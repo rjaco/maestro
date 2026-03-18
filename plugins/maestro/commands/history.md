@@ -7,6 +7,7 @@ allowed-tools:
   - Bash
   - Glob
   - Grep
+  - AskUserQuestion
 ---
 
 # Maestro History
@@ -30,9 +31,12 @@ Read `.maestro/state.md` for the "Features Completed" section and `.maestro/logs
 
   Total: 3 sessions, 10 stories, $8.15, 31m
 
-  [1] View session details (enter date or feature name)
-  [2] View cost analysis
-```
+Use AskUserQuestion:
+- Question: "What would you like to see?"
+- Header: "History"
+- Options:
+  1. label: "Session details", description: "View full build log for a specific session"
+  2. label: "Cost analysis", description: "Aggregated cost data across all sessions"
 
 If no sessions found:
 
@@ -72,9 +76,12 @@ The SESSION_ID can be a date, feature name, or session UUID. Search through logs
   Self-heal cycles: 2 total
   Commits: 5
 
-  [1] Show git log for these commits
-  [2] Back to session list
-```
+Use AskUserQuestion:
+- Question: "What next?"
+- Header: "Detail"
+- Options:
+  1. label: "Show git log", description: "View commits from this session"
+  2. label: "Back to list", description: "Return to session overview"
 
 ## `cost` — Cost Analysis
 

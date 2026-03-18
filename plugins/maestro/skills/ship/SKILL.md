@@ -35,6 +35,11 @@ Options:
   [3] Abort shipping
 ```
 
+**Important**: Test failure options MUST use AskUserQuestion:
+- Question: "Pre-ship verification failed: [N] test(s) failing."
+- Header: "Ship"
+- Options: Fix and re-run / Ship anyway (not recommended) / Abort
+
 ### Step 2: Type Check
 
 ```bash

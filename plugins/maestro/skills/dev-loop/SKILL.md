@@ -278,6 +278,11 @@ Time: 2m14s
 [MODE] Change mode for remaining stories
 ```
 
+**Important**: The checkpoint decision MUST use AskUserQuestion, not plain text menus:
+- Question: "Story [N/M] complete: [title]. What next?"
+- Header: "Checkpoint"
+- Options: Continue (Recommended) / Review changes / Skip next / Abort
+
 ### Mode: careful
 
 Show detailed phase-by-phase results:

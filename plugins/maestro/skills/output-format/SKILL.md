@@ -41,14 +41,29 @@ Use text-based indicators (never emoji):
 
 ## User Decisions
 
-Always use numbered options. Never use bullet points for decisions:
+ALL user decisions MUST use the AskUserQuestion tool. Never present
+plain text menus like "[1] Option [2] Option" for user choices.
 
-```
-  [1] Continue to next story
-  [2] Review changes before continuing
-  [3] Change mode for remaining stories
-  [4] Abort execution
-```
+Rules for AskUserQuestion:
+- Single-select: 2-4 options per question, max 4 questions per call
+- Multi-select: set multiSelect: true when choices aren't exclusive
+- Current selection: mark with "(current)" in the option label
+- Recommended option: mark with "(Recommended)" and list first
+- Use preview field for cost comparisons or visual diffs
+- Use description field to explain consequences of each choice
+- Use header field (max 12 chars) for category labels
+
+When to use AskUserQuestion:
+- Approval gates (story approval, architecture, vision)
+- Configuration choices (mode, model, provider)
+- Navigation (what to view next, what to do next)
+- Confirmations (abort, reset, delete)
+
+When NOT to use (plain text output instead):
+- Help text and documentation (display-only)
+- Error messages and diagnostics (informational)
+- Progress indicators and status displays
+- Summaries and reports
 
 ## Progress Indicators
 
@@ -188,7 +203,7 @@ Use 2-space indent with aligned columns:
 1. Never use emoji in output. Text indicators only.
 2. Always use 2-space indent for content within sections.
 3. Box width is consistent at 47 inner characters.
-4. Numbered options for ALL user decisions.
+4. ALL user decisions MUST use AskUserQuestion tool (see below).
 5. One blank line between sections, no blank lines within sections.
 6. Keep lines under 60 characters when possible for terminal readability.
 7. Use `[maestro]` prefix for standalone messages, boxes for structured data.

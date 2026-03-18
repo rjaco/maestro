@@ -1,7 +1,7 @@
 ---
 name: model
 description: "View and edit model assignments per task type — interactive menu"
-argument-hint: "[show]"
+argument-hint: ""
 allowed-tools:
   - Read
   - Write
@@ -12,7 +12,7 @@ allowed-tools:
 
 # Maestro Model — Interactive Model Manager
 
-View and edit which AI model is used for each task type in the Maestro pipeline. Uses interactive menus for all changes.
+View and edit which AI model is used for each task type. Uses a single multi-question form to configure all task types at once.
 
 ## Step 1: Read Current Config
 
@@ -24,7 +24,7 @@ Read `.maestro/config.yaml`. If it does not exist:
 
 Stop here.
 
-Look for the `models` section. If it does not exist, use these defaults:
+Look for the `models` section. If it does not exist, use these defaults and note "(default)" next to each:
 
 ```yaml
 models:
@@ -35,210 +35,106 @@ models:
   research: sonnet
 ```
 
-Also read `.maestro/trust.yaml` for `model_performance` data if it exists.
+## Step 2: Show Current + Ask All At Once
 
-## Step 2: Display Current Assignments
-
-Always show the current state first:
+Display the current assignments briefly:
 
 ```
 +---------------------------------------------+
 | Model Assignments                           |
 +---------------------------------------------+
+  planning   opus    |  execution  sonnet
+  review     opus    |  simple     haiku
+  research   sonnet  |
 
-  Task Type     Model      Used For
-  ----------    -------    ----------------------------------------
-  planning      opus       Decomposition, architecture, roadmaps
-  execution     sonnet     Story implementation, code writing
-  review        opus       QA review, milestone eval, quality gates
-  simple        haiku      Fix agents, config, boilerplate
-  research      sonnet     Web research, competitive analysis
-
-  Cost reference (per million tokens):
-    Haiku    $0.80 in / $4.00 out    (cheapest)
-    Sonnet   $3.00 in / $15.00 out   (balanced)
-    Opus     $15.00 in / $75.00 out  (most capable)
+  Haiku $0.80/$4  Sonnet $3/$15  Opus $15/$75
 ```
 
-If `model_performance` data exists in trust.yaml, add:
+Then use a SINGLE AskUserQuestion call with ALL 4 questions (max allowed) to let the user configure everything in one screen. Group the 5 task types into 4 questions (combine the two least-changed ones):
 
 ```
-  Performance (this project):
-    sonnet   83% QA first-pass, 0.4 avg self-heal
-    opus     100% QA first-pass, 0.0 avg self-heal
+AskUserQuestion with 4 questions:
+
+Question 1 — header: "Planning"
+  "Model for planning? (decomposition, architecture, roadmaps)"
+  Options:
+    - "Opus (current)" or "Opus" — "Most capable. Best for complex decomposition"
+    - "Sonnet" — "Balanced. Good for straightforward planning"
+    - "Haiku" — "Cheapest. OK for simple task breakdowns"
+
+Question 2 — header: "Execution"
+  "Model for execution? (story implementation, code writing)"
+  Options:
+    - "Opus" — "Best code quality, fewer QA rejections. ~$1.35/story"
+    - "Sonnet (current)" or "Sonnet" — "Balanced quality and cost. ~$0.27/story"
+    - "Haiku" — "Fastest, cheapest. Risk: more QA cycles. ~$0.07/story"
+
+Question 3 — header: "Review"
+  "Model for QA review? (code review, quality gates)"
+  Options:
+    - "Opus (current)" or "Opus" — "Catches more issues. Best for critical code"
+    - "Sonnet" — "Good review quality at lower cost"
+    - "Haiku" — "Basic checks only. Not recommended"
+
+Question 4 — header: "Other"
+  "Model for simple tasks + research?"
+  Options:
+    - "Both Haiku" — "Cheapest for fixes and research"
+    - "Haiku fixes, Sonnet research" — "Cheap fixes, better research quality"
+    - "Both Sonnet" — "Higher quality across the board"
+    - "Both Opus" — "Maximum quality for everything"
 ```
 
-## Step 3: Interactive Menu
+Mark the current selection with "(current)" in its label. Always list the current selection as the first option.
 
-Use AskUserQuestion to present the action menu:
+## Step 3: Apply Changes
 
-**Question:** "What would you like to change?"
+Parse the 4 answers and map to config values:
 
-**Options:**
-1. **Change a task's model** — "Pick which task type to reassign to a different model"
-2. **Apply a preset** — "Quick presets: Budget, Balanced, Quality, Max Performance"
-3. **No changes** — "Keep current assignments"
+- Question 1 → `models.planning`
+- Question 2 → `models.execution`
+- Question 3 → `models.review`
+- Question 4 → `models.simple` + `models.research`:
+  - "Both Haiku" → simple: haiku, research: haiku
+  - "Haiku fixes, Sonnet research" → simple: haiku, research: sonnet
+  - "Both Sonnet" → simple: sonnet, research: sonnet
+  - "Both Opus" → simple: opus, research: opus
 
-### If "Change a task's model":
+If any "Other" was selected, parse the custom text for a valid model name.
 
-Use AskUserQuestion to ask which task type:
+## Step 4: Write Config
 
-**Question:** "Which task type do you want to change?"
+Update `.maestro/config.yaml` with the new model assignments. If no `models` section exists, create one. Preserve all other config sections.
 
-**Options** (show current model in description):
-1. **planning** — "Currently: [model]. Used for decomposition, architecture, roadmaps"
-2. **execution** — "Currently: [model]. Used for story implementation, code writing"
-3. **review** — "Currently: [model]. Used for QA review, milestone eval, quality gates"
-4. **simple** — "Currently: [model]. Used for fix agents, config, boilerplate"
+## Step 5: Show Summary
 
-(Note: AskUserQuestion supports max 4 options. If user selects "Other", they can type "research".)
-
-Then use AskUserQuestion to ask which model, with previews showing the cost impact:
-
-**Question:** "Which model for [task type]?"
-
-**Options** (with preview showing cost comparison):
-1. **Haiku** — "Fastest, cheapest. Best for simple/mechanical tasks"
-   Preview: cost calculation for this task type with Haiku
-2. **Sonnet** — "Balanced speed, quality, and cost. Good default"
-   Preview: cost calculation for this task type with Sonnet
-3. **Opus** — "Most capable. Best for complex reasoning"
-   Preview: cost calculation for this task type with Opus
-
-Preview format for each option:
-```
-Cost estimate for [task type]:
-
-  [task] uses ~[N]K tokens per feature
-  Current ([old model]): ~$[X.XX] per feature
-  This option ([new model]): ~$[Y.YY] per feature
-  Change: [+/-]$[Z.ZZ] ([+/-]N%)
-```
-
-Use these token estimates:
-- planning: ~10K tokens per feature
-- execution: ~30K tokens per story
-- review: ~8K tokens per story
-- simple: ~3K tokens per fix
-- research: ~15K tokens per research sprint
-
-Cost calculation: tokens * (input_price + output_price) / 2 / 1_000_000
-- Haiku: tokens * 2.40 / 1_000_000
-- Sonnet: tokens * 9.00 / 1_000_000
-- Opus: tokens * 45.00 / 1_000_000
-
-After selection, update `.maestro/config.yaml` and confirm:
+Only show what changed:
 
 ```
-[maestro] Updated: [task] model changed from [old] to [new]
+[maestro] Models updated:
+
+  planning    opus           (unchanged)
+  execution   sonnet -> opus
+  review      opus           (unchanged)
+  simple      haiku -> sonnet
+  research    sonnet -> opus
 ```
 
-Then loop back to Step 3 (ask if they want to change anything else).
-
-### If "Apply a preset":
-
-Use AskUserQuestion with previews showing each preset's full model mapping:
-
-**Question:** "Which preset?"
-
-**Options with previews:**
-
-1. **Budget** — "Minimize cost. Sonnet for execution, Haiku for everything else"
-   Preview:
-   ```
-   Budget Preset:
-     planning:   haiku    (was: opus)
-     execution:  sonnet   (unchanged)
-     review:     haiku    (was: opus)
-     simple:     haiku    (unchanged)
-     research:   haiku    (was: sonnet)
-
-   Estimated savings: ~60% vs default
-   ```
-
-2. **Balanced (default)** — "Good mix of quality and cost"
-   Preview:
-   ```
-   Balanced Preset:
-     planning:   opus     (default)
-     execution:  sonnet   (default)
-     review:     opus     (default)
-     simple:     haiku    (default)
-     research:   sonnet   (default)
-   ```
-
-3. **Quality** — "Opus for planning and review, Sonnet for execution"
-   Preview:
-   ```
-   Quality Preset:
-     planning:   opus     (unchanged)
-     execution:  sonnet   (unchanged)
-     review:     opus     (unchanged)
-     simple:     sonnet   (was: haiku)
-     research:   opus     (was: sonnet)
-
-   Estimated increase: ~40% vs default
-   ```
-
-4. **Max Performance** — "Opus for everything. Maximum quality, maximum cost"
-   Preview:
-   ```
-   Max Performance Preset:
-     planning:   opus     (unchanged)
-     execution:  opus     (was: sonnet)
-     review:     opus     (unchanged)
-     simple:     opus     (was: haiku)
-     research:   opus     (was: sonnet)
-
-   Estimated increase: ~200% vs default
-   ```
-
-After selection, apply the preset to `.maestro/config.yaml` and confirm:
-
-```
-[maestro] Applied "[preset]" preset.
-
-  planning:   [model]
-  execution:  [model]
-  review:     [model]
-  simple:     [model]
-  research:   [model]
-```
-
-### If "No changes":
+If nothing changed:
 
 ```
 [maestro] No changes made.
 ```
 
-Stop here.
+## Presets
 
-## Step 4: Write Config
+If the user runs `/maestro model` and types "preset" or "budget" or "quality" or "max" as Other input, apply a preset directly:
 
-When updating `.maestro/config.yaml`:
+| Preset | planning | execution | review | simple | research |
+|--------|----------|-----------|--------|--------|----------|
+| budget | haiku | sonnet | haiku | haiku | haiku |
+| balanced | opus | sonnet | opus | haiku | sonnet |
+| quality | opus | sonnet | opus | sonnet | opus |
+| max | opus | opus | opus | opus | opus |
 
-1. If a `models` section exists, update the relevant key(s)
-2. If no `models` section exists, add the full section with all 5 task types
-3. Keep all other config sections unchanged
-
-```yaml
-models:
-  planning: [model]
-  execution: [model]
-  review: [model]
-  simple: [model]
-  research: [model]
-```
-
-## Guidelines
-
-When the user asks for advice or selects "Other" with a question, provide these guidelines:
-
-| Scenario | Recommendation |
-|----------|----------------|
-| Well-understood codebase, clear patterns | execution: sonnet |
-| Novel architecture, complex logic | execution: opus |
-| Tight budget, many small stories | Budget preset |
-| Quality-critical (fintech, healthcare) | Quality or Max Performance preset |
-| Rapid prototyping, exploration | Balanced preset |
-| First time using Maestro on a project | Balanced preset (learn trust levels first) |
+Show confirmation and the full mapping after applying.

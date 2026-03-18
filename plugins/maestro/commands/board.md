@@ -10,6 +10,7 @@ allowed-tools:
   - Glob
   - Grep
   - Skill
+  - AskUserQuestion
 ---
 
 # Maestro Board
@@ -67,12 +68,14 @@ If kanban integration is configured, show sync status:
 
 Show available actions:
 
-```
-  [1] Sync with [provider]
-  [2] Move a story
-  [3] Refresh
-  [4] Open in [provider] (if applicable)
-```
+Use AskUserQuestion:
+- Question: "What would you like to do?"
+- Header: "Board"
+- Options:
+  1. label: "Sync with [provider]", description: "Push/pull changes between Maestro and [provider]"
+  2. label: "Move a story", description: "Change a story's status manually"
+  3. label: "Refresh", description: "Reload the board from story files"
+  4. label: "Open in [provider]", description: "Open the board in your browser"
 
 ### `sync` — Sync with External Provider
 
@@ -99,10 +102,13 @@ Show available actions:
        (!) Story 05 description updated on board
        (i) No new cards added
 
-     [1] Apply all changes
-     [2] Review each change
-     [3] Ignore all changes
-   ```
+   Use AskUserQuestion:
+   - Question: "[N] changes detected from [provider]. How to proceed?"
+   - Header: "Sync"
+   - Options:
+     1. label: "Apply all changes", description: "Accept all board changes into Maestro"
+     2. label: "Review each change", description: "See each change and decide individually"
+     3. label: "Ignore all", description: "Discard board changes, keep Maestro state"
 
 4. If "Apply all changes" or "Review each change":
    - For status changes: update Maestro story state

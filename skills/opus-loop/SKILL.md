@@ -163,6 +163,11 @@ Milestone [N]/[total] complete: [name]
   Continue? [GO/PAUSE/ABORT/SKIP]
 ```
 
+**Important**: Milestone checkpoint MUST use AskUserQuestion:
+- Question: "Milestone [N/M] complete: [title]"
+- Header: "Milestone"
+- Options: Continue (Recommended) / Review diff / Pause / Abort
+
 ## Between Milestones
 
 Critical maintenance tasks between milestones:

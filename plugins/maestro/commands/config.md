@@ -125,15 +125,12 @@ When setting a kanban or knowledge base provider, run a quick connectivity check
 
 Ask for confirmation before resetting:
 
-```
-[maestro] Reset all configuration to defaults?
-
-  This will overwrite .maestro/config.yaml with default values.
-  Your integration settings will be cleared.
-
-  [1] Yes, reset everything
-  [2] Cancel
-```
+Use AskUserQuestion:
+- Question: "Reset all configuration to defaults? Integration settings will be cleared."
+- Header: "Reset"
+- Options:
+  1. label: "Yes, reset everything", description: "Overwrite config.yaml with default values"
+  2. label: "Cancel", description: "Keep current configuration"
 
 On confirmation, regenerate `config.yaml` with the default template (same as `maestro init` generates).
 

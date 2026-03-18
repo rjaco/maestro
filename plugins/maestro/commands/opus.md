@@ -1,7 +1,7 @@
 ---
 description: "Magnum Opus — build entire products autonomously with live conversation. Deep interview, mega research, milestone-driven execution."
 argument-hint: "VISION [--full-auto|--milestone-pause] [--budget $N] [--hours N] [--until-pause] [--skip-research] [--resume]"
-allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch
+allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
 ---
 
 # Maestro Opus — Magnum Opus Mode
@@ -105,14 +105,13 @@ Output: `.maestro/vision.md`
 
 Present the generated vision document to the user for approval:
 
-```
-Here is your vision document based on our conversation.
-Review it carefully — this is the North Star for the entire build.
-
-[vision summary]
-
-Approve? [Y/edit]
-```
+Use AskUserQuestion:
+- Question: "Approve this vision document?"
+- Header: "Vision"
+- Options:
+  1. label: "Approve (Recommended)", description: "Lock the vision and proceed to research"
+  2. label: "Edit", description: "Make changes to the vision before proceeding"
+  3. label: "Start over", description: "Discard and restart the interview"
 
 Wait for approval. If the user wants edits, incorporate them and re-present.
 
@@ -130,8 +129,15 @@ Research complete. Here is the brief:
 [key findings summary]
 
 Full details in .maestro/research/
-Continue to roadmap generation? [Y/n]
 ```
+
+Use AskUserQuestion:
+- Question: "Research complete. Proceed to roadmap generation?"
+- Header: "Research"
+- Options:
+  1. label: "Proceed (Recommended)", description: "Generate milestone roadmap from vision + research"
+  2. label: "Review findings", description: "Read the full research brief before continuing"
+  3. label: "Redo research", description: "Run the research sprint again with different focus"
 
 ## Step 7: Generate Roadmap
 
@@ -150,10 +156,16 @@ Roadmap: [total] milestones
 
 Total estimated cost: ~$[total]
 Estimated time: ~[N] hours
-
-You can reorder, skip, add, or modify milestones.
-Approve? [Y/adjust]
 ```
+
+Use AskUserQuestion:
+- Question: "Research complete. Approve this roadmap?"
+- Header: "Roadmap"
+- Options:
+  1. label: "Approve (Recommended)", description: "Begin building milestone by milestone"
+  2. label: "Adjust milestones", description: "Reorder, split, or modify milestones"
+  3. label: "Redo research", description: "Run the research sprint again with different focus"
+  4. label: "Abort", description: "Cancel the Magnum Opus session"
 
 Wait for approval. If the user wants changes, update milestones accordingly.
 
@@ -205,6 +217,15 @@ For each milestone in order:
 3. Evaluate milestone acceptance criteria
 4. Auto-fix if evaluation fails (max 3 cycles)
 5. Checkpoint based on OPUS_MODE
+
+Use AskUserQuestion:
+- Question: "Milestone [N/M] complete: [title]"
+- Header: "Milestone"
+- Options:
+  1. label: "Continue (Recommended)", description: "Proceed to milestone [N+1]: [next title]"
+  2. label: "Review combined diff", description: "See all changes from this milestone"
+  3. label: "Pause", description: "Save state and pause for later resumption"
+  4. label: "Abort", description: "Stop the Opus session. Committed work is preserved."
 
 Between milestones:
 - Re-read `.maestro/vision.md` (North Star anchor — prevents drift)

@@ -12,20 +12,13 @@ You are Maestro, an autonomous development orchestrator. You decompose features 
 
 Read `.maestro/state.local.md`. If the file exists and contains `active: true`:
 
-```
-+---------------------------------------------+
-| Active Maestro Session                      |
-+---------------------------------------------+
-  Feature   [feature name from state]
-  Progress  story [current]/[total]
-  Phase     [phase]
-  Mode      [mode]
-  Tokens    [spend]
-
-  [1] Resume from where I left off
-  [2] Abort current session and start new
-  [3] Show detailed status
-```
+Use AskUserQuestion:
+- Question: "Active Maestro session detected for: [feature name]"
+- Header: "Session"
+- Options:
+  1. label: "Resume", description: "Continue from story [current]/[total], phase: [phase]"
+  2. label: "Abort and start new", description: "Mark current session as aborted, then proceed with new request"
+  3. label: "Show status", description: "View detailed session status with /maestro status"
 
 Wait for user response. If they choose resume, read the state file, load the current story from `.maestro/stories/`, and continue from the saved phase. If abort, set `active: false` in state, then proceed with the new request.
 
@@ -182,11 +175,16 @@ Display the forecast:
   Mode      [mode]
 
   Tip: --yolo saves ~15% tokens on average.
-
-  Proceed? [Y/n]
 ```
 
-Wait for confirmation. If user declines, stop.
+Use AskUserQuestion:
+- Question: "Estimated cost: ~$[N.NN] for ~[N] stories. Proceed?"
+- Header: "Forecast"
+- Options:
+  1. label: "Proceed (Recommended)", description: "Start decomposing and building"
+  2. label: "Cancel", description: "Stop without starting"
+
+If user cancels, stop.
 
 ## Step 7: North Star Anchoring
 
@@ -288,7 +286,13 @@ Present the story list to the user:
 
   Order  1 → 2 → [3, 4] (parallel) → 5
 
-  Approve? [Y/adjust/abort]
+Use AskUserQuestion to get approval:
+- Question: "Decomposed into [N] stories. Approve this plan?"
+- Header: "Stories"
+- Options:
+  1. label: "Approve and start (Recommended)", description: "Begin the dev-loop with story 1"
+  2. label: "Adjust stories", description: "Reorder, add, remove, or modify stories before starting"
+  3. label: "Abort", description: "Cancel this Maestro session"
 ```
 
 Wait for approval. If user wants adjustments, modify stories accordingly.
@@ -366,12 +370,16 @@ Mode determines behavior:
   Commit    type(scope): message
   Tokens    NN,NNN (story) / NNN,NNN (total)
   Time      Nm Ns (story) / Nm Ns (total)
-
-  [1] Continue to next story
-  [2] Review changes (git diff)
-  [3] Change mode for remaining stories
-  [4] Abort execution
 ```
+
+Use AskUserQuestion for checkpoint decision:
+- Question: "Story [N/M] complete: [title]. What next?"
+- Header: "Checkpoint"
+- Options:
+  1. label: "Continue (Recommended)", description: "Proceed to story [N+1]: [next title]"
+  2. label: "Review changes", description: "Show git diff for this story before continuing"
+  3. label: "Skip next story", description: "Skip story [N+1] and move to the next eligible story"
+  4. label: "Abort", description: "Stop execution. Committed work is preserved."
 
 In **yolo** mode, automatically select option [1]. In **checkpoint** mode, wait for user selection. In **careful** mode, the user has already reviewed each phase.
 
