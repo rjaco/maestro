@@ -114,6 +114,42 @@ Options:
 
 State is written to disk before displaying the halt message so the session is resumable.
 
+## StopFailure Hook Integration
+
+The `StopFailure` hook (Claude Code v2.1.78) fires when API errors occur. This is the missing fallback path for doom-loop detection — catching failures that happen outside the agent's normal tool call flow.
+
+### Hook Behavior
+
+When `StopFailure` fires during an active Maestro session:
+
+1. Read `.maestro/state.local.md` to check if a session is active
+2. Increment `doom_loop.count` by 2 (API failures are more serious than tool-level repeats)
+3. Log the failure to `.maestro/logs/doom-loop.md`:
+   ```
+   [ISO timestamp] StopFailure during story [story_id]
+   Error: [error type from hook input]
+   Phase: [current phase from state]
+   Action: Incremented doom_loop.count to [N]
+   ```
+4. If `doom_loop.count >= 8`: set `doom_loop.intervention_level: 3` (halt)
+5. If `doom_loop.count >= 5`: set `doom_loop.intervention_level: 2` (escalate)
+
+### Hook Script Reference
+
+The `StopFailure` hook is registered in `hooks/hooks.json` and handled by `hooks/stop-failure-hook.sh`. The script:
+
+```bash
+# Input (JSON on stdin):
+# { "error": "rate_limit|server_error|authentication_failed|...", "session_id": "..." }
+#
+# Actions:
+# 1. Read .maestro/state.local.md
+# 2. If active session: increment doom_loop.count, log failure
+# 3. Output: { "systemMessage": "API failure detected. doom_loop.count=[N]" }
+```
+
+This ensures that even transient API failures are tracked as potential doom-loop indicators, preventing infinite retry loops when the API itself is the bottleneck.
+
 ## Integration Points
 
 ### dev-loop/SKILL.md

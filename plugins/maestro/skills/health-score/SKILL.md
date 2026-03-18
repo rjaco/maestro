@@ -1,6 +1,11 @@
 ---
 name: health-score
 description: "Calculate a project health score (0-100) from test coverage, type safety, lint compliance, dependency freshness, and tech debt. Tracks trends."
+effort: low
+maxTurns: 3
+disallowedTools:
+  - Write
+  - Edit
 ---
 
 # Project Health Score

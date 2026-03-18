@@ -1,6 +1,8 @@
 ---
 name: token-ledger
 description: "Track token usage and costs per story, feature, and session. Optional — disable with --no-cost-tracking. Use to log costs after each story completion."
+effort: low
+maxTurns: 3
 ---
 
 # token-ledger

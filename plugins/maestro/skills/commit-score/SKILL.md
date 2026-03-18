@@ -1,6 +1,11 @@
 ---
 name: commit-score
 description: "Score each commit on quality: tests, conventions, message quality, cleanliness. Track average per project."
+effort: low
+maxTurns: 3
+disallowedTools:
+  - Write
+  - Edit
 ---
 
 # Commit Quality Score

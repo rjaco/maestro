@@ -33,14 +33,14 @@ Read `.maestro/state.md` for the "Features Completed" section and `.maestro/logs
 +---------------------------------------------+
 | Session History                             |
 +---------------------------------------------+
+  Date        Feature                  Stories  Cost    Time
+  ----------  ---------------------    -------  ------  ------
+  2026-03-15  User authentication      5/5      $4.20   14m
+  2026-03-12  Dark mode toggle         2/2      $1.10   6m
+  2026-03-10  API rate limiting        3/3      $2.85   11m
 
-  Date         Feature                 Stories  Cost     Time
-  ----------   --------------------    ------   ------   ------
-  2026-03-15   User authentication     5/5      $4.20    14m
-  2026-03-12   Dark mode toggle        2/2      $1.10    6m
-  2026-03-10   API rate limiting       3/3      $2.85    11m
-
-  Total: 3 sessions, 10 stories, $8.15, 31m
+  Total  3 sessions, 10 stories, $8.15, 31m
+```
 
 Use AskUserQuestion:
 - Question: "What would you like to see?"
@@ -52,8 +52,10 @@ Use AskUserQuestion:
 If no sessions found:
 
 ```
-[maestro] No session history found.
-
++---------------------------------------------+
+| Session History                             |
++---------------------------------------------+
+  (i) No session history found.
   (i) History is recorded after completing features with /maestro.
 ```
 
@@ -76,16 +78,16 @@ The SESSION_ID can be a date, feature name, or session UUID. Search through logs
   Duration  14m 32s
   Stories   5/5 completed, 0 skipped
 
-  Story Breakdown:
-    01  Database schema         (ok)  QA pass 1st   $0.65   2m
-    02  API routes              (ok)  QA pass 1st   $0.95   3m
-    03  Auth middleware         (ok)  QA pass 2nd   $1.10   4m
-    04  Login page              (ok)  QA pass 1st   $0.80   3m
-    05  Tests                   (ok)  QA pass 1st   $0.70   2m
+  Story Breakdown
+    01  Database schema    (ok)  QA pass 1st   $0.65   2m
+    02  API routes         (ok)  QA pass 1st   $0.95   3m
+    03  Auth middleware    (ok)  QA pass 2nd   $1.10   4m
+    04  Login page         (ok)  QA pass 1st   $0.80   3m
+    05  Tests              (ok)  QA pass 1st   $0.70   2m
 
-  QA first-pass rate: 80%
-  Self-heal cycles: 2 total
-  Commits: 5
+  QA first-pass rate  80%
+  Self-heal cycles    2 total
+  Commits             5
 
 Use AskUserQuestion:
 - Question: "What next?"
@@ -102,18 +104,17 @@ Aggregate cost data across all sessions:
 +---------------------------------------------+
 | Cost Analysis                               |
 +---------------------------------------------+
+  Total spend      $8.15
+  Total stories    10
+  Total sessions   3
+  Avg per story    $0.82
+  Avg per feature  $2.72
 
-  Total spend:        $8.15
-  Total stories:      10
-  Total sessions:     3
-  Avg per story:      $0.82
-  Avg per feature:    $2.72
-
-  Model Breakdown:
+  Model Breakdown
     Sonnet    $5.40    (66%)    8 stories
     Opus      $2.75    (34%)    5 QA reviews
 
-  Cost Trend:
+  Cost Trend
     Mar 10    $2.85    (3 stories)
     Mar 12    $1.10    (2 stories)
     Mar 15    $4.20    (5 stories)
@@ -125,8 +126,10 @@ Aggregate cost data across all sessions:
 If `.maestro/token-ledger.md` does not exist:
 
 ```
-[maestro] No cost data found.
-
++---------------------------------------------+
+| Cost Analysis                               |
++---------------------------------------------+
+  (i) No cost data found.
   (i) Cost tracking starts automatically when you build features.
   (i) Disable with: /maestro config set cost_tracking.enabled false
 ```

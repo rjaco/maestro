@@ -1,6 +1,11 @@
 ---
 name: context-engine
 description: "Optimal context management engine. Composes right-sized context packages for each agent based on role, task, and relevance. Reduces token usage by 70-85% while improving agent performance."
+effort: low
+maxTurns: 3
+disallowedTools:
+  - Write
+  - Edit
 ---
 
 # Context Engine
@@ -316,6 +321,20 @@ The memory skill and context engine serve complementary roles. They do not dupli
 **Composition rule:** When building a T3 or T4 package, pull semantic facts from the memory skill first (constraints, conventions, rationale), then layer file-level context from the context engine on top. The memory skill is read-only input to the context engine's Step 3 (relevance filter) — facts stored in memory can raise the relevance score of related files.
 
 **Example:** If memory contains "auth refresh uses sliding window expiry — see src/auth/session.ts", and the current story is tagged `auth features`, that memory fact boosts the relevance score of `src/auth/session.ts` even before the prediction step runs.
+
+## MCP Tool Search — 85% Context Reduction
+
+Claude Code v2.1.76 introduced MCP Tool Search (lazy loading for tool definitions). When enabled, MCP tool descriptions are NOT loaded into the initial context — they are fetched on demand via the `ToolSearch` tool only when needed.
+
+**Impact:** In projects with many MCP servers, tool definitions can consume 77K+ tokens of context. With Tool Search, this drops to ~8.7K. This is an **85% reduction** in context overhead.
+
+**How to leverage in Maestro:**
+
+1. **For SDK-based agents:** Pass `tools: ["ToolSearch", ...]` instead of listing all MCP tools.
+2. **For plugin-level configuration:** Skills that interact with MCP servers should use `ToolSearch` to discover available tools rather than pre-loading all definitions.
+3. **Context budget impact:** When calculating tier budgets, subtract MCP tool overhead if Tool Search is enabled. T3/T4 agents gain significant headroom.
+
+**Recommendation:** Add `ToolSearch` to all agent `allowed-tools` lists to enable on-demand tool discovery.
 
 ## Integration Points
 

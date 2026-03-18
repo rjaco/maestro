@@ -1,6 +1,12 @@
 ---
 name: forecast
 description: "Estimate token cost before execution. Optional — disable with --no-forecast. Analyzes task complexity and produces cost breakdown."
+effort: low
+maxTurns: 3
+disallowedTools:
+  - Write
+  - Edit
+  - Bash
 ---
 
 # Forecast

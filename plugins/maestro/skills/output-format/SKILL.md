@@ -1,6 +1,11 @@
 ---
 name: output-format
 description: "Maestro output formatting standard. Referenced by all commands and skills for consistent, readable terminal output."
+effort: low
+maxTurns: 2
+disallowedTools:
+  - Write
+  - Edit
 ---
 
 # Output Format Standard

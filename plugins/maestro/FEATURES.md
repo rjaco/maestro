@@ -1,6 +1,6 @@
 # Maestro — Complete Feature Guide
 
-> The most comprehensive Claude Code orchestration plugin. 71 skills, 20 commands, 14 shell scripts, 6 agents, 11 specialist profiles.
+> The most comprehensive Claude Code orchestration plugin. 74 skills, 21 commands, 11 scripts, 6 agents, 11 specialist profiles.
 
 ---
 
@@ -15,12 +15,13 @@
 
 ---
 
-## Commands (20)
+## Commands (21)
 
 | Command | Usage | What It Does |
 |---------|-------|-------------|
 | `/maestro` | `/maestro "description"` | Build any feature — decompose, implement, review, commit |
 | `/maestro magnum-opus` | `/maestro magnum-opus "vision" --full-auto` | Magnum Opus — build entire products with milestones |
+| `/maestro opus` | `/maestro opus "vision"` | Alias for magnum-opus — same full product build workflow |
 | `/maestro plan` | `/maestro plan "feature"` | Deep planning mode — brainstorm, explore, design, decompose |
 | `/maestro init` | `/maestro init` | Zero-config project detection — auto-discover stack, CI, tests, MCP |
 | `/maestro status` | `/maestro status` | View progress, current story, spend, phase |
@@ -42,7 +43,7 @@
 
 ---
 
-## Orchestration Skills (71)
+## Orchestration Skills (74)
 
 ### Core Orchestration
 
@@ -55,6 +56,7 @@
 | **classifier** | Auto-classify requests and route to correct layer (vision/tactics/execution/knowledge work) |
 | **context-engine** | Right-sized context packages for each agent. Cross-session intelligence, file relevance scoring, 5-stage compaction |
 | **model-router** | 10-dimension task scoring (0-30) for optimal model selection. 70% cost reduction potential |
+| **architecture** | Design or update technical architecture — produces architecture.md with stack, data model, API, and infra decisions |
 
 ### Quality & Review
 
@@ -145,6 +147,8 @@
 | **voice** | Voice command mapping for Claude Code /voice mode |
 | **preview** | Chrome preview of UI changes via Playwright screenshots |
 | **auto-docs** | Auto-generate README, API docs, changelog after each story |
+| **audio** | Audio alerts when Maestro needs attention — terminal bell, macOS sounds, Linux audio |
+| **visualize** | Generate Mermaid diagrams and ASCII dashboards for dependencies, architecture, roadmaps, and progress |
 
 ### Platform & SDK
 
@@ -157,6 +161,9 @@
 | **mcp-detect** | Detect available MCP servers and CLI tools |
 | **workspace** | Isolate sessions by workspace for multi-project support |
 | **workflow-export** | Export plans as declarative YAML workflow files |
+| **remote-control** | Control Maestro from Telegram, Discord, or HTTP via Agent SDK |
+| **plugin-data** | Durable cross-project storage via `${CLAUDE_PLUGIN_DATA}` environment variable |
+| **config-profiles** | Project profile switching — swap entire config with one command (7 built-in profiles) |
 
 ### Meta & Self-Improvement
 
@@ -170,7 +177,7 @@
 
 ---
 
-## Shell Scripts (14)
+## Shell Scripts (15)
 
 | Script | Usage | What It Does |
 |--------|-------|-------------|
@@ -188,6 +195,7 @@
 | `scripts/worktree-merge.sh` | `./scripts/worktree-merge.sh <path>` | Merge worktree → development branch + cleanup |
 | `scripts/statusline.sh` | Auto (status line) | ANSI-colored status line showing phase, progress, cost |
 | `scripts/setup-maestro.sh` | `./scripts/setup-maestro.sh` | Initial Maestro setup and configuration |
+| `scripts/context-check.sh` | `./scripts/context-check.sh` | Context window usage monitor with ASCII progress bar |
 
 ---
 
@@ -303,7 +311,7 @@ Auto-downgrade saves ~70% on token costs by routing simple tasks to cheaper mode
 | vs Cursor | vs Codex | vs Windsurf |
 |-----------|----------|-------------|
 | Terminal-native, not IDE-locked | Local execution, not cloud-only | Skills are markdown, not proprietary |
-| 71 skills > basic composer | Progressive trust > one-shot | Self-improving via retrospective |
+| 74 skills > basic composer | Progressive trust > one-shot | Self-improving via retrospective |
 | Kanban + Notion/Obsidian sync | No project management | No knowledge work support |
 | 4 notification providers | No notifications | No notifications |
 | Cost tracking + auto-downgrade | No cost control | No cost tracking |
@@ -326,4 +334,4 @@ Auto-downgrade saves ~70% on token costs by routing simple tasks to cheaper mode
 
 ---
 
-*Last updated: 2026-03-18 | 75 skills, 20 commands, 15 scripts, 6 agents, 11 profiles*
+*Last updated: 2026-03-18 | 74 skills, 21 commands, 11 scripts, 6 agents, 11 profiles*

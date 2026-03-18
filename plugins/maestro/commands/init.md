@@ -1,4 +1,5 @@
 ---
+name: init
 description: "Initialize Maestro for this project — inference-first onboarding that asks, scans, previews, then builds"
 allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
 ---

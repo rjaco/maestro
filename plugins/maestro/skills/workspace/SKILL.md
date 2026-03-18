@@ -374,6 +374,45 @@ When a branch is merged and deleted, suggest cleaning up the workspace:
 └──────────────────────────────────────────────────────┘
 ```
 
+## WorktreeCreate / WorktreeRemove Hook Integration
+
+Claude Code v2.1.69 introduced `WorktreeCreate` and `WorktreeRemove` hooks that fire when git worktrees are created or removed. Since Maestro dispatches agents in worktrees (`isolation: "worktree"`), these hooks enable automatic workspace lifecycle tracking.
+
+### WorktreeCreate — Track Active Worktrees
+
+When a worktree is created (by Maestro's agent dispatch):
+
+1. Log the worktree to `.maestro/logs/worktrees.md`:
+   ```
+   [timestamp] CREATED worktree: [path] branch: [branch] agent: [agent_id]
+   ```
+2. If a workspace is branch-linked and the worktree branch matches, record the association
+3. Increment `active_worktrees` counter in state
+
+### WorktreeRemove — Cleanup on Worktree Removal
+
+When a worktree is removed (by merge or cleanup):
+
+1. Log the removal:
+   ```
+   [timestamp] REMOVED worktree: [path] duration: [time since creation]
+   ```
+2. Decrement `active_worktrees` counter
+3. If the worktree was the last one for a workspace's branch, mark workspace as idle
+
+### Orphan Detection
+
+Periodically (via awareness heartbeat), scan for orphaned worktrees — worktrees that exist on disk but have no corresponding active agent:
+
+```bash
+git worktree list --porcelain | grep "^worktree " | while read -r _ path; do
+  if [[ "$path" == *".claude/worktrees/"* ]]; then
+    # Check if agent is still running
+    # If not, flag for cleanup
+  fi
+done
+```
+
 ## Subcommand Patterns
 
 | Command | Description |

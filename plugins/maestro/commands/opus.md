@@ -1,4 +1,5 @@
 ---
+name: opus
 description: "Alias for /maestro magnum-opus. Redirects to the Magnum Opus command."
 argument-hint: "VISION [--budget $N] [--hours N] [--skip-research] [--resume]"
 allowed-tools: Skill

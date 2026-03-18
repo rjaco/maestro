@@ -54,10 +54,13 @@ Display the current assignments briefly:
 +---------------------------------------------+
 | Model Assignments                           |
 +---------------------------------------------+
-  planning   opus    |  execution  sonnet
-  review     opus    |  simple     haiku
-  research   sonnet  |
+  planning    opus
+  execution   sonnet
+  review      opus
+  simple      haiku
+  research    sonnet
 
+  Pricing (input/output per 1M tokens)
   Haiku $0.80/$4  Sonnet $3/$15  Opus $15/$75
 ```
 

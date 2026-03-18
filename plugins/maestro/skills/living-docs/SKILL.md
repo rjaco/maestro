@@ -1,6 +1,8 @@
 ---
 name: living-docs
 description: "Update Maestro's living documentation (.maestro/state.md, roadmap.md) after story completion or milestone changes."
+effort: medium
+maxTurns: 5
 ---
 
 # living-docs

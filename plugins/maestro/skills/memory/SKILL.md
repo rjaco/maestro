@@ -289,6 +289,38 @@ Append to the bottom of `semantic.md` or `episodic.md`:
 - Never silently delete entries — always log the action
 - Propose removals to the user if uncertain; do not auto-delete without logging
 
+## PostCompact Hook Integration
+
+The `PostCompact` hook (Claude Code v2.1.76) fires after context compaction. This is critical for memory — without it, the agent loses awareness of previously loaded memory after compaction.
+
+### How It Works
+
+When context is compacted:
+1. The `post-compact-hook.sh` fires and reads current session state
+2. It outputs a `systemMessage` containing:
+   - Current feature, mode, phase, story progress
+   - North Star from `.maestro/vision.md`
+   - Recent notes from `.maestro/notes.md`
+3. This message is injected into the post-compaction context
+
+### Memory Re-injection After Compaction
+
+The PostCompact hook handles basic state re-injection. For full memory re-injection:
+
+1. The `PostCompact` hook provides the session state anchor
+2. On the NEXT `build_context()` call, the memory skill re-reads both memory files
+3. High-confidence entries (> 0.7) are always re-injected
+4. This ensures the agent regains project knowledge within 1 turn after compaction
+
+### Plugin Data Migration
+
+When `${CLAUDE_PLUGIN_DATA}` is available (Claude Code v2.1.78+), memory operations should prefer this durable store over file-based persistence for frequently-accessed metadata like:
+- Current session confidence thresholds
+- Decay counters (number of sessions since last reinforcement per entry)
+- Maintenance log summaries
+
+The full memory files (semantic.md, episodic.md) remain as markdown files for git tracking and human readability. `${CLAUDE_PLUGIN_DATA}` supplements them with operational metadata.
+
 ## Integration Points
 
 ### In Dev-Loop

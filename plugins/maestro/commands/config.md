@@ -33,29 +33,28 @@ Read `.maestro/config.yaml` and display it with inline annotations:
 +---------------------------------------------+
 | Maestro Configuration                       |
 +---------------------------------------------+
-
-  Execution:
+  Execution
     default_mode         checkpoint
     default_model        sonnet
 
-  Quality Gates:
+  Quality Gates
     max_qa_iterations    5          (QA review cycles per story)
     max_self_heal        3          (auto-fix attempts per story)
     run_tsc              true       (TypeScript type checking)
     run_lint             true       (linter)
     run_tests            true       (test suite)
 
-  Cost Tracking:
+  Cost Tracking
     enabled              true
     forecast             true       (estimate before starting)
     ledger               true       (log per-story costs)
     budget_enforcement   true       (pause at budget limit)
 
-  Integrations:
-    Kanban:
+  Integrations
+    Kanban
       provider           (not set)
       sync_enabled       false
-    Knowledge Base:
+    Knowledge Base
       provider           (not set)
       vault_path         (not set)
       sync_enabled       false

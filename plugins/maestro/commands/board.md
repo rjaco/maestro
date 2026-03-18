@@ -58,14 +58,13 @@ Group stories by status and display as a text kanban board:
 +---------------------------------------------+
 | Board: Add user authentication              |
 +---------------------------------------------+
-
   BACKLOG          IN PROGRESS      DONE
   -----------      -----------      -----------
   04-tests         03-frontend      01-schema
-  05-middleware                      02-api-routes
+  05-middleware                     02-api-routes
 
-  Skipped: (none)
-  Blocked: (none)
+  Skipped  (none)
+  Blocked  (none)
 
   ---- 2/5 stories complete ----
 ```
@@ -107,8 +106,7 @@ Use AskUserQuestion:
    +---------------------------------------------+
    | Kanban Sync                                 |
    +---------------------------------------------+
-
-     Changes from [provider]:
+     Changes from [provider]
        (!) Story 03 moved to "Cancelled" on board
        (!) Story 05 description updated on board
        (i) No new cards added

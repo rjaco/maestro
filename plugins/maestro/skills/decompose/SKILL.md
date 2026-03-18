@@ -11,8 +11,66 @@ Breaks a feature request into 2-8 implementable stories with a dependency graph,
 
 - Feature description (from `$ARGUMENTS` or upstream classifier)
 - Project DNA (`.maestro/dna.md`) for tech stack, patterns, and conventions
+- `--skip-clarify` flag — if present, skip Phase 0 and proceed directly to decomposition
 
 ## Process
+
+### Phase 0: Clarify
+
+Skip this phase if `--skip-clarify` is present in `$ARGUMENTS`.
+
+#### 0.1 — Scan for Ambiguities
+
+Read the feature description and identify:
+
+- **Ambiguous requirements** — aspects that can be interpreted multiple ways (e.g., "user authentication" could mean email/password, OAuth, or both)
+- **Missing specifications** — decisions the user needs to make before implementation can be scoped correctly (auth strategy, data model, UI framework, API design)
+- **Edge cases** — failure modes, empty states, concurrent access, rate limiting
+
+Only flag items that would meaningfully change how the feature is decomposed. Skip this phase entirely (proceed to Step 1) if the feature description is fully self-contained and unambiguous.
+
+#### 0.2 — Present Clarification Summary
+
+If ambiguities were found, present them using AskUserQuestion with the following structured format:
+
+```
++---------------------------------------------+
+| Clarification Needed                        |
++---------------------------------------------+
+  Ambiguous:
+    [1] "user authentication" — email/password? OAuth? Both?
+    [2] "dashboard" — admin dashboard or user-facing?
+
+  Missing:
+    [3] No data model specified — what entities are needed?
+    [4] No error handling strategy mentioned
+
+  Edge Cases:
+    [5] What happens if the user has no data yet? (empty state)
+    [6] Rate limiting on the API endpoints?
+```
+
+Use AskUserQuestion:
+- Question: "Want to clarify these before I decompose?"
+- Header: "Clarification Needed"
+- Options: "Clarify now" / "Skip — decompose as-is" / "I'll answer inline"
+
+#### 0.3 — Handle Response
+
+**"Clarify now"** — Present each numbered item as an individual question. Collect all answers before proceeding to Step 1. Incorporate the answers into the feature description used for decomposition.
+
+**"Skip — decompose as-is"** — Proceed to Step 1. At the top of the decomposition output, include an "Assumptions" block listing how each ambiguous item was resolved:
+
+```
+Assumptions (unresolved — flagged for review):
+  [1] Assumed email/password auth only
+  [2] Assumed user-facing dashboard
+  [3] Assumed minimal data model — single entity
+```
+
+**"I'll answer inline"** — Present all items as a single numbered list and let the user type free-form answers. Parse the answers and incorporate them before proceeding to Step 1.
+
+---
 
 ### Step 1: Read Context
 
