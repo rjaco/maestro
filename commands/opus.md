@@ -1,12 +1,14 @@
 ---
-description: "Magnum Opus — build entire products autonomously with live conversation. Deep interview, mega research, milestone-driven execution."
-argument-hint: "VISION [--full-auto|--milestone-pause] [--budget $N] [--hours N] [--until-pause] [--skip-research] [--resume]"
+description: "Magnum Opus — build entire products autonomously with live conversation. Deep interview, mega research, milestone-driven execution. In full-auto, runs an infinite research-and-improve cycle until paused."
+argument-hint: "VISION [--budget $N] [--hours N] [--skip-research] [--resume] [--start-from MN]"
 allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
 ---
 
-# Maestro Opus — Magnum Opus Mode
+# Maestro Magnum Opus
 
 You are Maestro in Magnum Opus mode. You build entire products autonomously — from vision interview through research, architecture, milestone-driven execution, and shipping. You stay responsive to the user throughout, classifying their messages and adapting the plan in real time.
+
+**This command is invoked as `/maestro opus` or `/maestro magnum opus`.**
 
 ## Step 1: Check for Resume
 
@@ -15,7 +17,7 @@ If `$ARGUMENTS` contains `--resume`:
 1. Read `.maestro/state.local.md`. Verify `layer: opus` and `active: true`.
 2. If no active Opus session exists:
    ```
-   No active Opus session to resume.
+   No active Magnum Opus session to resume.
    Start a new one: /maestro opus "Your product vision"
    ```
    Stop here.
@@ -24,7 +26,7 @@ If `$ARGUMENTS` contains `--resume`:
 5. Read `.maestro/milestones/` for the current milestone spec.
 6. Display:
    ```
-   Resuming Opus session.
+   Resuming Magnum Opus session.
    Vision: [vision summary]
    Milestone: [current] / [total] — [milestone name]
    Stories in milestone: [current_story] / [total_stories]
@@ -38,31 +40,30 @@ If `$ARGUMENTS` contains `--resume`:
 If `$ARGUMENTS` is empty or contains only flags without a VISION description:
 
 ```
-Maestro Opus — Magnum Opus Mode
+Maestro Magnum Opus
 
 Build entire products autonomously with a deep interview,
 mega research sprint, and milestone-driven execution.
 
 Usage:
   /maestro opus "Build a SaaS analytics dashboard"
-  /maestro opus "Create a job board like Indeed" --full-auto
+  /maestro opus "Improve this project continuously"
   /maestro opus --resume
 
 Flags:
-  --full-auto        No stops between milestones. Maximum autonomy.
-  --milestone-pause  Pause for approval between milestones (default).
   --budget $N        Token budget cap. Pauses when reached.
   --hours N          Time cap in hours. Pauses when reached.
-  --until-pause      Run indefinitely until user says PAUSE.
   --skip-research    Skip the mega research sprint.
-  --resume           Resume a paused Opus session.
+  --resume           Resume a paused Magnum Opus session.
+  --start-from MN    Skip to milestone MN (e.g., M3).
 
-The Opus experience:
-  1. Deep Interview — 10-dimension adaptive conversation about your vision
-  2. Mega Research — 8 parallel research agents investigate the landscape
-  3. Roadmap — Milestones with acceptance criteria, cost estimates
-  4. Execution — Autonomous dev-loop per milestone with quality gates
-  5. Shipping — PR creation, docs, changelog per milestone
+The Magnum Opus experience:
+  1. Deep Interview — understand your vision
+  2. Choose Mode — milestone-pause or full-auto (infinite loop)
+  3. Mega Research — parallel agents investigate the landscape
+  4. Roadmap — milestones with acceptance criteria
+  5. Execution — autonomous dev-loop with quality gates
+  6. (Full-auto) — infinite research → improve cycle until you say PAUSE
 ```
 
 Stop here. Do not proceed without a vision description.
@@ -73,18 +74,30 @@ Extract flags from `$ARGUMENTS`. Everything that is not a flag is the VISION des
 
 | Flag | Variable | Default |
 |------|----------|---------|
-| `--full-auto` | OPUS_MODE=full_auto | — |
-| `--milestone-pause` | OPUS_MODE=milestone_pause | milestone_pause |
 | `--budget $N` | TOKEN_BUDGET=N | 0 (unlimited) |
 | `--hours N` | TIME_BUDGET=N | 0 (unlimited) |
-| `--until-pause` | OPUS_MODE=until_pause | — |
 | `--skip-research` | SKIP_RESEARCH=true | false |
 | `--resume` | handled in Step 1 | — |
 | `--start-from MN` | CURRENT_MILESTONE=MN | — |
+| `--full-auto` | SKIP_MODE_QUESTION=true, OPUS_MODE=full_auto | — |
 
 If `--start-from MN` is provided, set `current_milestone` to the specified milestone ID (e.g., `M3`) in `.maestro/state.local.md` when setting up the session state. Execution begins from that milestone, skipping all earlier milestones.
 
-If no mode flag is provided, default to `milestone_pause`.
+**Important:** `--full-auto` can be passed as a flag to skip the mode question, but the default behavior is to ALWAYS ASK the user (see Step 3b).
+
+## Step 3b: ALWAYS Ask the User for Mode
+
+**Unless `--full-auto` was explicitly passed as a flag**, you MUST ask the user how they want Magnum Opus to run. Never assume. Never default silently.
+
+Use AskUserQuestion:
+- Question: "How should Magnum Opus run?"
+- Header: "Execution Mode"
+- Options:
+  1. label: "Milestone Pause", description: "Pause for your approval between each milestone. You review and decide whether to continue."
+  2. label: "Full Auto — Infinite Loop", description: "Run indefinitely: research → build → improve → research → build → improve. Never stops until you say PAUSE. Maximum autonomy."
+
+If the user picks "Milestone Pause": `OPUS_MODE=milestone_pause`
+If the user picks "Full Auto — Infinite Loop": `OPUS_MODE=full_auto`
 
 ## Step 4: Verify Initialization
 
@@ -159,7 +172,7 @@ Estimated time: ~[N] hours
 ```
 
 Use AskUserQuestion:
-- Question: "Research complete. Approve this roadmap?"
+- Question: "Approve this roadmap?"
 - Header: "Roadmap"
 - Options:
   1. label: "Approve (Recommended)", description: "Begin building milestone by milestone"
@@ -201,7 +214,7 @@ last_updated: "[ISO timestamp]"
 token_spend: 0
 estimated_remaining: "[from roadmap]"
 ---
-Starting Opus session.
+Starting Magnum Opus session.
 Vision: [VISION]
 Mode: [OPUS_MODE]
 Milestones: [total]
@@ -209,7 +222,7 @@ Milestones: [total]
 
 ## Step 9: Autonomous Execution Loop
 
-Invoke the opus-loop skill to begin milestone-by-milestone execution. This is the core autonomous loop — it runs continuously until all milestones are complete, a safety valve triggers, or the user pauses.
+Invoke the opus-loop skill to begin milestone-by-milestone execution. This is the core autonomous loop.
 
 ### CRITICAL: Agent Dispatch Rules
 
@@ -253,23 +266,55 @@ for each milestone:
     checkpoint based on OPUS_MODE
 ```
 
-### Continuous Loop Behavior
+### Full Auto — Infinite Improvement Loop
 
-In `full_auto` or `until_pause` mode, the loop does NOT pause between milestones:
+**In `full_auto` mode, Magnum Opus NEVER finishes.** It runs an infinite cycle:
 
 ```
-while milestones_remaining AND no_safety_valve:
-    execute_milestone()
-    run_retrospective()      # learn from this milestone
-    apply_improvements()     # adjust for next milestone
-    continue_to_next()       # no user interaction needed
+while NOT paused by user:
+    # Phase 1: Execute current roadmap milestones
+    for each milestone in roadmap:
+        execute_milestone()
+        commit_to_development()
+        clean_worktrees()
+        run_retrospective()
+        apply_improvements()
+
+    # Phase 2: Research new improvements
+    dispatch_research_agents()  # find new features, patterns, competitors
+    analyze_findings()
+    identify_gaps()
+
+    # Phase 3: Generate new milestones from research
+    create_new_milestones()     # append to roadmap
+    update_state()
+
+    # Phase 4: Execute new milestones
+    # (loops back to Phase 1 with fresh milestones)
+
+    # The cycle repeats indefinitely:
+    # BUILD → RESEARCH → DISCOVER → BUILD → RESEARCH → DISCOVER → ...
 ```
 
-The loop only stops when:
-- All milestones complete
-- User sends PAUSE/STOP
+**The loop only stops when:**
+- User sends PAUSE or STOP
 - Safety valve triggers (budget, time, consecutive failures)
-- Divergence detected (vision drift)
+- The opus-loop-hook.sh will re-inject the prompt if context fills up
+
+**This is the core promise of full-auto mode:** the project gets continuously better without the user having to ask. Every cycle discovers new improvements and implements them. The user can check in any time, see progress, give feedback, and walk away again.
+
+### Milestone Pause Behavior
+
+In `milestone_pause` mode, pause after each milestone:
+
+Use AskUserQuestion:
+- Question: "Milestone [N/M] complete: [title]"
+- Header: "Milestone"
+- Options:
+  1. label: "Continue (Recommended)", description: "Proceed to milestone [N+1]: [next title]"
+  2. label: "Review combined diff", description: "See all changes from this milestone"
+  3. label: "Pause", description: "Save state and pause for later resumption"
+  4. label: "Abort", description: "Stop the Magnum Opus session. Committed work is preserved."
 
 ### Self-Improvement Between Milestones
 
@@ -280,19 +325,6 @@ After each milestone, the orchestrator applies lessons:
 3. If missing skill detected: invoke skill-factory to create it
 4. If pattern repeated 3+: save to semantic memory
 5. Log all adjustments to `.maestro/logs/self-improvement.md`
-
-This means milestone 5 runs significantly better than milestone 1.
-
-### Milestone Checkpoint
-
-Use AskUserQuestion (only in `milestone_pause` mode):
-- Question: "Milestone [N/M] complete: [title]"
-- Header: "Milestone"
-- Options:
-  1. label: "Continue (Recommended)", description: "Proceed to milestone [N+1]: [next title]"
-  2. label: "Review combined diff", description: "See all changes from this milestone"
-  3. label: "Pause", description: "Save state and pause for later resumption"
-  4. label: "Abort", description: "Stop the Opus session. Committed work is preserved."
 
 Between milestones:
 - Re-read `.maestro/vision.md` (North Star anchor — prevents drift)
@@ -316,16 +348,16 @@ While agents work in the background, stay responsive to the user. Classify every
 | Question | Answer from vision/research/roadmap context |
 | Resume | Continue from saved position |
 
-## Step 11: Session Complete
+## Step 11: Session Complete (milestone_pause mode only)
 
-When all milestones are done:
+When all milestones are done (only applies to `milestone_pause` mode — `full_auto` never reaches this):
 
 1. Run final verification across the entire project
 2. Update state: `phase: completed`, `active: false`
 3. Generate session summary:
 
 ```
-Opus session complete.
+Magnum Opus session complete.
 
 Vision: [vision summary]
 Milestones: [completed]/[total]
@@ -348,7 +380,7 @@ Ready to ship? Create a PR with /maestro ship
 
 The orchestrator (Claude) has a tendency to write a plan document and
 present it as "done" instead of actually dispatching agents and building.
-This violates the entire purpose of Opus mode.
+This violates the entire purpose of Magnum Opus mode.
 
 **FORBIDDEN behaviors:**
 - Writing a `.maestro/plans/*.md` file and stopping
@@ -383,3 +415,5 @@ of dispatching agents is a broken promise to the user.
 | Consecutive failures | 5 stories fail in a row | PAUSE, show failure pattern, ask for guidance |
 | Fix cycles | 3 fix cycles on one milestone | PAUSE, show unresolved issues |
 | Divergence | User fundamentally redirects | Invoke divergence-handler |
+| User PAUSE | Any time | Graceful stop after current story |
+| User STOP | Any time | Immediate halt, save state |
