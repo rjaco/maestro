@@ -1,0 +1,68 @@
+{
+  "mcpServers": {
+    "maestro": {
+      "type": "stdio",
+      "description": "Maestro orchestrator — exposes autonomous development capabilities as MCP tools",
+      "tools": {
+        "maestro_status": {
+          "description": "Get the current Maestro session status including milestone progress, active story, phase, and token spend",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        },
+        "maestro_build": {
+          "description": "Start building a feature autonomously using the Maestro dev-loop. Decomposes into stories, dispatches agents, runs QA, and commits.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "feature": {
+                "type": "string",
+                "description": "Description of the feature to build"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["yolo", "checkpoint", "careful"],
+                "description": "Execution mode: yolo (auto-all), checkpoint (pause per story), careful (pause per phase)",
+                "default": "checkpoint"
+              }
+            },
+            "required": ["feature"],
+            "additionalProperties": false
+          }
+        },
+        "maestro_plan": {
+          "description": "Generate a decomposition plan for a feature without executing it. Returns stories with dependency graph and cost estimate.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "feature": {
+                "type": "string",
+                "description": "Description of the feature to plan"
+              }
+            },
+            "required": ["feature"],
+            "additionalProperties": false
+          }
+        },
+        "maestro_squad_list": {
+          "description": "List all available agent squads with their roles and orchestration modes",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        },
+        "maestro_health": {
+          "description": "Get the project health score (0-100) based on test coverage, type safety, lint compliance, dependency freshness, and tech debt",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  }
+}
