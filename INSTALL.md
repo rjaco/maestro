@@ -1,147 +1,128 @@
 # Maestro Installation Guide
 
-## Quick Install
+## Quick Install (Recommended)
 
-### Claude Code Terminal
+### Method 1: From GitHub (works on Terminal + Desktop)
 
 ```bash
-claude plugin install maestro
+# Add the marketplace
+/plugin marketplace add rjaco/maestro-orchestrator
+
+# Install the plugin
+/plugin install maestro@rjaco-maestro-orchestrator
 ```
 
-Then initialize for your project:
+Or in one line from the terminal:
 
-```
-cd /path/to/your/project
-claude
-/maestro init
+```bash
+claude --plugin-dir /path/to/maestro/plugins/maestro
 ```
 
-### Claude Code Desktop
+### Method 2: Claude Code Desktop
 
 1. Open Claude Code Desktop
-2. Go to Settings > Plugins
-3. Search for "maestro"
-4. Click Install
-5. Open your project folder
-6. Type `/maestro init`
+2. Click **Customize** in the left sidebar
+3. Click **Browse plugins**
+4. Search for "maestro" (if published) or click **Upload plugin**
+5. Select the `plugins/maestro/` directory
+
+### Method 3: Local Development
+
+```bash
+# Clone the repo
+git clone https://github.com/rjaco/maestro-orchestrator.git
+
+# Run Claude Code with the plugin
+claude --plugin-dir ./maestro-orchestrator/plugins/maestro
+```
+
+### Method 4: Manual Installation
+
+```bash
+# Copy the plugin to Claude Code's plugin directory
+cp -r plugins/maestro ~/.claude/plugins/local/maestro
+
+# Or add the marketplace to your settings
+# In Claude Code, run:
+/plugin marketplace add rjaco/maestro-orchestrator
+```
 
 ## Post-Installation
 
-### First Run
-
-Run `/maestro init` inside your project. Maestro will:
-
-1. Ask you about your project (one open-ended question)
-2. Scan your codebase (package.json, tsconfig, etc.)
-3. Detect available integrations (MCP servers, CLI tools)
-4. Show a preview of what it learned
-5. Create the `.maestro/` directory with project DNA, config, and trust metrics
-
 ### Verify Installation
 
+```bash
+# In Claude Code, type:
+/maestro:help
+
+# Or check the plugin list:
+/plugin
 ```
+
+You should see "maestro" in the Installed tab with all commands available.
+
+### Initialize for Your Project
+
+```bash
+cd /path/to/your/project
+claude
+
+# Then type:
+/maestro init
+```
+
+Maestro will ask about your project, scan your codebase, and create the `.maestro/` directory.
+
+### Verify Everything Works
+
+```bash
 /maestro doctor
 ```
 
-This checks core files, configuration, hooks, and detected integrations.
+## Installation Scopes
 
-### Get Help
+| Scope | Command | Who sees it |
+|-------|---------|-------------|
+| User (default) | `/plugin install maestro@marketplace` | All your projects |
+| Project | `/plugin install maestro@marketplace --scope project` | All collaborators |
+| Local | `/plugin install maestro@marketplace --scope local` | Only you, this repo |
 
-```
-/maestro help
-/maestro help commands
-/maestro help modes
-```
+## Remote Control Compatibility
 
-## Optional Integrations
+Maestro works with Claude Code's Remote Control feature. Start a remote session:
 
-### Kanban (Project Management)
+```bash
+# Start Claude Code with remote control
+claude --remote-control "My Project"
 
-Connect Maestro to Asana, Jira, Linear, or GitHub Issues to visualize stories on a kanban board.
-
-#### GitHub Issues (simplest, no extra setup)
-
-If you have `gh` CLI installed and authenticated:
-
-```
-/maestro config set integrations.kanban.provider github
-/maestro config set integrations.kanban.sync_enabled true
+# Or from an existing session
+/remote-control My Project
 ```
 
-#### Asana
-
-1. Install the Asana MCP Server:
-   - Follow instructions at developers.asana.com/docs/mcp-server
-   - Add to your Claude Code MCP configuration
-
-2. Configure Maestro:
-   ```
-   /maestro config set integrations.kanban.provider asana
-   /maestro config set integrations.kanban.project_id YOUR_PROJECT_GID
-   /maestro config set integrations.kanban.sync_enabled true
-   ```
-
-#### Jira
-
-1. Install the Atlassian Remote MCP Server:
-   - Follow instructions at atlassian.com/blog/announcements/remote-mcp-server
-   - Authenticate with OAuth 2.1
-
-2. Configure Maestro:
-   ```
-   /maestro config set integrations.kanban.provider jira
-   /maestro config set integrations.kanban.project_id YOUR_PROJECT_KEY
-   /maestro config set integrations.kanban.sync_enabled true
-   ```
-
-#### Linear
-
-1. Install a Linear MCP Server
-2. Configure Maestro:
-   ```
-   /maestro config set integrations.kanban.provider linear
-   /maestro config set integrations.kanban.sync_enabled true
-   ```
-
-### Knowledge Base (Second Brain)
-
-Connect Maestro to Obsidian or Notion to persist decisions, learnings, and session summaries.
-
-#### Obsidian
-
-1. Enable Obsidian CLI:
-   - Open Obsidian > Settings > General > Command Line Interface > Enable
-   - Restart your terminal
-
-2. Connect:
-   ```
-   /maestro brain connect
-   ```
-   Maestro will auto-detect your vault location or ask for the path.
-
-#### Notion
-
-1. Install the Notion MCP Server:
-   - Create an integration at notion.so/profile/integrations
-   - Follow instructions at developers.notion.com/docs/mcp
-   - Share target workspace with the integration
-
-2. Connect:
-   ```
-   /maestro brain connect
-   ```
-
-### View Board
+Then open the session from your phone (Claude iOS/Android app) or browser (claude.ai/code) and use Maestro commands normally:
 
 ```
+/maestro status
 /maestro board
+/maestro brain search "auth"
 ```
 
-### Search Knowledge Base
+All Maestro commands work via Remote Control — they're standard Claude Code skills.
 
-```
-/maestro brain search "authentication"
-```
+## Dispatch Compatibility
+
+Maestro IS a dispatch system. It decomposes features into stories and dispatches specialized agents to implement them. If you also have the [Dispatch plugin](https://github.com/bassimeledath/dispatch), they complement each other:
+
+| Feature | Dispatch | Maestro |
+|---------|----------|---------|
+| Task decomposition | Manual | Automatic (decompose skill) |
+| Worker agents | Generic workers | Specialized (implementer, QA, fixer) |
+| Quality gates | None | QA review, self-heal, trust metrics |
+| Cost tracking | None | Token ledger, forecast |
+| Session management | Worker tracking | Full state management |
+| Knowledge persistence | None | Brain + memory system |
+
+You can use Dispatch for ad-hoc parallel tasks and Maestro for structured feature development.
 
 ## Commands Reference
 
@@ -149,6 +130,7 @@ Connect Maestro to Obsidian or Notion to persist decisions, learnings, and sessi
 |---------|-------------|
 | `/maestro "task"` | Build a feature autonomously |
 | `/maestro opus "vision"` | Build an entire product (Magnum Opus) |
+| `/maestro plan "task"` | Deep planning with codebase exploration |
 | `/maestro init` | Initialize for this project |
 | `/maestro status` | View progress, resume, pause, abort |
 | `/maestro model` | View/change model assignments |
@@ -158,12 +140,36 @@ Connect Maestro to Obsidian or Notion to persist decisions, learnings, and sessi
 | `/maestro board` | Kanban board view |
 | `/maestro brain` | Second brain operations |
 | `/maestro history` | Past sessions and cost analysis |
-| `/maestro plan "task"` | Deep planning with codebase exploration |
 | `/maestro notify` | Push notifications (Slack, Discord, Telegram) |
 | `/maestro viz` | Visual dashboards and Mermaid diagrams |
 
 ## Troubleshooting
 
-Run `/maestro doctor` to diagnose common issues.
+### "Unknown skill: maestro"
+
+The plugin isn't loaded. Try:
+1. `/plugin` — check if maestro appears in Installed tab
+2. If not, reinstall: `/plugin marketplace add rjaco/maestro-orchestrator`
+3. Then: `/plugin install maestro@rjaco-maestro-orchestrator`
+4. Restart Claude Code
+
+### Commands show as `/maestro:maestro-init` instead of `/maestro:init`
+
+You have an old cached version. Fix:
+1. `/plugin` → Installed → Uninstall maestro
+2. Reinstall from marketplace
+3. Or: delete `~/.claude/plugins/cache/maestro-orchestrator/` and reinstall
+
+### Stop hook error on exit
+
+If you see "JSON validation failed" when exiting:
+1. Check that `stop-hook.sh` uses `"approve"` (not `"allow"`)
+2. Update plugin: `/plugin` → Installed → Update maestro
+
+### Desktop can't find the plugin
+
+Desktop reads from `~/.claude/plugins/`. Make sure:
+1. Plugin is installed at user scope (not project scope)
+2. Restart Claude Code Desktop after installing
 
 For more help: `/maestro help troubleshooting`

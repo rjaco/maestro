@@ -144,3 +144,60 @@ environment: terminal | desktop | cowork | agent_sdk
 ```
 
 Adapt all subsequent output based on this detection.
+
+## Remote Control Compatibility
+
+Maestro works seamlessly with Claude Code's Remote Control feature (`/remote-control`). When a session is accessed remotely (from phone, tablet, or browser):
+
+### What works:
+- All `/maestro` commands function normally
+- AskUserQuestion menus render in the web/app UI
+- Background agents dispatch and report results
+- File edits and git operations execute on the local machine
+- Notifications can be pushed to Slack/Discord/Telegram (reaches you even when away from terminal)
+
+### Adaptations for remote:
+- Keep responses concise (mobile screens are small)
+- Progress updates should be self-contained (context may be lost between phone checks)
+- Use AskUserQuestion for all decisions (no need to type commands)
+- Checkpoints are especially valuable — they wait for your response from any device
+
+### Best workflow:
+```bash
+# On your machine:
+claude --remote-control "My Project"
+
+# Then from your phone:
+/maestro "Add user auth" --checkpoint
+
+# Maestro runs on your machine, checkpoints reach your phone
+# Review and approve from anywhere
+```
+
+## Dispatch Compatibility
+
+Maestro and the [Dispatch plugin](https://github.com/bassimeledath/dispatch) solve similar problems differently. They can coexist:
+
+### How they differ:
+
+| Capability | Dispatch | Maestro |
+|-----------|----------|---------|
+| Purpose | Ad-hoc parallel tasks | Structured feature development |
+| Decomposition | Manual (you define tasks) | Automatic (decompose skill) |
+| Workers | Generic (same prompt) | Specialized (implementer, QA, fixer) |
+| Quality | No review cycle | QA review + self-heal + trust |
+| State | Worker tracking only | Full session state + resume |
+| Cost | No tracking | Token ledger + forecast |
+| Memory | None | Semantic + episodic decay |
+
+### Using both together:
+
+- Use **Dispatch** for quick parallel tasks: "research these 5 APIs", "fix these 3 bugs"
+- Use **Maestro** for structured features: "Add user authentication with OAuth"
+- Maestro's dev-loop already dispatches agents in parallel when stories are independent — it IS a dispatch system with quality gates on top
+
+### If you only want one:
+
+If your work is mostly features/products → use Maestro.
+If your work is mostly ad-hoc parallel tasks → use Dispatch.
+Both installed? They don't conflict — different commands, different state files.
