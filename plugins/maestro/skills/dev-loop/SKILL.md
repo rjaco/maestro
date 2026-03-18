@@ -98,10 +98,11 @@ Use the story's `model_recommendation` field. Override rules:
 
 ## Phase 3: IMPLEMENT
 
-Dispatch the implementer as a background agent in an isolated worktree.
+Dispatch the implementer as a background agent in an isolated worktree. **This applies to ALL story types** — both code and knowledge work. Worktree isolation prevents half-done changes from polluting the main tree.
 
 ### Agent Configuration
 
+For **code stories**:
 ```yaml
 name: implementer
 model: [from Phase 2 model selection]
@@ -111,9 +112,32 @@ memory: project
 maxTurns: 50
 ```
 
+For **knowledge work stories**:
+```yaml
+name: implementer
+model: [from Phase 2 model selection]
+tools: [Read, Write, Bash, Grep, Glob, WebSearch, WebFetch]
+isolation: worktree
+memory: project
+maxTurns: 30
+```
+
+Knowledge work agents get `WebSearch` and `WebFetch` for research-heavy tasks but fewer turns (content creation is faster than code).
+
 ### Dispatch
 
-Use `run_in_background: true` so the orchestrator stays responsive. The user can:
+**MANDATORY**: Always use `isolation: "worktree"` on the Agent tool call. This creates an isolated git worktree where the implementer works without affecting the main tree.
+
+```
+Agent(
+  subagent_type: "maestro:maestro-implementer",
+  isolation: "worktree",
+  run_in_background: true,
+  prompt: "[story spec + context package + North Star]"
+)
+```
+
+The orchestrator stays responsive while the agent works. The user can:
 - Ask questions about the feature
 - Post notes to `.maestro/notes.md`
 - Check progress
@@ -130,13 +154,22 @@ The implementer reports one of four statuses:
 | `NEEDS_CONTEXT` | Missing information to proceed | Context Engine escalation: bump tier (T3 to T2 to T1), add requested context, re-dispatch |
 | `BLOCKED` | Cannot proceed (missing dependency, unclear spec, tooling issue) | Assess the blocker. If model capability issue, re-dispatch with more capable model. If spec issue, PAUSE and ask user |
 
-### TDD Enforcement
+### Code Stories: TDD Enforcement
 
 The implementer follows TDD discipline (enforced via the prompt):
 1. Write a failing test that captures the acceptance criterion
 2. Implement the minimum code to make the test pass
 3. Refactor if needed
 4. Repeat for each criterion
+
+### Knowledge Work Stories: Output-Driven Execution
+
+The implementer follows output contract discipline:
+1. Read the output contract from the generating skill
+2. Create the output file with correct frontmatter and all required sections
+3. Fill each section with substantive content
+4. Self-check against the contract before reporting DONE
+5. No TDD — validation happens in Phase 4 via content-validator
 
 ## Phase 3.5: TEST GENERATION (optional)
 
@@ -158,11 +191,19 @@ Skip this phase if:
 
 ## Phase 4: SELF-HEAL
 
-Run automated checks and fix failures.
+Run automated checks and fix failures. The check sequence depends on story type.
 
-For **code stories**, run quality gates:
+### Story Type Detection
 
-### Check Sequence
+Determine the story type from the story's `type` field or by analyzing the files:
+
+| Story Type | Detection | Validation Path |
+|-----------|-----------|-----------------|
+| `code` / `backend` / `frontend` / `fullstack` / `infrastructure` / `test` | Default | Code quality gates (tsc, lint, tests) |
+| `knowledge_work` / `content` / `marketing` / `research` / `strategy` | Layer 4 classifier | Output contract validation |
+| `markdown` | All files are `.md` | Markdown structure validation |
+
+### Code Story Validation
 
 ```bash
 # 1. TypeScript compilation
@@ -174,6 +215,33 @@ npm run lint
 # 3. Test suite (affected tests, then full suite)
 npm test
 ```
+
+### Knowledge Work Validation
+
+For non-code stories (content, marketing, research, strategy, markdown):
+
+1. **Load output contract** from the generating skill's `output_contract` definition
+2. **Run content-validator** checks:
+   - Frontmatter schema validation (required fields, types)
+   - Required sections present and non-empty
+   - Heading hierarchy (H1 → H2 → H3, no skips)
+   - Word count within bounds
+   - Cross-file references resolve
+3. **If SEO content**: readability score, keyword presence, meta tags
+4. **Report** using same pass/fail format as code checks
+
+```
+Content validation:
+  (ok) Frontmatter: all required fields present
+  (ok) Sections: 5/5 required sections found
+  (ok) Headings: hierarchy valid
+  (ok) Word count: 1,247 (target: 800-3000)
+  (x)  Cross-ref: link to research.md — file not found
+```
+
+If validation fails, dispatch fixer agent with the specific failures.
+
+### Check Sequence (Code)
 
 ### Auto-Fix Loop
 

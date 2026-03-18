@@ -186,18 +186,94 @@ Read `.maestro/notes.md`. For each note posted during the last milestone:
 
 Clear processed notes (move to `.maestro/archive/notes-MN.md`).
 
-### Retrospective
+### Retrospective + Self-Improvement
 
 Run a mini-retrospective on the completed milestone:
 - What went well (high QA first-pass rate, under budget)
 - What went poorly (many fix cycles, QA rejections, self-heal failures)
 - Lessons for the next milestone (adjust context tiers, model selections, story granularity)
 
-Log to `.maestro/logs/` via build-log skill.
+**Self-improvement actions** (applied immediately for the next milestone):
+1. If QA first-pass rate < 60%: escalate model for next milestone (sonnet → opus)
+2. If self-heal cycles > 2 average: add more context (bump default tier T3 → T2)
+3. If a skill was missing: invoke skill-factory to auto-generate it
+4. If a pattern was repeated 3+ times: save to semantic memory
+5. If context was insufficient: adjust live-docs fetch list
+
+Log to `.maestro/logs/` via build-log skill. Save lessons to `.maestro/memory/semantic.md`.
 
 ### State Persistence
 
 Write all state to disk. If the session is interrupted (crash, network loss, user closes terminal), the next `/maestro opus --resume` will pick up from the last checkpoint.
+
+## Continuous Loop Mode
+
+When `opus_mode` is `full_auto` or `until_pause`, the loop runs continuously without stopping:
+
+```
+while milestones remain AND no safety valve triggered:
+    1. Start milestone
+    2. Decompose into stories
+    3. For each story:
+        a. Dispatch implementer in worktree (isolation: "worktree")
+        b. Wait for completion
+        c. Run validation (code: tsc/lint/test, knowledge: output contracts)
+        d. QA review
+        e. Git craft (merge worktree, commit)
+    4. Evaluate milestone
+    5. Auto-fix if needed (up to 3 cycles)
+    6. Run retrospective + self-improvement
+    7. Apply lessons to next milestone
+    8. Continue to next milestone
+```
+
+### Self-Improvement Loop
+
+In continuous mode, Maestro actively improves itself between milestones:
+
+```
+After each milestone:
+    1. Analyze: what failed, what was slow, what was wasteful
+    2. Adjust: model selection, context tiers, validation rules
+    3. Generate: new skills if recurring patterns detected
+    4. Apply: changes take effect immediately for next milestone
+    5. Log: track improvement trajectory in .maestro/logs/
+```
+
+This means milestone N+1 benefits from everything learned in milestone N. Over a 10-milestone Opus session, the orchestrator becomes significantly more efficient and accurate.
+
+### Research-Improvement Loop
+
+For research-heavy Opus sessions (competitive analysis, market research, content strategy):
+
+```
+while improvement criteria not met:
+    1. Research: dispatch parallel research agents
+    2. Synthesize: combine findings into actionable brief
+    3. Evaluate: does the synthesis meet the acceptance criteria?
+    4. If not: identify gaps, formulate new research queries
+    5. Research again with refined queries
+    6. Re-synthesize and re-evaluate
+    7. Loop until criteria met or max iterations (5) reached
+```
+
+This enables deep research that refines itself — each round uses findings from the previous round to ask better questions.
+
+### Knowledge Work Continuous Loop
+
+For non-code Opus sessions (writing, marketing, strategy):
+
+```
+while content quality < threshold:
+    1. Generate: create content/strategy/copy
+    2. Validate: run output contract checks
+    3. Review: editorial QA (readability, SEO, tone)
+    4. If rejected: send feedback, regenerate
+    5. If approved: commit and continue
+    6. Between pieces: analyze patterns, improve templates
+```
+
+Validation uses content-validator and output-contracts instead of tests. Worktrees isolate each piece of content until it passes review.
 
 ## Safety Valves
 

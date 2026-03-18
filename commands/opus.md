@@ -209,16 +209,83 @@ Milestones: [total]
 
 ## Step 9: Autonomous Execution Loop
 
-Invoke the opus-loop skill to begin milestone-by-milestone execution.
+Invoke the opus-loop skill to begin milestone-by-milestone execution. This is the core autonomous loop — it runs continuously until all milestones are complete, a safety valve triggers, or the user pauses.
 
-For each milestone in order:
-1. Decompose milestone into stories (2-8 per milestone)
-2. Execute stories via dev-loop (mode: yolo within milestones)
-3. Evaluate milestone acceptance criteria
-4. Auto-fix if evaluation fails (max 3 cycles)
-5. Checkpoint based on OPUS_MODE
+### CRITICAL: Agent Dispatch Rules
 
-Use AskUserQuestion:
+Every story MUST be implemented by a dispatched agent, NOT by the orchestrator directly:
+
+```
+Agent(
+  subagent_type: "maestro:maestro-implementer",
+  isolation: "worktree",          # MANDATORY — isolates changes
+  run_in_background: true,        # MANDATORY — keeps orchestrator responsive
+  prompt: "[story spec + context]"
+)
+```
+
+The orchestrator (you) NEVER writes implementation files directly. You:
+1. Decompose milestones into stories
+2. Compose context packages
+3. Dispatch implementer agents in worktrees
+4. Run validation after agents complete
+5. Dispatch QA reviewer agents
+6. Merge worktrees on success
+7. Manage state and checkpoints
+
+### Execution Flow
+
+```
+for each milestone:
+    decompose into stories (2-8)
+    for each story in dependency order:
+        1. Dispatch implementer in worktree (Agent tool, isolation: "worktree")
+        2. Wait for agent to return DONE/BLOCKED/NEEDS_CONTEXT
+        3. Run validation:
+           - Code: tsc, lint, tests (in the worktree)
+           - Knowledge work: output-contract validation
+        4. Dispatch QA reviewer (Agent tool, read-only)
+        5. If QA approved: merge worktree, git craft commit
+        6. If QA rejected: re-dispatch implementer with feedback (up to 5x)
+    evaluate milestone acceptance criteria
+    auto-fix if needed (up to 3 cycles)
+    run retrospective + self-improvement
+    checkpoint based on OPUS_MODE
+```
+
+### Continuous Loop Behavior
+
+In `full_auto` or `until_pause` mode, the loop does NOT pause between milestones:
+
+```
+while milestones_remaining AND no_safety_valve:
+    execute_milestone()
+    run_retrospective()      # learn from this milestone
+    apply_improvements()     # adjust for next milestone
+    continue_to_next()       # no user interaction needed
+```
+
+The loop only stops when:
+- All milestones complete
+- User sends PAUSE/STOP
+- Safety valve triggers (budget, time, consecutive failures)
+- Divergence detected (vision drift)
+
+### Self-Improvement Between Milestones
+
+After each milestone, the orchestrator applies lessons:
+
+1. If QA first-pass < 60%: escalate default model for next milestone
+2. If self-heal > 2 avg: bump context tier (add more project context)
+3. If missing skill detected: invoke skill-factory to create it
+4. If pattern repeated 3+: save to semantic memory
+5. Log all adjustments to `.maestro/logs/self-improvement.md`
+
+This means milestone 5 runs significantly better than milestone 1.
+
+### Milestone Checkpoint
+
+Use AskUserQuestion (only in `milestone_pause` mode):
 - Question: "Milestone [N/M] complete: [title]"
 - Header: "Milestone"
 - Options:
@@ -230,6 +297,7 @@ Use AskUserQuestion:
 Between milestones:
 - Re-read `.maestro/vision.md` (North Star anchor — prevents drift)
 - Check `.maestro/notes.md` for user messages
+- Run retrospective + self-improvement
 - Update `.maestro/roadmap.md` with completion status
 - Update `.maestro/state.local.md`
 
