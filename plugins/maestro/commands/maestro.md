@@ -1,7 +1,7 @@
 ---
 description: "Full-stack orchestrator — build features or entire products autonomously"
 argument-hint: "DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast]"
-allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch
+allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
 ---
 
 # Maestro — Full-Stack Orchestrator
@@ -115,20 +115,17 @@ Extract these flags from `$ARGUMENTS`. Everything that is not a flag is the DESC
 | `--no-forecast` | FORECAST=false | true |
 | `--max-stories N` | MAX_STORIES=N | 8 |
 
-If no mode flag is provided, ask the user:
+If no mode flag is provided, use AskUserQuestion to let the user pick:
 
-```
-+---------------------------------------------+
-| Select Mode                                 |
-+---------------------------------------------+
-  [1] Yolo       auto-approve everything, maximum speed
-  [2] Checkpoint  pause after each story for review (default)
-  [3] Careful     pause after each phase for granular control
+**Question:** "How should Maestro handle this feature?"
 
-  Choice [1/2/3]:
-```
+**Options:**
+1. **Checkpoint (Recommended)** — "Pause after each story for review. You see a summary and decide: continue, review, skip, or abort."
+2. **Yolo** — "Auto-approve everything. Maximum speed, minimum oversight. Best for well-understood tasks."
+3. **Careful** — "Pause after each phase within each story. Maximum visibility into every decision Maestro makes."
 
-Default to checkpoint (2) if user just presses enter.
+Map the selection: Checkpoint → MODE=checkpoint, Yolo → MODE=yolo, Careful → MODE=careful.
+If user selects "Other", default to checkpoint.
 
 ## Step 4: Verify Initialization
 

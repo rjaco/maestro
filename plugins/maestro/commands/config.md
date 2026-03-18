@@ -7,6 +7,7 @@ allowed-tools:
   - Write
   - Edit
   - Bash
+  - AskUserQuestion
 ---
 
 # Maestro Config
@@ -134,4 +135,91 @@ Ask for confirmation before resetting:
   [2] Cancel
 ```
 
-On confirmation, regenerate `config.yaml` with the default template (same as `maestro-init` generates).
+On confirmation, regenerate `config.yaml` with the default template (same as `maestro init` generates).
+
+## Interactive Mode (no arguments)
+
+When `$ARGUMENTS` is empty, after showing the current config, use AskUserQuestion to offer an interactive menu:
+
+**Question:** "What would you like to configure?"
+
+**Options:**
+1. **Execution mode** — "Change default mode (currently: [mode])"
+2. **Quality gates** — "Toggle tsc, lint, tests, adjust QA/self-heal limits"
+3. **Integrations** — "Configure kanban or knowledge base providers"
+4. **Cost tracking** — "Toggle forecast, ledger, budget enforcement"
+
+### If "Execution mode":
+
+Use AskUserQuestion:
+
+**Question:** "Default execution mode?"
+
+**Options:**
+1. **yolo** — "Auto-approve everything. Maximum speed, minimum oversight"
+2. **checkpoint** — "Pause after each story for review (recommended)"
+3. **careful** — "Pause after each phase for granular control"
+
+Update `default_mode` in config.
+
+### If "Quality gates":
+
+Use AskUserQuestion with multiSelect:
+
+**Question:** "Which quality checks should run during self-heal? (select all that apply)"
+
+**Options (multiSelect: true):**
+1. **TypeScript (tsc)** — "Run tsc --noEmit to catch type errors"
+2. **Linter** — "Run the project linter (eslint, etc.)"
+3. **Tests** — "Run the test suite"
+
+Update `quality.run_tsc`, `quality.run_lint`, `quality.run_tests` accordingly.
+
+Then use AskUserQuestion:
+
+**Question:** "Adjust QA and self-heal limits?"
+
+**Options:**
+1. **Keep current** — "QA: [max_qa] iterations, Self-heal: [max_self_heal] attempts"
+2. **Strict** — "QA: 3 iterations, Self-heal: 2 attempts (fail faster)"
+3. **Patient** — "QA: 8 iterations, Self-heal: 5 attempts (try harder)"
+
+### If "Integrations":
+
+Use AskUserQuestion:
+
+**Question:** "Which integration to configure?"
+
+**Options:**
+1. **Kanban provider** — "Sync stories with project management (currently: [provider or 'none'])"
+2. **Knowledge base** — "Connect second brain (currently: [provider or 'none'])"
+3. **Back** — "Return to main menu"
+
+If Kanban selected, use AskUserQuestion:
+
+**Question:** "Kanban provider?"
+
+**Options:**
+1. **GitHub Issues** — "Uses gh CLI. No extra setup needed"
+2. **Asana** — "Requires Asana MCP Server"
+3. **Jira** — "Requires Atlassian MCP Server"
+4. **Linear** — "Requires Linear MCP Server"
+
+Update config and run connectivity check.
+
+If Knowledge base selected, suggest running `/maestro brain connect` for the full guided setup.
+
+### If "Cost tracking":
+
+Use AskUserQuestion with multiSelect:
+
+**Question:** "Cost tracking settings? (select all to enable)"
+
+**Options (multiSelect: true):**
+1. **Show forecast before starting** — "Estimate cost before execution begins"
+2. **Log per-story costs** — "Track token usage in token-ledger.md"
+3. **Enforce budget limits** — "Pause execution when budget is reached"
+
+Update `cost_tracking` settings accordingly.
+
+After any change, show confirmation and ask if they want to configure something else.
