@@ -323,18 +323,22 @@ test_pid_file_lifecycle() {
 }
 
 # ---------------------------------------------------------------------------
-# Test: SIGINT triggers cleanup (sets phase: paused)
+# Test: SIGTERM triggers cleanup (sets phase: paused)
 # ---------------------------------------------------------------------------
-test_sigint_sets_phase_paused() {
+# Note: bash traps only fire between commands (not while a child is blocking).
+# To trigger the daemon's cleanup handler, we send SIGTERM to the daemon process
+# while it is between commands (i.e., not inside the blocking claude call).
+# We achieve this by using a fake claude that exits immediately, then sending
+# SIGTERM during the inter-iteration sleep window.
+test_sigterm_sets_phase_paused() {
   setup_tmpdir
   # State that would loop: active=true, phase=opus_executing, no failures
   write_state "true" "opus_executing" "0" "99"
-  # Fake claude that sleeps briefly to give us time to send signal
+  # Fake claude that exits immediately so the daemon reaches the sleep interval
   FAKE_BIN="$TMPDIR/bin"
   mkdir -p "$FAKE_BIN"
   cat > "$FAKE_BIN/claude" <<'FAKE'
 #!/usr/bin/env bash
-sleep 2
 exit 0
 FAKE
   chmod +x "$FAKE_BIN/claude"
@@ -344,16 +348,36 @@ FAKE
   mkdir -p "$fake_scripts"
   ln -sf "$DAEMON" "$fake_scripts/opus-daemon.sh"
 
-  # Start daemon in background, then send SIGINT
-  bash "$fake_scripts/opus-daemon.sh" --interval 0 &
+  # Run with a 5s interval so the daemon is sleeping when we signal it.
+  # bash traps fire during sleep (sleep is interruptible).
+  bash "$fake_scripts/opus-daemon.sh" --interval 5 &
   local daemon_pid=$!
-  sleep 0.5
-  kill -INT "$daemon_pid" 2>/dev/null || true
+
+  # Poll until PID file appears (daemon is running and inside the loop)
+  local waited=0
+  while [[ ! -f "$PID_FILE" && $waited -lt 20 ]]; do
+    sleep 0.1
+    waited=$(( waited + 1 ))
+  done
+
+  # Wait for first iteration to complete so daemon is in the sleep interval
+  local iters=0
+  while [[ $iters -lt 20 ]]; do
+    sleep 0.2
+    iters=$(( iters + 1 ))
+    # Check log file for "Iteration 1: Complete"
+    if [[ -f "$LOG_FILE" ]] && grep -q "Iteration 1: Complete" "$LOG_FILE" 2>/dev/null; then
+      break
+    fi
+  done
+
+  # Daemon is now in `sleep 5` — SIGTERM will interrupt it and trigger the trap
+  kill -TERM "$daemon_pid" 2>/dev/null || true
   wait "$daemon_pid" 2>/dev/null || true
 
   local phase_line
   phase_line="$(grep '^phase:' "$STATE_FILE")"
-  assert_eq "SIGINT sets phase: paused" "phase: paused" "$phase_line"
+  assert_eq "SIGTERM sets phase: paused" "phase: paused" "$phase_line"
 
   teardown_tmpdir
 }
@@ -435,7 +459,7 @@ test_exits_on_max_failures
 test_max_iterations_1
 test_log_file_created
 test_pid_file_lifecycle
-test_sigint_sets_phase_paused
+test_sigterm_sets_phase_paused
 test_unknown_argument
 test_missing_state_file_exits_error
 test_prompt_content_passed_to_claude
