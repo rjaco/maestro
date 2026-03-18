@@ -1,81 +1,145 @@
 ---
-id: 0
-slug: "story-slug"
-title: "Human-Readable Story Title"
+id: [milestone]-[number]
+slug: [kebab-case-title]
+title: "[Human-Readable Story Title]"
+type: [frontend|backend|integration|data|infrastructure|test]
 depends_on: []
-parallel_safe: false
-estimated_tokens: 35000
-model_recommendation: "sonnet"
-type: "backend"
+parallel_safe: [true|false]
+complexity: [simple|medium|complex]
+model_recommendation: [haiku|sonnet|opus]
+estimated_tokens: [number]
 ---
 
-# Story: Human-Readable Story Title
+## Task Description
 
-## Requirements Context
+[1–3 sentences: what to build and why. Be concrete — name the function, endpoint, component, or behavior being added. Explain what user need or system requirement this addresses and how it fits into the broader feature.]
 
-[Excerpt from the feature description relevant to THIS story only — not the whole feature.]
-[Why this story exists — what user need or system requirement it addresses.]
-[How this story fits into the broader feature: what it builds on and what depends on it.]
+Example:
+> Add a `GET /api/v1/vehicles` endpoint that returns paginated vehicle records from the database. This is the data layer for the vehicle list screen and is required before the frontend listing story can begin.
 
-## Architecture Decisions
+## Acceptance Criteria
 
-[Relevant architectural decisions from the plan that directly affect this story.]
-[Patterns to follow, with specific file examples from the codebase — e.g., "Follow the repository pattern in `src/lib/userRepo.ts`".]
-[Data model or API changes this story implements, if any.]
-[Any technology or library choices locked in for this story and why.]
+[Each criterion must be specific and independently testable. Use BDD format. Include at least one error/edge-case scenario.]
 
-## Acceptance Criteria (BDD)
+1. Given [system precondition], when [action], then [verifiable outcome].
+2. Given [precondition 2], when [action 2], then [outcome 2].
+3. Given [error or edge case], when [action 3], then [expected error handling or boundary behavior].
 
-Given [precondition describing the system state]
-When [action taken by user or system]
-Then [expected, verifiable outcome]
+Example:
+1. Given the database contains vehicle records, when `GET /api/v1/vehicles` is called, then it returns a 200 response with a JSON array of vehicle objects and a `total` count.
+2. Given an invalid `page` query parameter, when the endpoint is called, then it returns a 400 response with a descriptive error message.
+3. Given no records exist, when the endpoint is called, then it returns a 200 response with an empty array and `total: 0`.
 
-Given [precondition 2]
-When [action 2]
-Then [expected outcome 2]
+## Architecture Context
 
-Given [precondition 3 — error or edge case]
-When [action 3]
-Then [expected error handling or boundary behavior]
+[Embed the actual code patterns the implementer must follow. Do NOT write "see architecture.md" or "follow the pattern in X". Copy the relevant snippet directly here. Include the source path as a comment so the implementer knows where it came from.]
 
-## Files
+Example:
 
-- Create: `src/path/to/new-file.ts` — [what this file does]
-- Create: `src/path/to/new-file.test.ts` — [what is tested and why]
-- Modify: `src/path/to/existing-file.ts` — [what changes and why]
-- Reference: `src/path/to/pattern-example.ts` — [follow this pattern for X]
-- Reference: `src/types/relevant-types.ts` — [type definitions needed]
-
-## Interfaces to Maintain
-
-[Function signatures, API contracts, or type definitions that must not break. If this story adds to an existing interface, show the current shape and what is being added.]
+API routes in this project follow this pattern (from `src/app/api/v1/vehicles/route.ts`):
 
 ```typescript
-// Current interface from src/types/foo.ts
-interface Foo {
-  bar: string;
-  baz: number;
+// src/app/api/v1/vehicles/route.ts
+export async function GET(request: NextRequest) {
+  const { valid, error, params } = validateParams(request, schema)
+  if (!valid) return NextResponse.json({ error }, { status: 400 })
+
+  const data = await vehicleRepo.list(params)
+  return NextResponse.json(data, { headers: CACHE_HEADERS })
 }
-// This story adds: qux: boolean
 ```
 
-## Edge Cases
+Repository functions follow this shape (from `src/lib/userRepo.ts`):
 
-- [Edge case 1 and how to handle it — e.g., empty input, null values, concurrent writes]
-- [Edge case 2 — e.g., what happens when a dependency story's output is missing]
-- [Edge case 3 — e.g., partial state, network failure, permission denial]
+```typescript
+// src/lib/userRepo.ts
+export async function list(params: ListParams): Promise<{ items: User[]; total: number }> {
+  const { page = 1, limit = 20 } = params
+  const offset = (page - 1) * limit
+  const [items, total] = await Promise.all([
+    db.select().from(users).limit(limit).offset(offset),
+    db.select({ count: count() }).from(users),
+  ])
+  return { items, total: total[0].count }
+}
+```
 
-## Test Requirements
+## File Operations
 
-- Unit: `src/path/to/new-file.test.ts` — test [specific behaviors: happy path, error path, boundary conditions]
-- Integration: [if applicable — describe what cross-component behavior to verify]
+[List every file the implementer will touch. For created files, state their purpose. For modified files, state what changes. For reference files, state what pattern or type to extract from them. Never say "see X for context" without listing it here.]
 
-## Definition of Done
+### Create
+- `src/path/to/new-file.ts` — [what this file does]
+- `src/path/to/new-file.test.ts` — [what behaviors are tested: happy path, errors, edge cases]
 
-- [ ] All acceptance criteria met
-- [ ] Interfaces preserved (or migration documented if changed)
-- [ ] Tests written and passing
-- [ ] TypeScript compiles without errors (`tsc --noEmit`)
-- [ ] Linter passes (`npm run lint`)
-- [ ] No regressions in existing tests
-- [ ] Code follows project conventions (from CLAUDE.md / project DNA)
+### Modify
+- `src/path/to/existing-file.ts` — [what changes and why; if adding to an interface, show current shape and the addition]
+
+### Reference (read-only)
+- `src/path/to/pattern-file.ts` lines [N–M] — [what to extract: a type, a pattern, a constant]
+
+## Test Expectations
+
+[Describe exactly what tests to write and how. Name the test file. List the scenarios. Reference the test pattern used in the project if relevant — embed it inline rather than pointing to a file.]
+
+Example:
+
+Write unit tests in `src/lib/vehicleRepo.test.ts` using Vitest. Each test should use the real database via `testDb` (do not mock the database — the project uses real DB integration tests).
+
+Scenarios to cover:
+- Returns paginated results with correct `total`.
+- Returns empty array with `total: 0` when no records exist.
+- Throws a typed error when the DB connection fails.
+
+Test pattern (from `src/lib/userRepo.test.ts`):
+
+```typescript
+import { testDb } from '@/test/helpers'
+import { list } from './vehicleRepo'
+
+describe('vehicleRepo.list', () => {
+  it('returns paginated vehicles', async () => {
+    await testDb.seed.vehicles(5)
+    const result = await list({ page: 1, limit: 3 })
+    expect(result.items).toHaveLength(3)
+    expect(result.total).toBe(5)
+  })
+})
+```
+
+## Dependencies (Resolved)
+
+[List every story this one depends on. State the actual status and what this story requires from it. Do NOT write "TBD" or "see dependency graph". Resolve it here.]
+
+Example:
+- `M1-S1` (DB schema migration): DONE — `vehicles` table exists with columns `id`, `make`, `model`, `year`, `price`.
+- `M1-S2` (auth middleware): IN_PROGRESS — endpoint must be behind `requireAuth()` middleware once available; stub with `// TODO: add requireAuth()` until merged.
+
+If there are no dependencies: `None.`
+
+## Project Rules (Inline)
+
+[Copy the CLAUDE.md rules that are directly relevant to this story. Do NOT write "follow CLAUDE.md". The implementer receives only this story — they have no access to CLAUDE.md unless it is embedded here.]
+
+Example:
+- Use `zod` for all request validation. Never validate manually with `if` checks.
+- All database access must go through repository functions in `src/lib/`. Do not call `db` directly from route handlers.
+- TypeScript strict mode is enabled. No `any` types.
+- Tests must not mock the database. Use `testDb` from `src/test/helpers`.
+
+## Project Lessons (Inline)
+
+[Copy retrospective lessons that apply to this story. If there are no relevant lessons, write `None.`]
+
+Example:
+- The `validateParams` helper does not strip unknown fields by default — pass `{ stripUnknown: true }` or validation will pass through garbage data.
+- `CACHE_HEADERS` must not be used on authenticated endpoints — it caused a data-leak incident in M0. Use `NO_CACHE_HEADERS` instead.
+
+## Constraints
+
+[Any limitations or non-obvious requirements that do not fit elsewhere.]
+
+Example:
+- The endpoint must respond in under 200ms at p95 for up to 10,000 records.
+- Do not add new npm dependencies. Use only what is already in `package.json`.
+- This story scope ends at the API layer. Do NOT build the UI component — that is M2-S4.
