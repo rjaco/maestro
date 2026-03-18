@@ -21,7 +21,7 @@ To start a new session:
   /maestro "describe your feature here"
 
 To initialize Maestro for this project:
-  /maestro-init
+  /maestro init
 ```
 
 Stop here.
@@ -149,8 +149,8 @@ If the session is paused, show:
 
 ```
   Session is PAUSED.
-  Resume with: /maestro-status resume
-  Abort with:  /maestro-status abort
+  Resume with: /maestro status resume
+  Abort with:  /maestro status abort
 ```
 
 If the session is completed, show:
@@ -254,7 +254,7 @@ If the session is completed, show:
 1. Read current state. If `phase` is already `paused`:
    ```
    Session is already paused.
-   Resume with: /maestro-status resume
+   Resume with: /maestro status resume
    ```
    Stop here.
 
@@ -275,7 +275,7 @@ If the session is completed, show:
    Feature: [feature]
    Story: [current]/[total]
    Paused from phase: [original phase]
-   Resume with: /maestro-status resume
+   Resume with: /maestro status resume
    ```
 
 5. Display:
@@ -286,8 +286,8 @@ If the session is completed, show:
    Progress: story [current]/[total]
    Paused during: [original phase]
 
-   Resume with: /maestro-status resume
-   Abort with:  /maestro-status abort
+   Resume with: /maestro status resume
+   Abort with:  /maestro status abort
    ```
 
 ## Important Notes
@@ -297,4 +297,4 @@ If the session is completed, show:
 - The `trust.yaml` file is cumulative across all sessions — never reset it on abort or pause.
 - When displaying token spend, format large numbers with commas (e.g., 145,230 tokens).
 - Time elapsed should be calculated from `started_at` to the current time, not `last_updated`.
-- If the state file exists but has corrupted or missing frontmatter fields, report the issue clearly and suggest running `/maestro-init` to reset.
+- If the state file exists but has corrupted or missing frontmatter fields, report the issue clearly and suggest running `/maestro init` to reset.

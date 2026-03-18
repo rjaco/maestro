@@ -92,7 +92,7 @@ Check if `.maestro/dna.md` exists. If not:
 
 ```
 Maestro is not initialized for this project.
-Run /maestro-init first to auto-discover your tech stack and create project DNA.
+Run /maestro init first to auto-discover your tech stack and create project DNA.
 ```
 
 Stop here.

@@ -1,5 +1,5 @@
 ---
-name: maestro-history
+name: history
 description: "View session history and build logs"
 argument-hint: "[list|detail SESSION_ID|cost]"
 allowed-tools:

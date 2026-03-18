@@ -3,7 +3,7 @@ description: "Initialize Maestro for this project — inference-first onboarding
 allowed-tools: Read Write Edit Bash Glob Grep
 ---
 
-# Maestro Init — Inference-First Onboarding (v1.1.0)
+# Maestro Init — Inference-First Onboarding (v2.0.0)
 
 You are performing first-time Maestro setup for this project. The flow is: **ask → scan → preview → build → stay available**. Combine the user's own description with codebase scanning to produce the project DNA.
 
@@ -262,7 +262,7 @@ Create `.maestro/state.md`:
 No active session.
 
 ## History
-- [timestamp] Maestro initialized (v1.1.0)
+- [timestamp] Maestro initialized (v2.0.0)
 ```
 
 ### 4d: Create Config File (with integrations)
@@ -270,7 +270,7 @@ No active session.
 Create `.maestro/config.yaml`:
 
 ```yaml
-# Maestro Configuration (v1.1.0)
+# Maestro Configuration (v2.0.0)
 # Edit these values to customize Maestro's behavior for this project.
 
 # Default execution mode: yolo | checkpoint | careful
@@ -415,4 +415,4 @@ Then display the stay-available message:
 - If the project has no recognizable tech stack files, still create the DNA with what can be inferred from the user's description, directory structure, and file extensions.
 - Keep DNA concise — it will be injected into agent context. Every token counts.
 - The user's free-text description takes priority over auto-detection when there is a conflict.
-- Version is 1.1.0 for state and config file headers.
+- Version is 2.0.0 for state and config file headers.

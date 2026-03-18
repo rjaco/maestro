@@ -1,5 +1,5 @@
 ---
-name: maestro-help
+name: help
 description: "Contextual help, FAQ, and guided walkthroughs for Maestro"
 argument-hint: "[topic]"
 allowed-tools:

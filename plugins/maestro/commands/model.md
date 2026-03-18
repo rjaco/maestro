@@ -13,7 +13,7 @@ View and edit which AI model is used for each task type in the Maestro pipeline.
 Read `.maestro/config.yaml`. If it does not exist:
 
 ```
-Maestro is not initialized. Run /maestro-init first.
+Maestro is not initialized. Run /maestro init first.
 ```
 
 Stop here.
@@ -64,8 +64,8 @@ Cost reference (per million tokens):
   Sonnet:  $3.00 input / $15.00 output
   Opus:    $15.00 input / $75.00 output
 
-To change: /maestro-model set <task> <model>
-Example:   /maestro-model set execution opus
+To change: /maestro model set <task> <model>
+Example:   /maestro model set execution opus
 ```
 
 ### `set TASK MODEL` — Update a model assignment

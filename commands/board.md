@@ -1,5 +1,5 @@
 ---
-name: maestro-board
+name: board
 description: "View and manage stories as a text-based kanban board"
 argument-hint: "[view|sync|move STORY_ID STATUS]"
 allowed-tools:

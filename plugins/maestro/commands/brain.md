@@ -1,5 +1,5 @@
 ---
-name: maestro-brain
+name: brain
 description: "Second brain operations -- connect, search, save, and manage your knowledge base"
 argument-hint: "[connect|search QUERY|save TITLE|tldr|daily]"
 allowed-tools:

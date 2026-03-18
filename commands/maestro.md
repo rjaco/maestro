@@ -89,16 +89,16 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 
 | First word | Route to |
 |------------|----------|
-| `opus` | `/maestro-opus` |
-| `help` | `/maestro-help` |
-| `config` | `/maestro-config` |
-| `board` | `/maestro-board` |
-| `brain` | `/maestro-brain` |
-| `doctor` | `/maestro-doctor` |
-| `history` | `/maestro-history` |
-| `init` | `/maestro-init` |
-| `status` | `/maestro-status` |
-| `model` | `/maestro-model` |
+| `opus` | `/maestro opus` |
+| `help` | `/maestro help` |
+| `config` | `/maestro config` |
+| `board` | `/maestro board` |
+| `brain` | `/maestro brain` |
+| `doctor` | `/maestro doctor` |
+| `history` | `/maestro history` |
+| `init` | `/maestro init` |
+| `status` | `/maestro status` |
+| `model` | `/maestro model` |
 
 ## Step 3: Parse Flags from $ARGUMENTS
 
@@ -135,7 +135,7 @@ Check if `.maestro/dna.md` exists. If not:
 
 ```
 Maestro is not initialized for this project.
-Run /maestro-init first to auto-discover your tech stack and create project DNA.
+Run /maestro init first to auto-discover your tech stack and create project DNA.
 ```
 
 Stop here.
@@ -208,7 +208,7 @@ Create `.maestro/state.local.md` with initial state:
 
 ```yaml
 ---
-maestro_version: "1.1.0"
+maestro_version: "2.0.0"
 active: true
 session_id: [generate UUID via bash: uuidgen or python -c "import uuid; print(uuid.uuid4())"]
 feature: "[DESCRIPTION]"

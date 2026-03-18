@@ -1,5 +1,5 @@
 ---
-name: maestro-doctor
+name: doctor
 description: "Health check and diagnostics for Maestro installation"
 argument-hint: ""
 allowed-tools:

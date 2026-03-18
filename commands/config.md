@@ -1,5 +1,5 @@
 ---
-name: maestro-config
+name: config
 description: "Interactive configuration editor for Maestro"
 argument-hint: "[show|set KEY VALUE|reset]"
 allowed-tools:

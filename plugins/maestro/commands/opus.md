@@ -92,7 +92,7 @@ Check if `.maestro/dna.md` exists. If not:
 
 ```
 Maestro is not initialized for this project.
-Run /maestro-init first to auto-discover your tech stack and create project DNA.
+Run /maestro init first to auto-discover your tech stack and create project DNA.
 ```
 
 Stop here.
@@ -163,7 +163,7 @@ Update `.maestro/state.local.md` with Opus-specific fields:
 
 ```yaml
 ---
-maestro_version: "1.1.0"
+maestro_version: "2.0.0"
 active: true
 session_id: "[uuid]"
 feature: "[VISION summary, first line]"
