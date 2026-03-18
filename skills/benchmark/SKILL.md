@@ -76,5 +76,3 @@ output_contract:
     - "## Story Benchmarks"
     - "## Feature Benchmarks"
 ```
-
-## Output Contract (already defined above)
