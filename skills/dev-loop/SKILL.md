@@ -80,6 +80,8 @@ The implementer prompt (see `implementer-prompt.md`) is filled with:
 4. **Interface Definitions** — Type definitions and function signatures the story depends on
 5. **Files to Reference** — From the story's Reference list, read and include key sections
 6. **QA History** — If this is a re-dispatch after QA rejection, include all previous QA feedback
+7. **Live Docs** — If the story involves a framework/library, invoke the `live-docs` skill to fetch current API docs and inject relevant signatures (max 2000 tokens)
+8. **Memory** — If `.maestro/memory/semantic.md` exists, inject relevant project memories (max 500 tokens)
 
 **Exclude from context:**
 - Other stories (the implementer does not need the full backlog)
@@ -136,9 +138,29 @@ The implementer follows TDD discipline (enforced via the prompt):
 3. Refactor if needed
 4. Repeat for each criterion
 
+## Phase 3.5: TEST GENERATION (optional)
+
+If the `test-gen` skill is available and the story type is `code`:
+
+1. Analyze files created/modified by the implementer
+2. Generate appropriate tests:
+   - New functions → unit tests
+   - New API endpoints → integration tests
+   - New components → component/render tests
+3. Follow existing test patterns from DNA
+4. Write test files alongside implementation
+5. Track coverage delta
+
+Skip this phase if:
+- Story already includes test stories (depends_on includes a test story)
+- Story type is `test` (it IS a test story)
+- Story type is `knowledge_work` (uses output contracts instead)
+
 ## Phase 4: SELF-HEAL
 
 Run automated checks and fix failures.
+
+For **code stories**, run quality gates:
 
 ### Check Sequence
 
@@ -181,6 +203,22 @@ Do NOT continue to QA with failing checks.
 ## Phase 5: QA REVIEW
 
 Dispatch an independent QA reviewer to catch issues the implementer missed.
+
+### Review Mode Selection
+
+For **code stories**, select review depth based on trust level:
+
+| Trust Level | Review Mode | What Happens |
+|-------------|-------------|-------------|
+| Novice / Apprentice | **Multi-review** | 3 parallel reviewers (correctness, security, performance) via `multi-review` skill |
+| Journeyman | **Standard** | Single QA reviewer |
+| Expert | **Standard** | Single QA reviewer |
+| `--careful` mode | **Multi-review** | Always 3 parallel reviewers regardless of trust |
+
+For **knowledge work stories**, use output contract validation:
+- Load the output contract from the generating skill
+- Run `content-validator` checks (frontmatter, structure, word bounds, SEO)
+- Report violations as QA findings
 
 ### Agent Configuration
 
@@ -249,6 +287,17 @@ If the story was implemented in a worktree:
 3. Clean up the worktree
 
 If conflicts exist, PAUSE and present the conflict to the user.
+
+### Commit Score
+
+After creating the commit, evaluate it using the `commit-score` skill:
+
+- Tests included? (0-25)
+- Conventions followed? (0-25)
+- Message quality? (0-25)
+- Clean code? (0-25)
+
+Show the score in the checkpoint summary. Track in `.maestro/trust.yaml` under `commit_scores`.
 
 ## Phase 7: CHECKPOINT
 
