@@ -66,6 +66,7 @@ Display context-aware help. If `.maestro/state.local.md` exists, read it to show
     plan · init · status · board · config · help
     brain · doctor · history · model · opus
     notify · viz · demo · quick-start
+    cost-estimate · deps · rollback
 
   Flags:
     --yolo · --checkpoint · --careful
@@ -95,6 +96,9 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 | `viz` | `/maestro viz` |
 | `demo` | `/maestro demo` |
 | `quick-start` | `/maestro quick-start` |
+| `cost-estimate` | `/maestro cost-estimate` |
+| `deps` | `/maestro deps` |
+| `rollback` | `/maestro rollback` |
 | `init` | `/maestro init` |
 | `status` | `/maestro status` |
 | `model` | `/maestro model` |
