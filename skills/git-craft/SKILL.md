@@ -1,6 +1,8 @@
 ---
 name: git-craft
 description: "Create documentation-quality git commits that serve as the project's implementation record. Use after a story passes QA review."
+effort: medium
+maxTurns: 5
 ---
 
 # git-craft

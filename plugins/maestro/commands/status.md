@@ -6,17 +6,6 @@ allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
 
 # Maestro Status — Progress, Resume, Abort, Pause
 
-**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
-
-```
-███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
-████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
-██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
-██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
-██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
-```
-
 You manage the lifecycle of a Maestro session: view progress, resume paused work, abort a session, or pause a running one.
 
 ## Step 1: Read Session State
@@ -53,6 +42,7 @@ Extract all fields from the YAML frontmatter of `.maestro/state.local.md`:
 - `token_spend` / `estimated_remaining`
 - `session_id`
 - `model_override`
+- `branch` — git branch if recorded, otherwise read from `git branch --show-current`
 
 If `layer` is `opus`, also extract:
 - `opus_mode` — full_auto, milestone_pause, budget_cap, time_cap, until_pause
@@ -61,6 +51,8 @@ If `layer` is `opus`, also extract:
 - `token_budget` / `time_budget_hours`
 - `fix_cycle` / `max_fix_cycles`
 - `consecutive_failures` / `max_consecutive_failures`
+
+If `layer` is `opus`, also read `.maestro/roadmap.md` to extract the full milestone list with titles and per-milestone story counts for progress bar rendering.
 
 ## Step 3: Handle Subcommands
 
@@ -72,58 +64,74 @@ Read `.maestro/trust.yaml` for trust metrics.
 
 Calculate time elapsed from `started_at` to now.
 
-Display comprehensive status:
-
 Read `.maestro/config.yaml` and check for an `integrations` section (e.g., `github`, `linear`, `slack`). Note which integrations are configured and their status.
 
+Display comprehensive status using the template below.
+
+**Progress bar rendering:** Use 16 characters total. Fill with █ proportional to completion, pad remaining with ░. Example: 4/8 stories → 8 filled, 8 empty → `████████░░░░░░░░`.
+
+**Cost display:** Convert token counts to approximate dollar amounts using the active model's rate. Show `~$N.NN`. If cost data is unavailable, show the raw token count instead.
+
+**Tokens display:** Show total tokens used in thousands (e.g., `145K used`).
+
+**Time elapsed:** Format as `Xh Ym` (e.g., `2h 14m`). If under 1 hour, show `Nm` only.
+
 ```
 +---------------------------------------------+
-| Maestro Session Status                      |
+| Maestro Status                              |
 +---------------------------------------------+
+  Session   [session_id, first 8 chars]
+  Feature   [feature name]
+  Mode      [mode] | Layer: [layer]
+  Branch    [git branch]
+  Started   [started_at, human readable]
 
-  Feature: [feature name]
-  Session: [session_id, first 8 chars]
-  Mode:    [mode]
-  Started: [started_at, human-readable]
-  Elapsed: [Nh Nm]
+  Progress  [████████░░░░░░░░] [current_story]/[total_stories] stories ([N]%)
 
-  Phase:
-    validate > delegate > [IMPLEMENT] > self-heal > qa > git > checkpoint
-    (Show the current phase in CAPS with brackets; others in lowercase.
-     Map phase values: validate, decompose/research -> validate;
-     delegate -> delegate; implement -> IMPLEMENT;
-     self_heal -> self-heal; qa_review -> qa;
-     git_craft -> git; checkpoint -> checkpoint.
-     Completed/paused/aborted show all lowercase with a note instead.)
+  Milestone [current_milestone]/[total_milestones]: [current milestone name, from roadmap]
+  Story     [current story title]
+  Phase     [current phase, human readable]
 
-  Progress:
-    Story:   [current_story] / [total_stories]  (ok)
-    Phase:   [phase]
-    QA:      iteration [qa_iteration] / [max_qa_iterations]  (ok) or (!) if qa_iteration > 1
-    Heal:    iteration [self_heal_iteration] / [max_self_heal]  (ok) or (x) if at max
+  Cost      ~$[N.NN] spent | ~$[N.NN] estimated remaining
+  Tokens    [N]K used
+  Time      [elapsed time]
 
-  Cost:
-    Spent:     ~[token_spend] tokens  (ok)
-    Remaining: ~[estimated_remaining] tokens (estimated)  (ok) or (!) if < 20% of budget
-
-  Trust:
-    Level:          [trust_level]  (ok) or (!) if low/probation
-    Total stories:  [total_stories from trust.yaml]
-    QA first-pass:  [qa_first_pass_rate]%
-    Avg QA rounds:  [average_qa_iterations]
-
-  Integrations:
-    (If `.maestro/config.yaml` has an `integrations` section, list each:)
-    github:  (ok) configured
-    linear:  (ok) configured
-    slack:   (x) not configured
-    (If no integrations section exists, show:)
-    No integrations configured.
-
+  QA Rate   [qa_first_pass_rate]% first-pass
+  Trust     [trust_level]
 +---------------------------------------------+
 ```
 
-After the box, show quick-action options based on state:
+Notes for rendering:
+- If `layer` is `execution`, omit the Milestone line entirely.
+- If cost data is unavailable or `token_spend` is zero, show `Cost  (no data)`.
+- If `estimated_remaining` is not set, omit that portion of the Cost line.
+- For `Phase`, map internal phase names to human-readable labels:
+  - `validate`, `decompose`, `research` → Validate
+  - `delegate` → Delegate
+  - `implement` → Implement
+  - `self_heal` → Self-heal
+  - `qa_review` → QA review
+  - `git_craft` → Git commit
+  - `checkpoint` → Checkpoint
+  - `paused` → PAUSED
+  - `completed` → COMPLETED
+  - `aborted` → ABORTED
+
+After the box, if `layer` is `opus`, display a milestone summary table with ASCII progress bars. For each milestone, compute its bar based on stories completed within that milestone vs. total stories for that milestone (read from `.maestro/roadmap.md`). If per-milestone story counts are not available, use done/in-progress/pending status only.
+
+```
+  Milestones:
+    M1  ████████████████ done     [milestone 1 title]
+    M2  ████████░░░░░░░░ 50%      [milestone 2 title]
+    M3  ░░░░░░░░░░░░░░░░ pending  [milestone 3 title]
+```
+
+Status labels:
+- `done` — milestone fully completed
+- `[N]%` — milestone in progress (percentage of its stories done)
+- `pending` — not yet started
+
+After the milestone table (or the main box if not Opus), show quick-action options based on state:
 
 If session is active (not paused, not completed, not aborted):
 
@@ -152,23 +160,7 @@ Use AskUserQuestion:
   1. label: "Start new session", description: "Begin a new feature with /maestro"
   2. label: "View history", description: "See past sessions and cost analysis"
 
-If `layer` is `opus`, add Magnum Opus section:
-
-```
-  Magnum Opus:
-    Opus mode:          [opus_mode]
-    Milestone:          [current_milestone] / [total_milestones]
-    Milestones:
-      M1: [name] — [status] ([cost])
-      M2: [name] — [status] ([cost])
-      ...
-    Budget:             [token_spend] / [token_budget or "unlimited"]
-    Time budget:        [elapsed] / [time_budget_hours or "unlimited"]
-    Fix cycles:         [fix_cycle] / [max_fix_cycles]
-    Consecutive fails:  [consecutive_failures] / [max_consecutive_failures]
-```
-
-If the session is paused, show:
+If the session is paused, also show:
 
 ```
   Session is PAUSED.
@@ -176,7 +168,7 @@ If the session is paused, show:
   Abort with:  /maestro status abort
 ```
 
-If the session is completed, show:
+If the session is completed, also show:
 
 ```
   Session COMPLETED.
