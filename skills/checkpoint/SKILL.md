@@ -113,6 +113,89 @@ Run /maestro opus --resume to continue from this point.
 | `rollback` | Use checkpoint tags as rollback targets |
 | `ship` | Delete all session checkpoint tags and state dirs on ship |
 
+## HANDOFF.md
+
+Every checkpoint writes a HANDOFF.md to `.maestro/HANDOFF.md`. This file is the primary mechanism for session state transfer — a new agent or a resumed session reads it as T1 context before doing anything else.
+
+### Format
+
+```markdown
+# HANDOFF — [Feature Name]
+
+**Session:** [session_id] | **Date:** [timestamp] | **Branch:** [git branch]
+
+## Current State
+- Milestone: [N/M] — [milestone name]
+- Story: [N/M] — [story name]
+- Phase: [current phase]
+
+## Decisions Made
+- [Decision 1 with rationale]
+- [Decision 2 with rationale]
+
+## Files Modified
+- [file1.ts] — [what changed]
+- [file2.ts] — [what changed]
+
+## Next Steps
+1. [Immediate next action]
+2. [Following action]
+
+## Open Questions
+- [Unresolved question needing user input]
+
+## Context to Preserve
+- [Key fact that shouldn't be lost across session boundary]
+```
+
+### Writing HANDOFF.md
+
+At every checkpoint, write `.maestro/HANDOFF.md` with the current session state:
+
+1. Read `session_id`, current milestone/story progress, and phase from `.maestro/state.local.md`
+2. Read the git branch: `git branch --show-current`
+3. Read the list of files changed since the last checkpoint: `git diff --name-only HEAD~1 HEAD` (or since the session-start commit if available)
+4. Populate all 6 sections:
+   - **Current State** — milestone N/M, story N/M, current phase
+   - **Decisions Made** — architectural or approach decisions made during the session; pull from state or memory if available
+   - **Files Modified** — one line per changed file with a brief description of what changed
+   - **Next Steps** — the immediate action queue (what would happen next if the session continued)
+   - **Open Questions** — any unresolved items that need user input before proceeding
+   - **Context to Preserve** — facts that should survive a session boundary (model choices, constraint reasons, workaround explanations)
+5. Write the file, overwriting any previous HANDOFF.md
+
+Before overwriting, archive the previous file (see Archive Behavior below).
+
+### Archive Behavior
+
+Before writing a new HANDOFF.md, if `.maestro/HANDOFF.md` already exists:
+
+```bash
+mkdir -p .maestro/handoffs/
+cp .maestro/HANDOFF.md .maestro/handoffs/handoff-{previous_timestamp}.md
+```
+
+Where `{previous_timestamp}` is read from the `**Date:**` line of the existing HANDOFF.md (or derived from the file's mtime). This preserves a complete chain of session handoffs for debugging and retrospective review.
+
+### Session Resume
+
+When a Maestro session starts (any `/maestro` command after a gap), check for `.maestro/HANDOFF.md`:
+
+1. If the file exists, inject its content as T1 context before composing the agent prompt
+2. Log: `[memory] HANDOFF.md injected — resuming from [Feature Name] at [phase]`
+3. The HANDOFF.md is NOT deleted on resume — it remains until the next checkpoint overwrites it
+
+This ensures that even if episodic memory has decayed, the last-known session state is immediately available to the resumed agent.
+
+### HANDOFF.md Lifecycle
+
+| Event | HANDOFF.md action |
+|-------|------------------|
+| Checkpoint created | Archive existing → write new |
+| Session resumed | Read and inject as T1 context |
+| `/maestro ship` | Archive final → remove `.maestro/HANDOFF.md` |
+| Workspace switch | Write new HANDOFF.md in the switched workspace; archive in source workspace |
+
 ## State Schema
 
 ```yaml
