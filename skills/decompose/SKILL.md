@@ -11,66 +11,8 @@ Breaks a feature request into 2-8 implementable stories with a dependency graph,
 
 - Feature description (from `$ARGUMENTS` or upstream classifier)
 - Project DNA (`.maestro/dna.md`) for tech stack, patterns, and conventions
-- `--skip-clarify` flag — if present, skip Phase 0 and proceed directly to decomposition
 
 ## Process
-
-### Phase 0: Clarify
-
-Skip this phase if `--skip-clarify` is present in `$ARGUMENTS`.
-
-#### 0.1 — Scan for Ambiguities
-
-Read the feature description and identify:
-
-- **Ambiguous requirements** — aspects that can be interpreted multiple ways (e.g., "user authentication" could mean email/password, OAuth, or both)
-- **Missing specifications** — decisions the user needs to make before implementation can be scoped correctly (auth strategy, data model, UI framework, API design)
-- **Edge cases** — failure modes, empty states, concurrent access, rate limiting
-
-Only flag items that would meaningfully change how the feature is decomposed. Skip this phase entirely (proceed to Step 1) if the feature description is fully self-contained and unambiguous.
-
-#### 0.2 — Present Clarification Summary
-
-If ambiguities were found, present them using AskUserQuestion with the following structured format:
-
-```
-+---------------------------------------------+
-| Clarification Needed                        |
-+---------------------------------------------+
-  Ambiguous:
-    [1] "user authentication" — email/password? OAuth? Both?
-    [2] "dashboard" — admin dashboard or user-facing?
-
-  Missing:
-    [3] No data model specified — what entities are needed?
-    [4] No error handling strategy mentioned
-
-  Edge Cases:
-    [5] What happens if the user has no data yet? (empty state)
-    [6] Rate limiting on the API endpoints?
-```
-
-Use AskUserQuestion:
-- Question: "Want to clarify these before I decompose?"
-- Header: "Clarification Needed"
-- Options: "Clarify now" / "Skip — decompose as-is" / "I'll answer inline"
-
-#### 0.3 — Handle Response
-
-**"Clarify now"** — Present each numbered item as an individual question. Collect all answers before proceeding to Step 1. Incorporate the answers into the feature description used for decomposition.
-
-**"Skip — decompose as-is"** — Proceed to Step 1. At the top of the decomposition output, include an "Assumptions" block listing how each ambiguous item was resolved:
-
-```
-Assumptions (unresolved — flagged for review):
-  [1] Assumed email/password auth only
-  [2] Assumed user-facing dashboard
-  [3] Assumed minimal data model — single entity
-```
-
-**"I'll answer inline"** — Present all items as a single numbered list and let the user type free-form answers. Parse the answers and incorporate them before proceeding to Step 1.
-
----
 
 ### Step 1: Read Context
 
@@ -102,6 +44,7 @@ Create 2-8 stories. Each story must be:
 - **Independent where possible** — Minimize cross-story dependencies
 - **Ordered by dependency** — Foundation stories first, integration stories last
 - **Right-sized** — Not so small it is trivial, not so large it is unwieldy
+- **Self-contained** — Each story MUST embed enough context to be executed independently after context compaction. An implementer agent loading only the story file must have everything needed: requirements excerpt, architecture decisions, BDD acceptance criteria, interface definitions, and edge cases. Never write a story that requires the implementer to reconstruct context from other files.
 
 For each story, determine:
 
@@ -140,17 +83,39 @@ Dependency rules:
 | `sonnet` | Standard features, moderate logic, test writing, component building |
 | `opus` | Complex architecture, novel algorithms, security-critical code, subtle edge cases |
 
-#### Acceptance Criteria
+#### Acceptance Criteria (BDD)
 
-Write 3-6 clear, testable criteria per story. Each criterion must be verifiable by running code or inspecting output. Avoid vague criteria like "works correctly" — be specific about inputs, outputs, and behavior.
+Write 3-6 clear, testable criteria per story using BDD format (Given / When / Then). Each criterion must be verifiable by running code or inspecting output. Avoid vague criteria like "works correctly" — be specific about inputs, outputs, and behavior.
 
-#### Context for Implementer
+#### Requirements Context
 
-Provide bullet points the implementer agent will need:
-- Which existing patterns to follow (with file path references)
-- Which utilities/helpers to use
-- Which conventions apply (from CLAUDE.md or project DNA)
-- Any gotchas or non-obvious constraints
+Write a short excerpt from the feature description scoped to THIS story only. Explain:
+- Why this story exists — what user need or system requirement it addresses
+- How it fits into the broader feature (what it builds on, what depends on it)
+
+This section is what allows an implementer agent to understand the "why" after context compaction.
+
+#### Architecture Decisions
+
+Capture the architectural decisions that constrain or guide this story:
+- Which existing patterns to follow (with specific file path references)
+- Which utilities/helpers to use and where they live
+- Data model or API changes this story implements
+- Any technology or library choices locked in for this story
+
+#### Interfaces to Maintain
+
+List function signatures, API contracts, or type definitions that must not break. If this story adds to an existing interface, show the current shape and what is being added. Use a code block so the implementer has exact types.
+
+#### Edge Cases
+
+List specific edge cases the implementer must handle — empty inputs, null values, concurrent operations, permission errors, partial state. Be concrete.
+
+#### Test Requirements
+
+Specify:
+- Unit test file path and what behaviors to cover (happy path, error path, boundary conditions)
+- Integration tests if the story crosses system boundaries
 
 #### Files
 
@@ -162,6 +127,8 @@ List files to:
 ### Step 4: Write Story Files
 
 Write each story to `.maestro/stories/NN-slug.md` using the format defined in `story-template.md`.
+
+**Embedded context is mandatory.** Every story file must be independently executable after context compaction — the implementer agent will load only the story file, not the original feature request or the conversation history. Fill in all sections: Requirements Context, Architecture Decisions, BDD Acceptance Criteria, Interfaces to Maintain, Edge Cases, and Test Requirements. Placeholder text or empty sections are not acceptable.
 
 Create the directory if it does not exist:
 ```

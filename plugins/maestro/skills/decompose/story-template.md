@@ -11,39 +11,69 @@ type: "backend"
 
 # Story: Human-Readable Story Title
 
-## Acceptance Criteria
+## Requirements Context
 
-1. First testable criterion with specific expected behavior
-2. Second testable criterion with measurable outcome
-3. Third testable criterion covering edge case or error handling
-4. (Optional) Fourth criterion for completeness
-5. (Optional) Fifth criterion for non-functional requirements
-6. (Optional) Sixth criterion for integration verification
+[Excerpt from the feature description relevant to THIS story only — not the whole feature.]
+[Why this story exists — what user need or system requirement it addresses.]
+[How this story fits into the broader feature: what it builds on and what depends on it.]
 
-## Context for Implementer
+## Architecture Decisions
 
-- Follow the existing pattern in `src/path/to/similar-feature.ts` for structure and naming
-- Use the `utilityFunction()` helper from `src/lib/utils.ts` for formatting
-- Adhere to project convention: server components by default, `'use client'` only when needed
-- This story's output will be consumed by story NN (provide stable interfaces)
-- Gotcha: describe any non-obvious constraint or edge case the implementer should know
+[Relevant architectural decisions from the plan that directly affect this story.]
+[Patterns to follow, with specific file examples from the codebase — e.g., "Follow the repository pattern in `src/lib/userRepo.ts`".]
+[Data model or API changes this story implements, if any.]
+[Any technology or library choices locked in for this story and why.]
+
+## Acceptance Criteria (BDD)
+
+Given [precondition describing the system state]
+When [action taken by user or system]
+Then [expected, verifiable outcome]
+
+Given [precondition 2]
+When [action 2]
+Then [expected outcome 2]
+
+Given [precondition 3 — error or edge case]
+When [action 3]
+Then [expected error handling or boundary behavior]
 
 ## Files
 
-### Create
-- `src/path/to/new-file.ts` — Description of what this file contains
-- `src/path/to/new-file.test.ts` — Tests for the above
+- Create: `src/path/to/new-file.ts` — [what this file does]
+- Create: `src/path/to/new-file.test.ts` — [what is tested and why]
+- Modify: `src/path/to/existing-file.ts` — [what changes and why]
+- Reference: `src/path/to/pattern-example.ts` — [follow this pattern for X]
+- Reference: `src/types/relevant-types.ts` — [type definitions needed]
 
-### Modify
-- `src/path/to/existing-file.ts` — What changes and why
+## Interfaces to Maintain
 
-### Reference
-- `src/path/to/pattern-example.ts` — Read this for the pattern to follow
-- `src/types/relevant-types.ts` — Type definitions needed
+[Function signatures, API contracts, or type definitions that must not break. If this story adds to an existing interface, show the current shape and what is being added.]
+
+```typescript
+// Current interface from src/types/foo.ts
+interface Foo {
+  bar: string;
+  baz: number;
+}
+// This story adds: qux: boolean
+```
+
+## Edge Cases
+
+- [Edge case 1 and how to handle it — e.g., empty input, null values, concurrent writes]
+- [Edge case 2 — e.g., what happens when a dependency story's output is missing]
+- [Edge case 3 — e.g., partial state, network failure, permission denial]
+
+## Test Requirements
+
+- Unit: `src/path/to/new-file.test.ts` — test [specific behaviors: happy path, error path, boundary conditions]
+- Integration: [if applicable — describe what cross-component behavior to verify]
 
 ## Definition of Done
 
 - [ ] All acceptance criteria met
+- [ ] Interfaces preserved (or migration documented if changed)
 - [ ] Tests written and passing
 - [ ] TypeScript compiles without errors (`tsc --noEmit`)
 - [ ] Linter passes (`npm run lint`)

@@ -1,7 +1,7 @@
 ---
 name: maestro
 description: "Full-stack orchestrator — build features or entire products autonomously"
-argument-hint: "DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast]"
+argument-hint: "DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast] [--framing] [--skip-clarify]"
 allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
 ---
 
@@ -190,7 +190,7 @@ If `--framing` was passed OR the classifier detects a vague/broad request:
 4. If the user accepts a reframed description, replace DESCRIPTION with it
 5. Continue to forecast and decompose with the refined description
 
-Skip this step if the request is already specific and well-scoped (e.g., "Fix the null check in auth.ts").
+Skip this step if the request is already specific and well-scoped.
 
 ## Step 6: Forecast (unless --no-forecast)
 
@@ -286,28 +286,53 @@ model_recommendation: sonnet/opus
 type: backend/frontend/fullstack/infrastructure/test
 ---
 
-## Acceptance Criteria
+## Requirements Context
+[Excerpt from the feature description relevant to THIS story only]
+[Why this story exists — what user need it addresses]
+[How this story fits into the broader feature: what it builds on and what depends on it]
 
-1. [Specific, testable criterion]
-2. [Another criterion]
+## Architecture Decisions
+[Relevant arch decisions from the plan that affect THIS story]
+[Patterns to follow, with specific file examples from the codebase]
+[Data model or API changes this story implements]
 
-## Context for Implementer
+## Acceptance Criteria (BDD)
+Given [precondition]
+When [action]
+Then [expected outcome]
 
-- [Key context about dependencies]
-- [Patterns to follow]
-- [Relevant existing code]
+Given [precondition 2]
+When [action 2]
+Then [expected outcome 2]
 
 ## Files
+- Create: `path/to/new/file.ts` — [what this file does]
+- Modify: `path/to/existing/file.ts` — [what changes and why]
+- Reference: `path/to/pattern/file.ts` — [follow this pattern]
 
-- Create: `path/to/new/file.ts`
-- Modify: `path/to/existing/file.ts`
-- Reference: `path/to/pattern/file.ts` (follow this pattern)
+## Interfaces to Maintain
+[Function signatures, API contracts, type definitions that must not break]
+```typescript
+// Current interface from src/types/foo.ts
+interface Foo {
+  bar: string;
+  baz: number;
+}
+// This story adds: qux: boolean
+```
+
+## Edge Cases
+- [Edge case 1 and how to handle it]
+- [Edge case 2 and how to handle it]
+
+## Test Requirements
+- Unit: [specific test file and what to test]
+- Integration: [if applicable]
 
 ## Definition of Done
-
 - [ ] All acceptance criteria met
+- [ ] Interfaces preserved (or migration documented)
 - [ ] Tests passing
-- [ ] TypeScript clean (tsc --noEmit)
 - [ ] Follows project conventions from DNA
 ```
 
