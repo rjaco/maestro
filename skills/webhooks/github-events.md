@@ -68,6 +68,29 @@ gh issue list --state open --limit 10 --json number,title,labels,createdAt
 | Issue closed | Update kanban if synced |
 | Issue assigned | Log to notes.md |
 
+### PR Comment Events (Issue Comments)
+
+GitHub sends PR comments as `issue_comment` events (PRs are issues in GitHub's model).
+
+```bash
+# Poll for recent PR comments containing @maestro commands
+gh api repos/{owner}/{repo}/issues/comments \
+  --paginate --limit 20 \
+  --jq '[.[] | select(.body | test("@maestro"; "i")) | select(.created_at > "LAST_POLL_TIME")]'
+```
+
+| Comment Content | Action |
+|----------------|--------|
+| `@maestro build` | Trigger CI build for PR branch |
+| `@maestro review` | Run multi-agent code review on PR diff |
+| `@maestro fix` | Auto-fix issues via self-heal phase |
+| `@maestro status` | Reply with current build/review status |
+| `@maestro test` | Run tests for the PR branch |
+
+**Authorization:** Only process commands from users with `write` or `admin` repo permissions. Check via `gh api repos/{owner}/{repo}/collaborators/{author}/permission`.
+
+See `pr-comment-triggers.md` for full command format, parsing logic, and rate limiting.
+
 ## Integration with Maestro
 
 When polling finds relevant events:
