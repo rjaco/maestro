@@ -47,7 +47,7 @@ SESSION_ID=$(yaml_val "session_id")
 # Session isolation — only loop for the session that started the Opus run
 HOOK_SESSION=""
 if [[ -n "$HOOK_INPUT" ]]; then
-  HOOK_SESSION=$(echo "$HOOK_INPUT" | jq -r '.session_id // ""' 2>/dev/null || true)
+  HOOK_SESSION=$(echo "$HOOK_INPUT" | grep -o '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || true)
 fi
 if [[ -n "$SESSION_ID" ]] && [[ -n "$HOOK_SESSION" ]] && [[ "$SESSION_ID" != "$HOOK_SESSION" ]]; then
   printf '{"decision":"approve","reason":"Different session"}\n'
@@ -146,13 +146,9 @@ sed "s/^last_updated: .*/last_updated: \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"/" "$ST
 mv "$TEMP_FILE" "$STATE_FILE"
 
 # Block the exit and re-inject the prompt
-jq -n \
-  --arg prompt "$LOOP_PROMPT" \
-  --arg msg "$SYSTEM_MSG" \
-  '{
-    "decision": "block",
-    "reason": $prompt,
-    "systemMessage": $msg
-  }'
+# Escape special JSON characters in prompt and system message
+LOOP_PROMPT_ESC=$(printf '%s' "$LOOP_PROMPT" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
+SYSTEM_MSG_ESC=$(printf '%s' "$SYSTEM_MSG" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
+printf '{"decision":"block","reason":"%s","systemMessage":"%s"}\n' "$LOOP_PROMPT_ESC" "$SYSTEM_MSG_ESC"
 
 exit 0

@@ -17,7 +17,7 @@ fi
 # Extract tool name from hook input
 TOOL_NAME=""
 if [[ -n "$HOOK_INPUT" ]]; then
-  TOOL_NAME=$(printf '%s' "$HOOK_INPUT" | jq -r '.tool_name // ""' 2>/dev/null || true)
+  TOOL_NAME=$(printf '%s' "$HOOK_INPUT" | grep -o '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"tool_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || true)
 fi
 
 # Only intercept Bash tool calls
@@ -29,7 +29,7 @@ fi
 # Extract the command being run
 COMMAND=""
 if [[ -n "$HOOK_INPUT" ]]; then
-  COMMAND=$(printf '%s' "$HOOK_INPUT" | jq -r '.tool_input.command // ""' 2>/dev/null || true)
+  COMMAND=$(printf '%s' "$HOOK_INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"command"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || true)
 fi
 
 # Check for dangerous git operations on main
