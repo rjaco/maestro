@@ -13,6 +13,7 @@ allowed-tools:
   - Skill
   - WebSearch
   - WebFetch
+  - AskUserQuestion
 ---
 
 # Maestro Plan — Deep Planning Mode

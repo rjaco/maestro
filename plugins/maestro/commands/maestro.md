@@ -65,6 +65,7 @@ Display context-aware help. If `.maestro/state.local.md` exists, read it to show
   Subcommands:
     plan · init · status · board · config · help
     brain · doctor · history · model · opus
+    notify · viz
 
   Flags:
     --yolo · --checkpoint · --careful
@@ -206,7 +207,7 @@ Create `.maestro/state.local.md` with initial state:
 
 ```yaml
 ---
-maestro_version: "2.0.0"
+maestro_version: "1.1.0"
 active: true
 session_id: [generate UUID via bash: uuidgen or python -c "import uuid; print(uuid.uuid4())"]
 feature: "[DESCRIPTION]"

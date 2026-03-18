@@ -220,7 +220,7 @@ Common Issues
 
 Stories stuck in IN_PROGRESS
   Run: /maestro status
-  Then: [1] Resume or [3] Abort
+  Then choose "Resume" or "Abort" from the menu
 
 Config file is corrupted
   Run: /maestro config reset

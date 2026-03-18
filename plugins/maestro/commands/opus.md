@@ -175,7 +175,7 @@ Update `.maestro/state.local.md` with Opus-specific fields:
 
 ```yaml
 ---
-maestro_version: "2.0.0"
+maestro_version: "1.1.0"
 active: true
 session_id: "[uuid]"
 feature: "[VISION summary, first line]"

@@ -158,6 +158,9 @@ Connect Maestro to Obsidian or Notion to persist decisions, learnings, and sessi
 | `/maestro board` | Kanban board view |
 | `/maestro brain` | Second brain operations |
 | `/maestro history` | Past sessions and cost analysis |
+| `/maestro plan "task"` | Deep planning with codebase exploration |
+| `/maestro notify` | Push notifications (Slack, Discord, Telegram) |
+| `/maestro viz` | Visual dashboards and Mermaid diagrams |
 
 ## Troubleshooting
 

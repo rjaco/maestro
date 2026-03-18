@@ -3,7 +3,7 @@ description: "Initialize Maestro for this project — inference-first onboarding
 allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
 ---
 
-# Maestro Init — Inference-First Onboarding (v2.0.0)
+# Maestro Init — Inference-First Onboarding (v1.1.0)
 
 You are performing first-time Maestro setup for this project. The flow is: **ask → scan → preview → build → stay available**. Combine the user's own description with codebase scanning to produce the project DNA.
 
@@ -268,7 +268,7 @@ Create `.maestro/state.md`:
 No active session.
 
 ## History
-- [timestamp] Maestro initialized (v2.0.0)
+- [timestamp] Maestro initialized (v1.1.0)
 ```
 
 ### 4d: Create Config File (with integrations)
@@ -276,7 +276,7 @@ No active session.
 Create `.maestro/config.yaml`:
 
 ```yaml
-# Maestro Configuration (v2.0.0)
+# Maestro Configuration (v1.1.0)
 # Edit these values to customize Maestro's behavior for this project.
 
 # Default execution mode: yolo | checkpoint | careful
@@ -318,6 +318,34 @@ commands:
 # Scheduler (cron-based tasks)
 scheduler:
   enabled: false
+
+# Notifications (push to Slack/Discord/Telegram)
+notifications:
+  enabled: false
+  providers:
+    slack:
+      webhook_url: null
+    discord:
+      webhook_url: null
+    telegram:
+      bot_token: null
+      chat_id: null
+  triggers:
+    on_story_complete: true
+    on_feature_complete: true
+    on_qa_rejection: true
+    on_self_heal_failure: true
+    on_test_regression: true
+
+# Awareness (heartbeat monitoring)
+awareness:
+  enabled: false
+  interval_minutes: 30
+
+# Webhooks (inbound event processing)
+webhooks:
+  enabled: false
+  poll_interval_minutes: 5
 
 # External integrations (auto-detected)
 integrations:
@@ -421,4 +449,4 @@ Then display the stay-available message:
 - If the project has no recognizable tech stack files, still create the DNA with what can be inferred from the user's description, directory structure, and file extensions.
 - Keep DNA concise — it will be injected into agent context. Every token counts.
 - The user's free-text description takes priority over auto-detection when there is a conflict.
-- Version is 2.0.0 for state and config file headers.
+- Version is 1.1.0 for state and config file headers.
