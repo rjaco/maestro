@@ -363,7 +363,7 @@ The local state file is YAML front matter followed by free-text notes. It holds 
 
 ```yaml
 ---
-maestro_version: "1.2.0"
+maestro_version: "1.3.0"
 active: true
 session_id: "b8e4d291-7f3a-4c1e-a9b2-5d8f6e3c1a7b"
 feature: "Add user authentication"
