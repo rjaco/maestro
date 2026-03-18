@@ -145,3 +145,80 @@ Trust levels:
 ```
 
 Trust level influences default autonomy: expert projects get yolo as the suggested default, novice projects get careful.
+
+## Self-Improvement Analysis (OpenClaw-inspired)
+
+Beyond friction detection, analyze the session for systemic improvement opportunities:
+
+### Skill Usefulness Analysis
+
+After each feature, evaluate which skills contributed and which were idle:
+
+1. **Used skills**: Which skills were invoked? How many tokens did each consume?
+2. **Missing skills**: Were there tasks that needed manual intervention because no skill handled them?
+3. **Underperforming skills**: Did any skill's output get discarded or heavily modified by the user?
+4. **Overkill skills**: Were expensive skills (Opus model) used for simple tasks?
+
+Log findings:
+```markdown
+Skill usefulness:
+  (ok) dev-loop       used, effective (5 stories, 0 manual overrides)
+  (ok) decompose      used, effective (generated accurate stories)
+  (!)  context-engine used, but context was too lean for story 3
+  (x)  research       not used (feature didn't need research)
+  (!)  missing        no skill for database migration — manual work
+```
+
+### Agent Performance Tracking
+
+Track per-agent metrics across sessions:
+
+```yaml
+# Added to .maestro/trust.yaml
+agent_performance:
+  implementer:
+    stories_attempted: 5
+    done_first_try: 3
+    needs_context: 1
+    blocked: 0
+    avg_tokens: 28500
+  qa_reviewer:
+    reviews_done: 5
+    approved_first_try: 4
+    false_rejections: 0
+  fixer:
+    fixes_attempted: 3
+    fixed_first_try: 2
+    escalated: 1
+```
+
+### Auto-Generate Improvement Proposals
+
+Based on the analysis, propose concrete improvements:
+
+1. **New skill needed**: "Create a `maestro-db-migration` skill — 2 stories needed manual DB work"
+   → Trigger skill-factory auto-generation
+2. **Model adjustment**: "Execution model underperforming — suggest upgrading to Opus for this project"
+   → Suggest via AskUserQuestion in next session
+3. **Context tuning**: "Context engine delivered too little context for backend stories — lower threshold"
+   → Update context-engine config
+4. **Quality rule**: "QA found the same issue 3 times — add to QA checklist"
+   → Update qa-reviewer-prompt.md
+
+### Lessons Learned Accumulation
+
+Save approved improvements to memory:
+
+```
+# In .maestro/memory/semantic.md
+- [date] Learned: backend stories need auth context injected (story 3 needed NEEDS_CONTEXT retry)
+- [date] Learned: test stories should depend on all implementation stories (story 5 ran before 3 finished)
+- [date] Learned: this project needs DB migration skill (2 stories required manual work)
+```
+
+### Integration with Brain
+
+If brain integration is configured:
+- Save retrospective to knowledge base (category: retrospective)
+- Search past retrospectives before generating new proposals
+- Avoid proposing improvements already tried and rejected

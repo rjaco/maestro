@@ -84,6 +84,56 @@ When dispatched for a daily briefing:
 5. Compile into a structured briefing
 6. Save to brain (if configured) or log to `.maestro/logs/briefing-{date}.md`
 
+### Awareness Check (Enhanced — OpenClaw heartbeat pattern)
+
+When dispatched for an awareness check:
+
+1. Run all 5 awareness checks from `skills/awareness/SKILL.md`:
+   - Quality gates (tsc, lint, tests)
+   - Dependency security audit (`npm audit`)
+   - Convention review (recent commits vs. DNA patterns)
+   - Coverage trends (if configured)
+   - Tech debt scan (TODO/FIXME/HACK count)
+
+2. Compare against previous awareness report (most recent in `.maestro/logs/awareness-*.md`)
+
+3. Score findings by severity:
+   - Info: log only
+   - Warning: log + add to notes.md
+   - Alert: log + notes.md + send notification
+
+4. Generate awareness report to `.maestro/logs/awareness-{date}-{time}.md`
+
+5. If notification providers configured, send alerts for Warning/Alert findings
+
+### Suggest Improvements
+
+When awareness detects patterns:
+- Recurring test failures in same area → suggest refactoring
+- Growing tech debt in specific files → flag for review
+- Dependency with known vulnerabilities → suggest update
+- Convention violations increasing → suggest DNA update
+
+Format suggestions as notes in `.maestro/notes.md` for the dev-loop to pick up.
+
+### Poll Webhooks
+
+When dispatched for webhook polling:
+
+1. Read `.maestro/webhooks/queue.json` for unprocessed events
+2. Route each event per webhook SKILL.md rules
+3. Mark as processed
+4. Send notifications for high-urgency events
+
+### Poll GitHub
+
+When dispatched for GitHub polling:
+
+1. Use `gh` CLI to check recent PRs, issues, and workflow runs
+2. Compare against last poll (stored in `.maestro/logs/github-poll.md`)
+3. Log new events to notes.md
+4. Send notifications for failures or requested reviews
+
 ## Constraints
 
 - Maximum execution time: 60 seconds
