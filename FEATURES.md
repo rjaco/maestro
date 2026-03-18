@@ -309,7 +309,21 @@ Auto-downgrade saves ~70% on token costs by routing simple tasks to cheaper mode
 | Cost tracking + auto-downgrade | No cost control | No cost tracking |
 | Spec-driven + feature registry | No spec system | No session handoff |
 | Security drift detection | No security audit | No integrity checks |
+| Remote control (Telegram/Discord) | No remote access | No remote access |
+| Config profile switching | No profiles | No profiles |
+| Plugin data persistence | Sandbox-only | No persistence |
 
 ---
 
-*Last updated: 2026-03-18 | 71 skills, 20 commands, 14 scripts, 6 agents, 11 profiles*
+## Recent Additions (M10)
+
+| Feature | Description |
+|---------|-------------|
+| **remote-control** | Control Maestro from Telegram/Discord/HTTP via Agent SDK |
+| **config-profiles** | Switch entire configuration with one command (7 built-in profiles) |
+| **plugin-data** | Durable cross-project storage via `${CLAUDE_PLUGIN_DATA}` |
+| **context-check.sh** | Context window usage monitor with ASCII progress bar |
+
+---
+
+*Last updated: 2026-03-18 | 75 skills, 20 commands, 15 scripts, 6 agents, 11 profiles*
