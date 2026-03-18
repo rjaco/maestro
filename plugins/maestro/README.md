@@ -1,5 +1,13 @@
 # Maestro
 
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Skills](https://img.shields.io/badge/skills-87-purple)
+![Commands](https://img.shields.io/badge/commands-25-orange)
+![Agents](https://img.shields.io/badge/agents-6-cyan)
+![Squads](https://img.shields.io/badge/squads-3-red)
+![Hooks](https://img.shields.io/badge/hooks-6_events-yellow)
+
 **Full-Stack Autonomous Development Orchestrator for Claude Code**
 
 Build features with `/maestro`. Build entire products with `/maestro magnum-opus`. Track progress on your kanban board. Persist knowledge in your second brain.
