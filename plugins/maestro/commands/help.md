@@ -281,6 +281,34 @@ Trust System:
   Four levels: Novice > Apprentice > Journeyman > Expert.
 ```
 
+## Native Claude Code Integrations
+
+These built-in Claude Code features work great with Maestro:
+
+### /effort — Control model effort level
+```
+/effort low     — Fast responses, lower cost (good for status checks)
+/effort medium  — Balanced (default for most tasks)
+/effort high    — Maximum reasoning power (good for architecture, debugging)
+```
+Maestro agents use effort levels automatically based on their role.
+
+### /loop — Recurring tasks
+```
+/loop 5m /maestro status   — Check status every 5 minutes
+/loop 30m /maestro heartbeat — Monitor heartbeat every 30 minutes
+```
+
+### /remote-control — Control from phone
+```
+/remote-control   — Get a URL to control this session from any device
+```
+Pair with Maestro's Telegram remote listener for full mobile control.
+
+### Agent Teams
+Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` to enable native agent teams.
+Maestro's TeammateIdle and TaskCompleted hooks integrate automatically.
+
 ## Behavior
 
 - If the user asks a question not covered by a topic, answer it using your understanding of the Maestro plugin (read skill files if needed).
