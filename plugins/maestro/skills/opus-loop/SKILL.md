@@ -85,10 +85,11 @@ For each story in dependency order:
 1. Validate prerequisites
 2. Delegate with right-sized context (include milestone scope + vision anchor)
 3. Implement via background agent
-4. Self-heal (tsc, lint, tests — up to 3 fix attempts)
-5. QA review (up to 5 iterations)
-6. Git craft (commit)
-7. Update state: `current_story: N`
+4. After dispatching each agent, write a heartbeat to `.maestro/logs/heartbeat.json` with the current timestamp, phase, milestone, story, and action. This enables the daemon to detect stalls.
+5. Self-heal (tsc, lint, tests — up to 3 fix attempts)
+6. QA review (up to 5 iterations)
+7. Git craft (commit)
+8. Update state: `current_story: N`
 
 Track per-story metrics for the milestone retrospective:
 - Tokens used
@@ -218,7 +219,7 @@ Log to `.maestro/logs/` via build-log skill. Save lessons to `.maestro/memory/se
 
 ### State Persistence
 
-Write all state to disk. If the session is interrupted (crash, network loss, user closes terminal), the next `/maestro magnum-opus --resume` will pick up from the last checkpoint.
+Write all state to disk. If the session is interrupted (crash, network loss, user closes terminal), the next `/maestro opus --resume` will pick up from the last checkpoint.
 
 ## Continuous Loop Mode
 

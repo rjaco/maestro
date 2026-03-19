@@ -3,7 +3,8 @@ set -euo pipefail
 
 # Maestro SessionStart Hook
 # Detects Maestro state and injects context at session start.
-# Lets every new session know if Maestro is initialized and what state it's in.
+# After context compaction in an Opus session, injects full orchestration context
+# so the autonomous loop can resume without interruption.
 
 # Read hook input from stdin
 HOOK_INPUT=""
@@ -53,34 +54,176 @@ if [[ -f "$STATE_FILE" ]]; then
   TOTAL_STORIES=$(yaml_val "total_stories")
   CURRENT_MILESTONE=$(yaml_val "current_milestone")
   TOTAL_MILESTONES=$(yaml_val "total_milestones")
+  OPUS_MODE=$(yaml_val "opus_mode")
 
   if [[ "$ACTIVE" == "true" ]]; then
-    MSG="Maestro has an ACTIVE session."
-    MSG="$MSG Feature: ${FEATURE:-unknown}."
-    MSG="$MSG Phase: ${PHASE:-unknown}."
 
     if [[ "$LAYER" == "opus" ]]; then
-      MSG="$MSG Mode: Magnum Opus."
-      MSG="$MSG Milestone: ${CURRENT_MILESTONE:-?}/${TOTAL_MILESTONES:-?}."
+      # -------------------------------------------------------
+      # Full Opus recovery context after compaction
+      # -------------------------------------------------------
+      MSG="[MAESTRO OPUS RECOVERY] Context compaction detected. Restoring Magnum Opus orchestration state."
+      MSG="${MSG}
+
+== CURRENT STATE ==
+Feature:   ${FEATURE:-unknown}
+Phase:     ${PHASE:-unknown}
+Mode:      ${OPUS_MODE:-full_auto}
+Milestone: ${CURRENT_MILESTONE:-?}/${TOTAL_MILESTONES:-?}
+Story:     ${CURRENT_STORY:-?}/${TOTAL_STORIES:-?}"
+
+      # -- North Star from vision.md --
+      VISION_FILE="$CWD/.maestro/vision.md"
+      if [[ -f "$VISION_FILE" ]]; then
+        VISION_LINES=""
+        in_frontmatter=1
+        count=0
+        while IFS= read -r vline || [[ -n "$vline" ]]; do
+          # Skip frontmatter block (between first and second ---)
+          if [[ $in_frontmatter -eq 1 ]]; then
+            if [[ "$vline" == "---" ]]; then
+              in_frontmatter=2
+            fi
+            continue
+          fi
+          if [[ $in_frontmatter -eq 2 ]]; then
+            if [[ "$vline" == "---" ]]; then
+              in_frontmatter=0
+            fi
+            continue
+          fi
+          # Skip blank lines
+          [[ -z "${vline// }" ]] && continue
+          if [[ $count -eq 0 ]]; then
+            VISION_LINES="${vline}"
+          else
+            VISION_LINES="${VISION_LINES}
+${vline}"
+          fi
+          count=$((count + 1))
+          [[ $count -ge 5 ]] && break
+        done < "$VISION_FILE"
+
+        if [[ -n "$VISION_LINES" ]]; then
+          MSG="${MSG}
+
+== NORTH STAR (vision.md) ==
+${VISION_LINES}"
+        fi
+      fi
+
+      # -- Milestone scope --
+      MILESTONE_DIR="$CWD/.maestro/milestones"
+      if [[ -d "$MILESTONE_DIR" ]] && [[ -n "$CURRENT_MILESTONE" ]]; then
+        MILESTONE_FILE=""
+        # Find a file whose name starts with M${CURRENT_MILESTONE}
+        for f in "$MILESTONE_DIR"/M"${CURRENT_MILESTONE}"-*.md "$MILESTONE_DIR"/M"${CURRENT_MILESTONE}".md; do
+          if [[ -f "$f" ]]; then
+            MILESTONE_FILE="$f"
+            break
+          fi
+        done
+
+        if [[ -n "$MILESTONE_FILE" ]]; then
+          MILESTONE_SCOPE=""
+          past_title=0
+          scope_count=0
+          while IFS= read -r mline || [[ -n "$mline" ]]; do
+            # Find the title line (first # heading)
+            if [[ $past_title -eq 0 ]]; then
+              if [[ "$mline" =~ ^#[[:space:]] ]]; then
+                past_title=1
+              fi
+              continue
+            fi
+            # Skip blank lines after title
+            [[ -z "${mline// }" ]] && continue
+            if [[ $scope_count -eq 0 ]]; then
+              MILESTONE_SCOPE="${mline}"
+            else
+              MILESTONE_SCOPE="${MILESTONE_SCOPE}
+${mline}"
+            fi
+            scope_count=$((scope_count + 1))
+            [[ $scope_count -ge 3 ]] && break
+          done < "$MILESTONE_FILE"
+
+          if [[ -n "$MILESTONE_SCOPE" ]]; then
+            MILESTONE_NAME=$(basename "$MILESTONE_FILE" .md)
+            MSG="${MSG}
+
+== CURRENT MILESTONE SCOPE (${MILESTONE_NAME}) ==
+${MILESTONE_SCOPE}"
+          fi
+        fi
+      fi
+
+      # -- Story list for current milestone --
+      STORIES_DIR="$CWD/.maestro/stories"
+      if [[ -d "$STORIES_DIR" ]] && [[ -n "$CURRENT_MILESTONE" ]]; then
+        STORY_LIST=""
+        while IFS= read -r -d '' sfile; do
+          sname=$(basename "$sfile")
+          # Extract status from frontmatter if present
+          sstatus=$(grep -m1 "^[Ss]tatus:" "$sfile" 2>/dev/null | head -1 || true)
+          sstatus="${sstatus#*:}"
+          sstatus="${sstatus#"${sstatus%%[![:space:]]*}"}"
+          sstatus="${sstatus%\"}" ; sstatus="${sstatus#\"}"
+          if [[ -z "$sstatus" ]]; then
+            sstatus="pending"
+          fi
+          entry="  - ${sname} [${sstatus}]"
+          if [[ -z "$STORY_LIST" ]]; then
+            STORY_LIST="${entry}"
+          else
+            STORY_LIST="${STORY_LIST}
+${entry}"
+          fi
+        done < <(find "$STORIES_DIR" -maxdepth 1 -name "M${CURRENT_MILESTONE}-*.md" -print0 2>/dev/null | sort -z)
+
+        if [[ -n "$STORY_LIST" ]]; then
+          MSG="${MSG}
+
+== STORIES FOR MILESTONE ${CURRENT_MILESTONE} ==
+${STORY_LIST}"
+        fi
+      fi
+
+      # -- Explicit continuation directive --
+      MSG="${MSG}
+
+== DIRECTIVE ==
+CONTINUE the Magnum Opus autonomous loop. Execute the next story by dispatching an Agent with isolation: worktree. Do NOT stop. Do NOT write plan documents."
+
+    else
+      # Non-opus active session
+      MSG="Maestro has an ACTIVE session."
+      MSG="${MSG} Feature: ${FEATURE:-unknown}."
+      MSG="${MSG} Phase: ${PHASE:-unknown}."
+
+      if [[ -n "$TOTAL_STORIES" ]] && [[ "$TOTAL_STORIES" != "0" ]]; then
+        MSG="${MSG} Story: ${CURRENT_STORY:-?}/${TOTAL_STORIES}."
+      fi
+
+      MSG="${MSG} Use /maestro status for details."
     fi
 
-    if [[ -n "$TOTAL_STORIES" ]] && [[ "$TOTAL_STORIES" != "0" ]]; then
-      MSG="$MSG Story: ${CURRENT_STORY:-?}/${TOTAL_STORIES}."
-    fi
-
-    MSG="$MSG Use /maestro status for details or /maestro opus --resume to continue."
   elif [[ "$PHASE" == "completed" ]]; then
     MSG="Maestro: last session completed (${FEATURE:-unknown}). Run /maestro for a new task."
   elif [[ "$PHASE" == "paused" ]]; then
     MSG="Maestro: PAUSED session (${FEATURE:-unknown})."
     if [[ "$LAYER" == "opus" ]]; then
-      MSG="$MSG Resume with /maestro opus --resume."
+      MSG="${MSG} Resume with /maestro opus --resume."
     else
-      MSG="$MSG Resume with /maestro status."
+      MSG="${MSG} Resume with /maestro status."
     fi
   fi
 else
-  MSG="Maestro initialized for this project. Use /maestro to start orchestrating."
+  # DNA file exists but state file is missing — Maestro is installed but not initialized for this project
+  echo "[MAESTRO] State file not found at .maestro/state.local.md" >&2
+  echo "  -> Cause: Maestro is installed but has not been initialized in this project" >&2
+  echo "  -> Fix: Run /maestro init to set up Maestro for this project" >&2
+  MSG="Maestro is installed but not yet initialized. Run /maestro init to begin."
 fi
 
 # Only output if we have something to say

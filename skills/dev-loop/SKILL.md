@@ -20,91 +20,6 @@ For each story in dependency order:
   Phase 7: CHECKPOINT  — Mode-dependent user interaction
 ```
 
-## Execution Modes: Sequential vs. Parallel
-
-The dev-loop supports two execution modes based on the dependency graph from decomposition:
-
-### Sequential Execution (Default)
-
-Stories with dependencies execute one at a time, in dependency order. Each story completes all 7 phases before the next begins.
-
-### Parallel Execution (For Independent Stories)
-
-When the dependency graph contains stories that are `parallel_safe: true` with no mutual dependencies and all shared dependencies already completed, the dev-loop dispatches them simultaneously.
-
-**Parallel execution flow:**
-
-```
-Given stories: [S1 done] → S2 (depends S1), S3 (depends S1, parallel_safe), S4 (depends S1, parallel_safe)
-
-S2, S3, S4 are all unblocked (S1 is done).
-S3 and S4 are parallel_safe with no mutual dependency.
-S2 depends on nothing that S3/S4 produce.
-
-Dispatch plan:
-  - S2 (sequential — has downstream dependents)
-  - S3 + S4 (parallel — both independent, both parallel_safe)
-
-Actually: dispatch S2, S3, S4 all in parallel if none depends on each other.
-```
-
-**Rules:**
-1. Only stories whose ALL `depends_on` are DONE are eligible.
-2. Among eligible stories, group those marked `parallel_safe: true` that don't depend on each other.
-3. Maximum 3 parallel agents (prevents context thrashing and merge hell).
-4. Each parallel agent gets `isolation: "worktree"` — separate git worktrees, no shared state.
-5. Use `run_in_background: true` on all parallel agents.
-6. After ALL parallel agents complete, merge in story-ID order (lowest first).
-7. Run full test suite ONCE after merging all parallel stories (catches integration issues).
-8. If any parallel story fails validation/QA, the others' results are still valid.
-
-**Dispatch example (single message, multiple Agent calls):**
-
-```
-// Dispatch 3 independent stories simultaneously:
-
-Agent(
-  subagent_type: "maestro:maestro-implementer",
-  description: "Story 02: API routes",
-  isolation: "worktree", run_in_background: true, model: "sonnet",
-  prompt: "[story 02 context]"
-)
-
-Agent(
-  subagent_type: "maestro:maestro-implementer",
-  description: "Story 03: Frontend UI",
-  isolation: "worktree", run_in_background: true, model: "sonnet",
-  prompt: "[story 03 context]"
-)
-
-Agent(
-  subagent_type: "maestro:maestro-implementer",
-  description: "Story 04: Config setup",
-  isolation: "worktree", run_in_background: true, model: "haiku",
-  prompt: "[story 04 context]"
-)
-```
-
-**Merge coordination after parallel completion:**
-
-```
-For each completed story (in ID order):
-  1. Check merge conflicts with main working tree
-  2. If clean merge:
-     a. Merge worktree → feature branch
-     b. Run Phase 4 (self-heal) on the merged result
-     c. If self-heal passes → Phase 5 (QA), Phase 6 (git craft)
-     d. If self-heal fails → dispatch fixer in the worktree
-  3. If conflict:
-     a. Attempt auto-resolve (accept both sides if non-overlapping)
-     b. If auto-resolve fails → PAUSE, show conflict, ask user
-  4. Clean up worktree
-
-After ALL parallel stories merged:
-  Run full test suite (npm test) to catch cross-story integration issues.
-  If integration tests fail → generate targeted fix stories.
-```
-
 ## North Star Anchoring
 
 At every phase transition, re-inject the original feature goal to prevent drift. Long autonomous runs naturally accumulate context noise. The North Star keeps agents aligned.
@@ -125,6 +40,8 @@ Before starting each new story:
 
 ## Phase 1: VALIDATE
 
+Update heartbeat: write current timestamp, phase name (`validate`), and milestone/story to `.maestro/logs/heartbeat.json`.
+
 Check all prerequisites before dispatching an implementer.
 
 **Checks:**
@@ -141,6 +58,8 @@ Check all prerequisites before dispatching an implementer.
 **Output:** VALIDATED or BLOCKED (with reason)
 
 ## Phase 2: DELEGATE
+
+Update heartbeat: write current timestamp, phase name (`delegate`), and milestone/story to `.maestro/logs/heartbeat.json`.
 
 Build the right-sized context package for the implementer agent.
 
@@ -183,18 +102,9 @@ Use the story's `model_recommendation` field. Override rules:
 
 ## Phase 3: IMPLEMENT
 
+Update heartbeat: write current timestamp, phase name (`implement`), and milestone/story to `.maestro/logs/heartbeat.json`. Include `last_action: "dispatched implementer for [story-id]"` and increment `agent_dispatches`.
+
 Dispatch the implementer as a background agent in an isolated worktree. **This applies to ALL story types** — both code and knowledge work. Worktree isolation prevents half-done changes from polluting the main tree.
-
-### Check for Parallel Opportunities
-
-Before dispatching a single story, check if multiple stories are ready:
-
-1. Read the dependency graph from `.maestro/stories/`.
-2. Find all stories where ALL `depends_on` are DONE.
-3. If 2+ stories are ready AND marked `parallel_safe`:
-   - Dispatch up to 3 simultaneously (see "Parallel Execution" above).
-   - Skip the rest of Phase 3-7 per-story — handle them in batch after all return.
-4. If only 1 story is ready, or none are parallel_safe: dispatch sequentially.
 
 ### Agent Configuration
 
@@ -224,20 +134,14 @@ Knowledge work agents get `WebSearch` and `WebFetch` for research-heavy tasks bu
 
 **MANDATORY**: Always use `isolation: "worktree"` on the Agent tool call. This creates an isolated git worktree where the implementer works without affecting the main tree.
 
-Use the `delegation` skill for all dispatch decisions (model selection, context composition):
-
 ```
 Agent(
   subagent_type: "maestro:maestro-implementer",
-  description: "Implement story NN: [title]",
   isolation: "worktree",
   run_in_background: true,
-  model: "[from delegation Decision 2]",
-  prompt: "[North Star + story spec + context package from delegation Decision 3]"
+  prompt: "[story spec + context package + North Star]"
 )
 ```
-
-See `skills/delegation/SKILL.md` for the full dispatch protocol, parallel dispatch rules, and model selection scoring.
 
 The orchestrator stays responsive while the agent works. The user can:
 - Ask questions about the feature
@@ -292,6 +196,8 @@ Skip this phase if:
 - Story type is `knowledge_work` (uses output contracts instead)
 
 ## Phase 4: SELF-HEAL
+
+Update heartbeat: write current timestamp, phase name (`self_heal`), and milestone/story to `.maestro/logs/heartbeat.json`.
 
 Run automated checks and fix failures. The check sequence depends on story type.
 
@@ -372,6 +278,8 @@ Do NOT continue to QA with failing checks.
 
 ## Phase 5: QA REVIEW
 
+Update heartbeat: write current timestamp, phase name (`qa_review`), and milestone/story to `.maestro/logs/heartbeat.json`.
+
 Dispatch an independent QA reviewer to catch issues the implementer missed.
 
 ### Review Mode Selection
@@ -428,6 +336,8 @@ Maximum **5 QA iterations** per story. If still rejected after 5 rounds:
 
 ## Phase 6: GIT CRAFT
 
+Update heartbeat: write current timestamp, phase name (`git_craft`), and milestone/story to `.maestro/logs/heartbeat.json`.
+
 Create a documentation-quality commit for the completed story.
 
 ### Commit Format
@@ -470,6 +380,8 @@ After creating the commit, evaluate it using the `commit-score` skill:
 Show the score in the checkpoint summary. Track in `.maestro/trust.yaml` under `commit_scores`.
 
 ## Phase 7: CHECKPOINT
+
+Update heartbeat: write current timestamp, phase name (`checkpoint`), and milestone/story to `.maestro/logs/heartbeat.json`. Include `last_action: "story [story-id] complete"`.
 
 Behavior depends on the execution mode.
 

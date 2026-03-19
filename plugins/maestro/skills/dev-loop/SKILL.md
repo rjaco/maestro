@@ -40,6 +40,8 @@ Before starting each new story:
 
 ## Phase 1: VALIDATE
 
+Update heartbeat: write current timestamp, phase name (`validate`), and milestone/story to `.maestro/logs/heartbeat.json`.
+
 Check all prerequisites before dispatching an implementer.
 
 **Checks:**
@@ -56,6 +58,8 @@ Check all prerequisites before dispatching an implementer.
 **Output:** VALIDATED or BLOCKED (with reason)
 
 ## Phase 2: DELEGATE
+
+Update heartbeat: write current timestamp, phase name (`delegate`), and milestone/story to `.maestro/logs/heartbeat.json`.
 
 Build the right-sized context package for the implementer agent.
 
@@ -97,6 +101,8 @@ Use the story's `model_recommendation` field. Override rules:
 - Never downgrade from the story's recommendation
 
 ## Phase 3: IMPLEMENT
+
+Update heartbeat: write current timestamp, phase name (`implement`), and milestone/story to `.maestro/logs/heartbeat.json`. Include `last_action: "dispatched implementer for [story-id]"` and increment `agent_dispatches`.
 
 Dispatch the implementer as a background agent in an isolated worktree. **This applies to ALL story types** — both code and knowledge work. Worktree isolation prevents half-done changes from polluting the main tree.
 
@@ -191,6 +197,8 @@ Skip this phase if:
 
 ## Phase 4: SELF-HEAL
 
+Update heartbeat: write current timestamp, phase name (`self_heal`), and milestone/story to `.maestro/logs/heartbeat.json`.
+
 Run automated checks and fix failures. The check sequence depends on story type.
 
 ### Story Type Detection
@@ -270,6 +278,8 @@ Do NOT continue to QA with failing checks.
 
 ## Phase 5: QA REVIEW
 
+Update heartbeat: write current timestamp, phase name (`qa_review`), and milestone/story to `.maestro/logs/heartbeat.json`.
+
 Dispatch an independent QA reviewer to catch issues the implementer missed.
 
 ### Review Mode Selection
@@ -326,6 +336,8 @@ Maximum **5 QA iterations** per story. If still rejected after 5 rounds:
 
 ## Phase 6: GIT CRAFT
 
+Update heartbeat: write current timestamp, phase name (`git_craft`), and milestone/story to `.maestro/logs/heartbeat.json`.
+
 Create a documentation-quality commit for the completed story.
 
 ### Commit Format
@@ -368,6 +380,8 @@ After creating the commit, evaluate it using the `commit-score` skill:
 Show the score in the checkpoint summary. Track in `.maestro/trust.yaml` under `commit_scores`.
 
 ## Phase 7: CHECKPOINT
+
+Update heartbeat: write current timestamp, phase name (`checkpoint`), and milestone/story to `.maestro/logs/heartbeat.json`. Include `last_action: "story [story-id] complete"`.
 
 Behavior depends on the execution mode.
 
