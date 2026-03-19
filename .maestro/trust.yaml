@@ -1,0 +1,11 @@
+total_stories: 0
+qa_first_pass_rate: 0.00
+self_heal_success_rate: 0.00
+average_qa_iterations: 0.0
+stories_by_mode:
+  yolo: 0
+  checkpoint: 0
+  careful: 0
+trust_level: novice
+# Levels: novice (<5 stories) | apprentice (5-15, >60% QA pass)
+#         journeyman (15-30, >75%) | expert (30+, >85%)

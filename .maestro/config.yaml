@@ -1,0 +1,38 @@
+# Maestro Configuration
+# Edit these values to customize Maestro's behavior for this project.
+
+# Default execution mode: yolo | checkpoint | careful
+default_mode: checkpoint
+
+# Default model for implementation agents
+default_model: sonnet
+
+# Cost tracking
+cost_tracking:
+  enabled: true
+  forecast: true
+  ledger: true
+  budget_enforcement: true
+
+# Quality gates
+quality:
+  max_qa_iterations: 5
+  max_self_heal: 3
+  run_tsc: false
+  run_lint: false
+  run_tests: false
+
+# Model assignments per task type
+models:
+  planning: opus
+  execution: opus
+  review: opus
+  simple: sonnet
+  research: opus
+
+# Project-specific commands (none — this is a markdown plugin)
+commands:
+  build: null
+  test: null
+  lint: null
+  typecheck: null
