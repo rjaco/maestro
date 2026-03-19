@@ -55,13 +55,13 @@ while IFS=$'\t' read -r event_name raw_command; do
 
   if [[ ! -f "$command_path" ]]; then
     echo "[FAIL] ${event_name} → ${display_path} (file not found)"
-    ((fail_count++))
+    fail_count=$((fail_count + 1))
   elif [[ ! -x "$command_path" ]]; then
     echo "[WARN] ${event_name} → ${display_path} (exists, not executable)"
-    ((warn_count++))
+    warn_count=$((warn_count + 1))
   else
     echo "[PASS] ${event_name} → ${display_path} (exists, executable)"
-    ((pass_count++))
+    pass_count=$((pass_count + 1))
   fi
 done < <(
   jq -r '

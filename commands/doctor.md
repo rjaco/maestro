@@ -36,6 +36,8 @@ _(Doctor runs automatically and produces a structured report. No flags or subcom
 | Session state | Warns on stale sessions older than 24 hours |
 | Git status | Branch, uncommitted changes, session branch alignment |
 | Hook installation | Stop hook is installed and executable |
+| Plugin manifest | `claude plugin validate` — manifest, skill frontmatter, command definitions |
+| Hook script validation | `scripts/validate-hooks.sh` — all hook entries point to executable scripts |
 | Integration detection | MCP servers and CLI tools vs. configured providers |
 | Knowledge base | Vault path exists (Obsidian) or MCP available (Notion) |
 | Kanban connectivity | Provider authentication and reachability |
@@ -101,7 +103,15 @@ Check if the stop hook is properly installed:
 - Verify the `Stop` hook is defined
 - Check that `stop-hook.sh` exists and is executable
 
-### 7. Integration Detection
+### 7. Plugin Manifest Validation
+
+Run `claude plugin validate` to check plugin manifest, skill frontmatter, and command definitions. Report any validation errors.
+
+### 8. Hook Script Validation
+
+Run `scripts/validate-hooks.sh` to verify all hook entries in `hooks/hooks.json` point to valid executable scripts. Report any FAIL (missing file) or WARN (not executable) results.
+
+### 9. Integration Detection
 
 Invoke the `mcp-detect` skill logic:
 - Check for each MCP server (Asana, Jira, Linear, Notion, Playwright)
@@ -109,13 +119,13 @@ Invoke the `mcp-detect` skill logic:
 - Compare detected integrations against configured integrations in `config.yaml`
 - Warn if a provider is configured but not detected
 
-### 8. Knowledge Base Connectivity
+### 10. Knowledge Base Connectivity
 
 If `integrations.knowledge_base.provider` is set:
 - Obsidian: check that `vault_path` exists and is a directory
 - Notion: check that Notion MCP tools are available
 
-### 9. Kanban Connectivity
+### 11. Kanban Connectivity
 
 If `integrations.kanban.provider` is set:
 - GitHub: check that `gh` is authenticated (`gh auth status`)
