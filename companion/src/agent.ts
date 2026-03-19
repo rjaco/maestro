@@ -1,3 +1,5 @@
+import { query, type SDKResultMessage } from '@anthropic-ai/claude-agent-sdk'
+import type { Options } from '@anthropic-ai/claude-agent-sdk'
 import { config } from './config.js'
 import { getSession, saveSession } from './db.js'
 import { logger } from './logger.js'
@@ -8,17 +10,6 @@ export interface QueryResult {
   costUsd?: number
 }
 
-/**
- * Run a Claude Code query via the Agent SDK.
- *
- * NOTE: The Agent SDK API shape may vary between versions. This module
- * uses a try/catch around the import to fail gracefully if the SDK is
- * not installed, and uses defensive field access on events. If the SDK
- * API changes, update the event processing below.
- *
- * Fallback: If the Agent SDK is not available, falls back to spawning
- * `claude` CLI directly via child_process.
- */
 export async function runQuery(
   chatId: string,
   message: string,
@@ -31,12 +22,10 @@ export async function runQuery(
   const typingInterval = onTyping ? setInterval(onTyping, 4000) : undefined
 
   try {
-    // Try Agent SDK first
     const result = await runWithAgentSDK(fullPrompt, existingSessionId, chatId)
     return result
   } catch (sdkErr) {
-    logger.warn({ err: sdkErr }, 'Agent SDK unavailable, falling back to CLI')
-    // Fallback to CLI spawning
+    logger.warn({ err: sdkErr }, 'Agent SDK query failed, falling back to CLI')
     const result = await runWithCLI(fullPrompt, chatId)
     return result
   } finally {
@@ -49,40 +38,38 @@ async function runWithAgentSDK(
   sessionId: string | null,
   chatId: string,
 ): Promise<QueryResult> {
-  // Dynamic import so the module doesn't crash if SDK not installed
-  const sdk = await import('@anthropic-ai/claude-agent-sdk')
-  const queryFn = sdk.query ?? sdk.default?.query
-
-  if (!queryFn) {
-    throw new Error('Agent SDK query function not found — API may have changed')
-  }
-
   let resultText: string | null = null
   let newSessionId: string | undefined
   let totalCost: number | undefined
 
-  const queryOpts: Record<string, unknown> = {
-    prompt,
+  const options: Options = {
     cwd: config.projectRoot,
     permissionMode: 'bypassPermissions',
+    allowDangerouslySkipPermissions: true,
     settingSources: ['project', 'user'],
-  }
-  if (sessionId) {
-    queryOpts.resume = sessionId
+    model: config.chatModel,
+    ...(sessionId ? { resume: sessionId } : {}),
   }
 
-  for await (const event of queryFn(queryOpts) as AsyncIterable<Record<string, unknown>>) {
-    // Extract session ID from init events
-    if (event.type === 'system' && event.subtype === 'init' && typeof event.session_id === 'string') {
-      newSessionId = event.session_id
+  const queryResult = query({ prompt, options })
+
+  for await (const event of queryResult) {
+    // Extract session ID from system init events
+    if (event.type === 'system' && 'subtype' in event) {
+      const sysEvent = event as Record<string, unknown>
+      if (sysEvent.subtype === 'init' && typeof sysEvent.session_id === 'string') {
+        newSessionId = sysEvent.session_id
+      }
     }
 
-    // Extract result text and cost from result events
+    // Extract result from result events
     if (event.type === 'result') {
-      if (typeof event.result === 'string') resultText = event.result
-      if (typeof event.text === 'string') resultText = event.text
-      if (typeof event.total_cost_usd === 'number') totalCost = event.total_cost_usd
-      if (typeof event.costUsd === 'number') totalCost = event.costUsd
+      const resultEvent = event as SDKResultMessage
+      totalCost = resultEvent.total_cost_usd
+      if (resultEvent.subtype === 'success') {
+        resultText = resultEvent.result
+        newSessionId = resultEvent.session_id
+      }
     }
   }
 
@@ -106,7 +93,7 @@ async function runWithCLI(prompt: string, chatId: string): Promise<QueryResult> 
   try {
     const { stdout } = await execFileAsync('claude', ['-p', prompt, '--yes', '--model', config.chatModel], {
       cwd: config.projectRoot,
-      timeout: 300_000, // 5 min timeout
+      timeout: 300_000,
       env: { ...process.env, ANTHROPIC_API_KEY: config.anthropicApiKey },
     })
 
