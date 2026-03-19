@@ -17,28 +17,40 @@ console.log(`
   ╚══════════════════════════════════════╝
 `)
 
-// --- PID Lock ---
+// --- PID Lock (atomic via exclusive create) ---
 mkdirSync(dirname(config.pidPath), { recursive: true })
 
-if (existsSync(config.pidPath)) {
-  const existingPid = readFileSync(config.pidPath, 'utf-8').trim()
-  try {
-    process.kill(Number(existingPid), 0) // Check if alive
-    logger.error({ pid: existingPid }, 'Another companion instance is running')
-    console.error(`Another Maestro Companion is already running (PID ${existingPid}).`)
-    console.error('Stop it first: kill ' + existingPid)
-    process.exit(1)
-  } catch {
-    // Process not running, stale PID file
-    logger.warn({ pid: existingPid }, 'Removing stale PID file')
+try {
+  // Atomic: fails if file already exists
+  writeFileSync(config.pidPath, String(process.pid), { flag: 'wx' })
+} catch (e: unknown) {
+  if ((e as NodeJS.ErrnoException).code === 'EEXIST') {
+    // File exists — check if the process is still alive
+    const existingPid = readFileSync(config.pidPath, 'utf-8').trim()
+    try {
+      process.kill(Number(existingPid), 0)
+      logger.error({ pid: existingPid }, 'Another companion instance is running')
+      console.error(`Another Maestro Companion is already running (PID ${existingPid}).`)
+      console.error('Stop it first: kill ' + existingPid)
+      process.exit(1)
+    } catch {
+      // Stale PID — overwrite
+      logger.warn({ pid: existingPid }, 'Removing stale PID file')
+      writeFileSync(config.pidPath, String(process.pid))
+    }
+  } else {
+    throw e
   }
 }
-writeFileSync(config.pidPath, String(process.pid))
 logger.info({ pid: process.pid }, 'Companion starting')
 
 // --- Validate Config ---
 if (!config.telegramToken) {
   console.error('MAESTRO_TELEGRAM_TOKEN is required. Set it in companion/.env')
+  process.exit(1)
+}
+if (!config.anthropicApiKey) {
+  console.error('ANTHROPIC_API_KEY is required. Set it in companion/.env')
   process.exit(1)
 }
 
@@ -90,11 +102,12 @@ channel.onMessage(async (msg) => {
     chatId,
     text ?? '[Media message]',
     systemContext,
-    () => channel.sendTyping(chatId), // Refresh typing every 4s
+    () => { void channel.sendTyping(chatId) },
   )
 
   if (result.text) {
     const html = markdownToTelegramHtml(result.text)
+    // Only chunk once — let the channel adapter handle raw sending
     const chunks = chunkMessage(html)
     for (const chunk of chunks) {
       await channel.send({ chatId, html: chunk })
@@ -109,7 +122,10 @@ channel.onMessage(async (msg) => {
 })
 
 // --- Graceful Shutdown ---
+let shuttingDown = false
 async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return
+  shuttingDown = true
   logger.info({ signal }, 'Shutting down...')
   try {
     await channel.stop()
@@ -121,7 +137,8 @@ async function shutdown(signal: string): Promise<void> {
     // Ignore PID file removal errors
   }
   logger.info('Companion stopped')
-  process.exit(0)
+  // Let pino flush, then exit
+  process.exitCode = 0
 }
 
 process.on('SIGINT', () => { void shutdown('SIGINT') })

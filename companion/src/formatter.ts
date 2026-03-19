@@ -1,19 +1,48 @@
 const MAX_TELEGRAM_LENGTH = 4096
 
-export function markdownToTelegramHtml(text: string): string {
+function escapeHtml(text: string): string {
   return text
-    // Code blocks first (preserve content)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Bold
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+export function markdownToTelegramHtml(text: string): string {
+  // Extract code blocks first to protect them from escaping
+  const codeBlocks: string[] = []
+  let processed = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
+    const idx = codeBlocks.length
+    codeBlocks.push(`<pre><code class="language-${escapeHtml(lang)}">${escapeHtml(code)}</code></pre>`)
+    return `\x00CODEBLOCK${idx}\x00`
+  })
+
+  // Extract inline code
+  const inlineCode: string[] = []
+  processed = processed.replace(/`([^`]+)`/g, (_match, code: string) => {
+    const idx = inlineCode.length
+    inlineCode.push(`<code>${escapeHtml(code)}</code>`)
+    return `\x00INLINE${idx}\x00`
+  })
+
+  // Escape remaining HTML entities in plain text
+  processed = escapeHtml(processed)
+
+  // Apply markdown formatting on escaped text
+  processed = processed
     .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-    // Italic
     .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<i>$1</i>')
-    // Strikethrough
     .replace(/~~(.+?)~~/g, '<s>$1</s>')
-    // Links
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+
+  // Restore code blocks and inline code
+  for (let i = 0; i < inlineCode.length; i++) {
+    processed = processed.replace(`\x00INLINE${i}\x00`, inlineCode[i])
+  }
+  for (let i = 0; i < codeBlocks.length; i++) {
+    processed = processed.replace(`\x00CODEBLOCK${i}\x00`, codeBlocks[i])
+  }
+
+  return processed
 }
 
 export function chunkMessage(text: string): string[] {

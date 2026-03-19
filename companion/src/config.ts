@@ -30,5 +30,5 @@ export const config = {
   logLevel: get('LOG_LEVEL', 'info'),
   chatModel: get('CHAT_MODEL', 'sonnet'),
   buildModel: get('BUILD_MODEL', 'opus'),
-  maxWorkers: parseInt(get('MAX_WORKERS', '3'), 10),
+  maxWorkers: parseInt(get('MAX_WORKERS', '3'), 10) || 3,
 } as const

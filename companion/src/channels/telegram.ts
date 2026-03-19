@@ -1,5 +1,6 @@
 import { Bot, InputFile } from 'grammy'
 import type { ChannelAdapter, IncomingMessage, OutgoingMessage } from './types.js'
+import { chunkMessage } from '../formatter.js'
 
 export class TelegramAdapter implements ChannelAdapter {
   readonly name = 'telegram'
@@ -10,6 +11,10 @@ export class TelegramAdapter implements ChannelAdapter {
   constructor(token: string, allowedChatIds: string[]) {
     this.bot = new Bot(token)
     this.allowedChatIds = new Set(allowedChatIds)
+    // Grammy error handler — prevents unhandled errors from crashing the process
+    this.bot.catch((err) => {
+      console.error('[Maestro] Grammy error:', err.message ?? err)
+    })
     this.setupHandlers()
   }
 
@@ -120,8 +125,8 @@ export class TelegramAdapter implements ChannelAdapter {
     const text = msg.html ?? msg.text ?? ''
     if (!text) return
 
-    // Chunk long messages
-    const chunks = chunkText(text, 4096)
+    // Chunk long messages (single implementation from formatter.ts)
+    const chunks = chunkMessage(text)
     for (const chunk of chunks) {
       await this.bot.api.sendMessage(msg.chatId, chunk, {
         parse_mode: msg.html ? 'HTML' : undefined,
@@ -137,18 +142,4 @@ export class TelegramAdapter implements ChannelAdapter {
       // Ignore typing errors
     }
   }
-}
-
-function chunkText(text: string, maxLen: number): string[] {
-  if (text.length <= maxLen) return [text]
-  const chunks: string[] = []
-  let remaining = text
-  while (remaining.length > maxLen) {
-    let splitAt = remaining.lastIndexOf('\n', maxLen)
-    if (splitAt < maxLen * 0.3) splitAt = maxLen
-    chunks.push(remaining.slice(0, splitAt))
-    remaining = remaining.slice(splitAt).trimStart()
-  }
-  if (remaining) chunks.push(remaining)
-  return chunks
 }
