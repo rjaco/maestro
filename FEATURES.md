@@ -1,6 +1,6 @@
 # Maestro — Complete Feature Guide
 
-> The most comprehensive Claude Code orchestration plugin. 89 skills, 25 commands, 6 agents, 3 squads, 11 specialist profiles, 10 templates.
+> The most comprehensive Claude Code orchestration plugin. 101 skills, 26 commands, 6 agents, 3 squads, 11 specialist profiles, 10 templates.
 
 ---
 
@@ -76,7 +76,7 @@
 |-------|---------|
 | **memory** | Dual-sector memory with confidence scoring (0.0-1.0), salience decay, FTS search |
 | **retrospective** | Self-improvement with meta-rules, rule quality scoring (0-12), 5-stage lifecycle |
-| **self-correct** | Permanent learning from corrections — captures feedback, applies to skills/CLAUDE.md |
+| **self-correct** | Permanent learning from corrections — captures feedback, applies to101 skills/CLAUDE.md |
 | **feature-registry** | Immutable JSON requirement registry surviving context resets for multi-session continuity |
 | **steering** | 4 persistent files (product.md, structure.md, tech.md, standards.md) as T1 context |
 | **audit-log** | Structured decision log — 8 decision types with confidence and outcome tracking |
@@ -169,7 +169,7 @@
 
 | Skill | Purpose |
 |-------|---------|
-| **skill-factory** | Auto-create project-specific skills from profile templates |
+| **skill-factory** | Auto-create project-specific101 skills from profile templates |
 | **output-contracts** | Declare expected output formats and validate compliance |
 | **output-format** | Consistent terminal output formatting standard |
 | **health-score** | Project health score (0-100) from coverage, types, lint, deps, debt |
@@ -256,7 +256,7 @@
 
 | Source | Events |
 |--------|--------|
-| GitHub | PR opened, push, issues, PR comments (`@maestro` commands) |
+| GitHub | PR opened, push, issues, PR comments (`@maestro`26 commands) |
 | CI/CD | Build passed/failed, deploy completed |
 | Deploy | Vercel, Netlify, GitHub Actions, Railway |
 | Monitoring | Sentry, Datadog, UptimeRobot, PagerDuty |
@@ -311,7 +311,7 @@ Auto-downgrade saves ~70% on token costs by routing simple tasks to cheaper mode
 | vs Cursor | vs Codex | vs Windsurf |
 |-----------|----------|-------------|
 | Terminal-native, not IDE-locked | Local execution, not cloud-only | Skills are markdown, not proprietary |
-| 74 skills > basic composer | Progressive trust > one-shot | Self-improving via retrospective |
+| 101 skills > basic composer | Progressive trust > one-shot | Self-improving via retrospective |
 | Kanban + Notion/Obsidian sync | No project management | No knowledge work support |
 | 4 notification providers | No notifications | No notifications |
 | Cost tracking + auto-downgrade | No cost control | No cost tracking |
@@ -334,4 +334,4 @@ Auto-downgrade saves ~70% on token costs by routing simple tasks to cheaper mode
 
 ---
 
-*Last updated: 2026-03-18 | 75 skills, 23 commands, 11 scripts, 6 agents, 11 profiles*
+*Last updated: 2026-03-18 | 101 skills, 26 commands, 11 scripts, 6 agents, 11 profiles*
