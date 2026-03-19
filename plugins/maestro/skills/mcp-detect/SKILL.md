@@ -11,7 +11,7 @@ Detects which external integrations are available in the current Claude Code env
 
 ### MCP Tool Prefix Detection
 
-Check if specific MCP tool prefixes are available by attempting to list tools. The presence of these prefixes indicates the MCP server is installed and running:
+Check if specific MCP tool prefixes are available. The presence of these prefixes indicates the MCP server is installed and running:
 
 | Integration | Tool Prefix | Example Tool |
 |-------------|-------------|--------------|
@@ -21,7 +21,26 @@ Check if specific MCP tool prefixes are available by attempting to list tools. T
 | Notion | `mcp__notion__` | `mcp__notion__search` |
 | Playwright | `mcp__playwright__` or `mcp__plugin_playwright_playwright__` | `mcp__plugin_playwright_playwright__browser_navigate` |
 
-To detect MCP tools, use ToolSearch to check for each prefix. If results are returned, the server is available.
+**Detection approach:** Use the `ToolSearch` tool (a built-in Claude Code deferred tool loader) to probe for MCP tools by prefix. Call it with a keyword query matching the integration name:
+
+```
+ToolSearch(query: "+mcp__asana", max_results: 1)   → If results returned, Asana MCP is available
+ToolSearch(query: "+mcp__linear", max_results: 1)   → If results returned, Linear MCP is available
+ToolSearch(query: "+mcp__notion", max_results: 1)   → If results returned, Notion MCP is available
+ToolSearch(query: "playwright", max_results: 1)      → If results returned, Playwright MCP is available
+```
+
+The `+` prefix in ToolSearch queries requires the term to appear in the tool name. If no results are returned, the MCP server is not configured.
+
+**Alternative detection (if ToolSearch is not available):** Check for MCP configuration files:
+
+```bash
+# Check .mcp.json in project root
+[ -f ".mcp.json" ] && cat .mcp.json | jq -r 'keys[]' 2>/dev/null
+
+# Check Claude Code's MCP settings
+[ -f "$HOME/.claude/settings.json" ] && cat "$HOME/.claude/settings.json" | jq -r '.mcpServers // {} | keys[]' 2>/dev/null
+```
 
 ### CLI Tool Detection
 

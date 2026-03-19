@@ -315,6 +315,7 @@ Every `spec` invocation emits output in this order:
 
 ## Integration
 
+- **spec-first**: `skills/spec-first/SKILL.md` — enforces that a validated spec exists before any dev-loop starts; auto-generates specs from one-line descriptions and elevates them to T1 context
 - **decompose**: reads active spec to generate stories from requirements
 - **context-engine**: loads active spec as T1 (always available to all agents)
 - **qa-reviewer**: checks implementations against spec AC lines
