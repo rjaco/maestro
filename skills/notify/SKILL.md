@@ -173,3 +173,71 @@ if config.notifications.enabled:
 - Provider not configured → skip silently
 - Invalid config → log once per session, disable provider
 - Never retry failed notifications — they're informational, not critical
+
+## Notification Levels
+
+Each channel can be configured to receive only notifications at or above a specified importance level. This prevents low-signal channels (e.g., a work Slack) from receiving verbose chatter while keeping a personal Telegram fully informed.
+
+### Configuration
+
+```yaml
+# In .maestro/config.yaml
+notifications:
+  enabled: true
+  default_level: all        # all | important | critical | none
+  per_channel:
+    telegram:
+      level: all            # receive everything
+    slack:
+      level: important      # spending, errors, completions
+    email:
+      level: critical       # failures, over-budget, security only
+  providers:
+    # ... existing provider config ...
+```
+
+### Level Definitions
+
+| Level | Events included |
+|-------|----------------|
+| `all` | Every action, status update, and notification |
+| `important` | Spending, errors, completions, milestones, approvals needed |
+| `critical` | Failures, over-budget, security alerts |
+| `none` | Silent (actions still logged) |
+
+Levels are ordered by severity: `none < all < important < critical`. A channel configured at `important` receives `important` and `critical` events but not `all`-only events.
+
+### Event-to-Level Mapping
+
+| Event | Level |
+|-------|-------|
+| `action_started` | all |
+| `action_completed` | all |
+| `action_auto_approved` | all |
+| `action_user_approved` | important |
+| `action_denied` | important |
+| `action_failed` | critical |
+| `spending_alert` | important |
+| `spending_limit_reached` | critical |
+| `milestone_complete` | important |
+| `story_complete` | all |
+| `approval_needed` | important |
+| `security_alert` | critical |
+
+### Filtering Logic
+
+Before sending any notification to a channel, apply this check:
+
+```
+level_order = { all: 0, important: 1, critical: 2, none: 99 }
+
+channel_level = per_channel[channel].level ?? default_level ?? "all"
+event_level   = EVENT_LEVEL_MAP[event_type]
+
+if level_order[event_level] >= level_order[channel_level]:
+    send to channel
+else:
+    skip silently (still log to .maestro/logs/notifications.log)
+```
+
+A channel set to `none` never receives notifications (but the event is still logged). A channel set to `all` receives every event. Unknown event types default to `all` level so they are never silently dropped.
