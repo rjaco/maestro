@@ -15,6 +15,7 @@ export async function runQuery(
   message: string,
   systemContext: string,
   onTyping?: () => void,
+  options?: { bypassPermissions?: boolean },
 ): Promise<QueryResult> {
   const existingSessionId = getSession(chatId)
   const fullPrompt = systemContext ? `${systemContext}\n\n${message}` : message
@@ -22,7 +23,7 @@ export async function runQuery(
   const typingInterval = onTyping ? setInterval(onTyping, 4000) : undefined
 
   try {
-    const result = await runWithAgentSDK(fullPrompt, existingSessionId, chatId)
+    const result = await runWithAgentSDK(fullPrompt, existingSessionId, chatId, options?.bypassPermissions)
     return result
   } catch (sdkErr) {
     logger.warn({ err: sdkErr }, 'Agent SDK query failed, falling back to CLI')
@@ -37,21 +38,27 @@ async function runWithAgentSDK(
   prompt: string,
   sessionId: string | null,
   chatId: string,
+  bypassPermissions = false,
 ): Promise<QueryResult> {
   let resultText: string | null = null
   let newSessionId: string | undefined
   let totalCost: number | undefined
 
-  const options: Options = {
+  const sdkOptions: Options = {
     cwd: config.projectRoot,
-    permissionMode: 'bypassPermissions',
-    allowDangerouslySkipPermissions: true,
     settingSources: ['project', 'user'],
     model: config.chatModel,
     ...(sessionId ? { resume: sessionId } : {}),
+    // Only bypass permissions for build workers, not casual chat
+    ...(bypassPermissions ? {
+      permissionMode: 'bypassPermissions' as const,
+      allowDangerouslySkipPermissions: true,
+    } : {
+      permissionMode: 'acceptEdits' as const,
+    }),
   }
 
-  const queryResult = query({ prompt, options })
+  const queryResult = query({ prompt, options: sdkOptions })
 
   for await (const event of queryResult) {
     // Extract session ID from system init events

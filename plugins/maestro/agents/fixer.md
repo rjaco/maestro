@@ -2,8 +2,13 @@
 name: maestro-fixer
 description: "Laser-focused fix agent for self-heal phase. Given a specific error and the affected file, applies the minimal fix. T4 context tier — receives only the error, file, and fix pattern."
 model: sonnet
+memory: project
+<<<<<<< HEAD
+effort: medium
+=======
 maxTurns: 20
 disallowedTools: []
+>>>>>>> worktree-agent-ae55d890
 ---
 
 # Fixer Agent

@@ -4,12 +4,22 @@
   "description": "Autonomous AI companion — talk to Maestro via Telegram, Slack, or Discord with voice support and persistent personality",
   "type": "module",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "bin": {
     "maestro-companion": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "scripts",
+    "COMPANION.md",
+    ".env.example"
+  ],
   "scripts": {
     "dev": "bun run src/index.ts",
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start": "node dist/index.js",
     "setup": "bun run scripts/setup.ts",
     "status": "bun run scripts/status.ts",
