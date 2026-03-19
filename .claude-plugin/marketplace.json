@@ -12,8 +12,8 @@
   },
   "stats": {
     "skills": 138,
-    "commands": 44,
-    "hooks": 12
+    "commands": 43,
+    "hooks": 16
   },
   "plugins": [
     {
@@ -22,7 +22,7 @@
       "version": "1.4.0",
       "author": {
         "name": "Maestro Contributors",
-        "url": "https://github.com/anthropics/maestro-orchestrator"
+        "url": "https://github.com/rjaco/maestro-orchestrator"
       },
       "source": "./plugins/maestro",
       "categories": [
@@ -53,7 +53,7 @@
         "obsidian",
         "notion"
       ],
-      "homepage": "https://github.com/anthropics/maestro-orchestrator",
+      "homepage": "https://github.com/rjaco/maestro-orchestrator",
       "repository": "https://github.com/anthropics/maestro-orchestrator"
     }
   ]

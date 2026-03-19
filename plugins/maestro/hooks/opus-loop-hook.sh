@@ -1,5 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
+# NOTE: Intentionally no set -euo pipefail — this hook must never crash.
+# Failing subcommands are handled via || true patterns.
 # Maestro Opus Loop Hook
 # Prevents session exit during active Opus sessions.
 # Re-injects the Opus orchestration prompt to continue the autonomous loop.
