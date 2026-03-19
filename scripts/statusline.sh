@@ -62,7 +62,7 @@ if [[ -z "$PROJECT_ROOT" || ! -f "$DNA_FILE" ]]; then
 fi
 
 # --- Caching for state file reads (5s TTL) ---
-CACHE_FILE="/tmp/maestro-statusline-cache"
+CACHE_FILE="${TMPDIR:-/tmp}/maestro-statusline-cache-$(id -u)"
 CACHE_TTL=5
 MAESTRO_STATUS=""
 

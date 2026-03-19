@@ -83,15 +83,15 @@
 - Deploy: `claude plugin install maestro` (marketplace)
 
 ## Project Scale
-- Skills: 128 skill directories
+- Skills: 138 skill directories
 - Agents: 6 agent definitions
-- Commands: 39 slash commands
+- Commands: 43 slash commands
 - Profiles: 11 specialist profiles
-- Templates: 12 scaffolding templates
-- Hooks: 8 events (SessionStart, PreToolUse, Stop, StopFailure, PostCompact, Notification, TeammateIdle, TaskCompleted)
-- Hook scripts: 11
-- Scripts: 15+
-- Total files: ~400+ markdown, 7 JSON, 26 shell scripts
+- Templates: 13 scaffolding templates
+- Hooks: 16 events (SessionStart, SessionEnd, PreToolUse, PostToolUse, Stop, StopFailure, PreCompact, PostCompact, PermissionRequest, Notification, TeammateIdle, TaskCompleted, WorktreeCreate, WorktreeRemove, UserPromptSubmit, SubagentStart)
+- Hook scripts: 19
+- Scripts: 22
+- Total files: ~631 markdown, 14 JSON, 77 shell scripts
 
 ## Branching Strategy
 - `development` branch: all work goes here

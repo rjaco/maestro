@@ -2,12 +2,9 @@
 name: maestro-researcher
 description: "Research agent for competitive analysis and market research. Uses web search and Playwright for comprehensive intel."
 model: sonnet
-<<<<<<< HEAD
 effort: medium
-=======
 maxTurns: 30
 disallowedTools: [Write, Edit]
->>>>>>> worktree-agent-ae55d890
 ---
 
 # Researcher Agent

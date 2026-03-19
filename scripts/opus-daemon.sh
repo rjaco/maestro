@@ -175,7 +175,10 @@ parse_state() {
 set_state() {
   local key="$1"
   local value="$2"
-  sed -i "s|^${key}: .*$|${key}: ${value}|" "$STATE_FILE"
+  # Escape sed special characters in value to prevent injection
+  local escaped_value
+  escaped_value=$(printf '%s\n' "$value" | sed 's/[|&/\]/\\&/g')
+  sed -i "s|^${key}: .*$|${key}: ${escaped_value}|" "$STATE_FILE"
 }
 
 # ---------------------------------------------------------------------------

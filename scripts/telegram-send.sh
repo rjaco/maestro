@@ -66,10 +66,13 @@ if [[ -n "$PHOTO_PATH" ]]; then
     exit 1
   fi
 
-  RESPONSE=$(curl -s --max-time 5 -X POST "${BASE_URL}/sendPhoto" \
-    -F "chat_id=${MAESTRO_TELEGRAM_CHAT}" \
-    -F "photo=@${PHOTO_PATH}" \
-    ${MESSAGE:+-F "caption=${MESSAGE}"})
+  local -a curl_args=(
+    -s --max-time 5 -X POST "${BASE_URL}/sendPhoto"
+    -F "chat_id=${MAESTRO_TELEGRAM_CHAT}"
+    -F "photo=@${PHOTO_PATH}"
+  )
+  [[ -n "${MESSAGE:-}" ]] && curl_args+=(-F "caption=${MESSAGE}")
+  RESPONSE=$(curl "${curl_args[@]}")
 
   OK=$(printf '%s' "$RESPONSE" | grep -o '"ok":true' || true)
   if [[ -z "$OK" ]]; then

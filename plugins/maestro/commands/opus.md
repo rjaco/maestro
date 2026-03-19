@@ -2,7 +2,18 @@
 name: opus
 description: "Magnum Opus — build entire products autonomously with live conversation. Deep interview, mega research, milestone-driven execution."
 argument-hint: "VISION [--full-auto|--milestone-pause] [--budget $N] [--hours N] [--until-pause] [--skip-research] [--resume]"
-allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  - WebSearch
+  - WebFetch
+  - AskUserQuestion
 ---
 
 # Maestro Opus — Magnum Opus Mode

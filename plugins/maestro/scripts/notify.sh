@@ -1,139 +1,335 @@
 #!/usr/bin/env bash
-# Maestro Notify Script — Send notifications from shell
-# Sends messages to Slack, Discord, or Telegram directly from bash.
-# Useful for: progress updates, CI/CD alerts, cron job results.
-#
 # Usage:
-#   ./scripts/notify.sh "Build complete — 5 stories shipped"
-#   ./scripts/notify.sh --channel slack "Deploy to production succeeded"
-#   ./scripts/notify.sh --level error "Tests failing on main branch"
-#   ./scripts/notify.sh --title "Daily Report" --body "$(cat report.md)"
+#   ./scripts/notify.sh --event milestone_complete --message "M1 done"
+#   ./scripts/notify.sh --event story_complete --message "Story S3 complete"
 #
-# Config: reads from .maestro/config.yml or environment variables
+# Reads notification provider config from .maestro/config.yaml if present.
+# Falls back to checking env vars directly if config is missing.
+#
+# Supported providers: telegram, slack, discord, webhook
 
 set -euo pipefail
 
-MESSAGE=""
-CHANNEL=""
-LEVEL="info"
-TITLE=""
-BODY=""
+# ── Argument parsing ──────────────────────────────────────────────────────────
 
-# Parse arguments
+EVENT=""
+MESSAGE=""
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --channel) CHANNEL="$2"; shift 2 ;;
-    --level) LEVEL="$2"; shift 2 ;;
-    --title) TITLE="$2"; shift 2 ;;
-    --body) BODY="$2"; shift 2 ;;
-    --help)
-      echo "Usage: notify.sh [OPTIONS] [MESSAGE]"
-      echo ""
-      echo "Options:"
-      echo "  --channel slack|discord|telegram  Target channel (default: all configured)"
-      echo "  --level info|warning|error        Message severity"
-      echo "  --title TEXT                       Message title/subject"
-      echo "  --body TEXT                        Message body (overrides positional arg)"
-      echo ""
-      echo "Examples:"
-      echo "  notify.sh 'Build complete'"
-      echo "  notify.sh --channel slack --level error 'Tests failed'"
-      echo "  notify.sh --title 'Daily Report' --body \"\$(cat report.md)\""
-      exit 0
+    --event)
+      if [[ $# -lt 2 ]]; then
+        echo "notify: --event requires a value" >&2
+        exit 1
+      fi
+      EVENT="$2"
+      shift 2
       ;;
-    *) MESSAGE="$1"; shift ;;
+    --message)
+      if [[ $# -lt 2 ]]; then
+        echo "notify: --message requires a value" >&2
+        exit 1
+      fi
+      MESSAGE="$2"
+      shift 2
+      ;;
+    *)
+      echo "notify: unknown argument: $1" >&2
+      exit 1
+      ;;
   esac
 done
 
-# Build message from title + body or positional arg
-if [[ -n "$TITLE" ]]; then
-  MESSAGE="*${TITLE}*"
-  if [[ -n "$BODY" ]]; then
-    MESSAGE="${MESSAGE}\n${BODY}"
-  fi
-elif [[ -n "$BODY" ]]; then
-  MESSAGE="$BODY"
-fi
-
-if [[ -z "$MESSAGE" ]]; then
-  echo "Error: No message provided. Use --help for usage."
+if [[ -z "$EVENT" ]]; then
+  echo "notify: --event is required" >&2
   exit 1
 fi
 
-# Add level prefix
-case "$LEVEL" in
-  error)   PREFIX="❌" ;;
-  warning) PREFIX="⚠️" ;;
-  info)    PREFIX="ℹ️" ;;
-  *)       PREFIX="📢" ;;
-esac
-
-FULL_MESSAGE="${PREFIX} [Maestro] ${MESSAGE}"
-
-# --- Slack ---
-send_slack() {
-  local webhook_url="${SLACK_WEBHOOK_URL:-}"
-  if [[ -z "$webhook_url" ]]; then
-    # Try to read from config
-    webhook_url=$(grep -A1 'slack:' .maestro/config.yml 2>/dev/null | grep 'webhook_url:' | sed 's/.*webhook_url:[[:space:]]*//' | xargs 2>/dev/null || true)
-  fi
-  if [[ -n "$webhook_url" && "$webhook_url" != "null" ]]; then
-    local escaped_msg
-    escaped_msg=$(printf '%s' "$FULL_MESSAGE" | sed 's/"/\\"/g')
-    curl -s -X POST "$webhook_url" \
-      -H 'Content-Type: application/json' \
-      -d "{\"text\":\"${escaped_msg}\"}" >/dev/null 2>&1 && echo "  ✅ Slack sent" || echo "  ❌ Slack failed"
-  fi
-}
-
-# --- Discord ---
-send_discord() {
-  local webhook_url="${DISCORD_WEBHOOK_URL:-}"
-  if [[ -z "$webhook_url" ]]; then
-    webhook_url=$(grep -A1 'discord:' .maestro/config.yml 2>/dev/null | grep 'webhook_url:' | sed 's/.*webhook_url:[[:space:]]*//' | xargs 2>/dev/null || true)
-  fi
-  if [[ -n "$webhook_url" && "$webhook_url" != "null" ]]; then
-    local escaped_msg
-    escaped_msg=$(printf '%s' "$FULL_MESSAGE" | sed 's/"/\\"/g')
-    curl -s -X POST "$webhook_url" \
-      -H 'Content-Type: application/json' \
-      -d "{\"content\":\"${escaped_msg}\"}" >/dev/null 2>&1 && echo "  ✅ Discord sent" || echo "  ❌ Discord failed"
-  fi
-}
-
-# --- Telegram ---
-send_telegram() {
-  local bot_token="${TELEGRAM_BOT_TOKEN:-}"
-  local chat_id="${TELEGRAM_CHAT_ID:-}"
-  if [[ -z "$bot_token" ]]; then
-    bot_token=$(grep 'bot_token:' .maestro/config.yml 2>/dev/null | sed 's/.*bot_token:[[:space:]]*//' | xargs 2>/dev/null || true)
-  fi
-  if [[ -z "$chat_id" ]]; then
-    chat_id=$(grep 'chat_id:' .maestro/config.yml 2>/dev/null | sed 's/.*chat_id:[[:space:]]*//' | xargs 2>/dev/null || true)
-  fi
-  if [[ -n "$bot_token" && "$bot_token" != "null" && -n "$chat_id" && "$chat_id" != "null" ]]; then
-    local escaped_msg
-    escaped_msg=$(printf '%s' "$FULL_MESSAGE" | sed 's/"/\\"/g')
-    curl -s -X POST "https://api.telegram.org/bot${bot_token}/sendMessage" \
-      -d "chat_id=${chat_id}" \
-      -d "text=${escaped_msg}" \
-      -d "parse_mode=HTML" >/dev/null 2>&1 && echo "  ✅ Telegram sent" || echo "  ❌ Telegram failed"
-  fi
-}
-
-# Send to specified channel or all configured
-echo "Sending notification..."
-if [[ -n "$CHANNEL" ]]; then
-  case "$CHANNEL" in
-    slack) send_slack ;;
-    discord) send_discord ;;
-    telegram) send_telegram ;;
-    *) echo "Unknown channel: $CHANNEL"; exit 1 ;;
-  esac
-else
-  send_slack
-  send_discord
-  send_telegram
+if [[ -z "$MESSAGE" ]]; then
+  echo "notify: --message is required" >&2
+  exit 1
 fi
 
-echo "Done."
+# ── Script location (for sibling script calls) ────────────────────────────────
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE=".maestro/config.yaml"
+
+# ── YAML helper: extract a scalar value from a simple YAML file ───────────────
+# Usage: yaml_get <file> <dot.path>
+# Only handles flat key: value and two-level indented keys.
+yaml_get() {
+  local file="$1"
+  local key="$2"
+  local section
+  local leaf
+
+  # Split key on last '.'
+  section="${key%.*}"
+  leaf="${key##*.}"
+
+  if [[ "$section" == "$leaf" ]]; then
+    # Top-level key
+    grep -m1 "^${leaf}:" "$file" 2>/dev/null \
+      | sed 's/^[^:]*:[[:space:]]*//' \
+      | tr -d '"' \
+      | xargs 2>/dev/null || true
+  else
+    # Two-level key: find section block then look for leaf
+    local in_section=0
+    local indent_section=""
+    while IFS= read -r line; do
+      # Detect section header (allow leading spaces)
+      local stripped_line
+      stripped_line="${line#"${line%%[! ]*}"}"  # ltrim
+      if [[ "$stripped_line" == "${section##*.}:" ]]; then
+        in_section=1
+        indent_section="${line%%[! ]*}"  # capture indent
+        continue
+      fi
+      if [[ $in_section -eq 1 ]]; then
+        # End of section: line at same or lesser indent that isn't blank
+        if [[ -n "$line" && "$line" != "${indent_section}"* ]]; then
+          in_section=0
+          continue
+        fi
+        local k v
+        k=$(printf '%s' "$line" | sed 's/^[[:space:]]*//' | cut -d: -f1)
+        v=$(printf '%s' "$line" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"' | xargs 2>/dev/null || true)
+        if [[ "$k" == "$leaf" ]]; then
+          printf '%s' "$v"
+          return
+        fi
+      fi
+    done < "$file"
+  fi
+}
+
+# ── Config reader ─────────────────────────────────────────────────────────────
+
+# Returns "true" or "" for a provider's enabled flag
+provider_enabled() {
+  local provider="$1"
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    return
+  fi
+  local val
+  val=$(yaml_get "$CONFIG_FILE" "notifications.${provider}.enabled" 2>/dev/null || true)
+  printf '%s' "$val"
+}
+
+# Returns the value of an env var whose name is stored in config
+provider_env() {
+  local provider="$1"
+  local key="$2"   # e.g. token_env / webhook_env
+  if [[ ! -f "$CONFIG_FILE" ]]; then
+    return
+  fi
+  local env_var_name
+  env_var_name=$(yaml_get "$CONFIG_FILE" "notifications.${provider}.${key}" 2>/dev/null || true)
+  if [[ -n "$env_var_name" ]]; then
+    printf '%s' "${!env_var_name:-}"
+  fi
+}
+
+# ── Telegram ──────────────────────────────────────────────────────────────────
+
+send_telegram() {
+  local msg="$1"
+  local token=""
+  local chat=""
+
+  if [[ -f "$CONFIG_FILE" ]]; then
+    # Read env var names from config, then dereference
+    local token_var chat_var
+    token_var=$(yaml_get "$CONFIG_FILE" "notifications.telegram.token_env" 2>/dev/null || true)
+    chat_var=$(yaml_get "$CONFIG_FILE" "notifications.telegram.chat_id_env" 2>/dev/null || true)
+    [[ -n "$token_var" ]] && token="${!token_var:-}"
+    [[ -n "$chat_var"  ]] && chat="${!chat_var:-}"
+  fi
+
+  # Fall back to well-known env vars
+  [[ -z "$token" ]] && token="${MAESTRO_TELEGRAM_TOKEN:-}"
+  [[ -z "$chat"  ]] && chat="${MAESTRO_TELEGRAM_CHAT:-}"
+
+  if [[ -z "$token" || -z "$chat" ]]; then
+    echo "notify: telegram: token/chat not configured — skipping" >&2
+    return 0
+  fi
+
+  MAESTRO_TELEGRAM_TOKEN="$token" MAESTRO_TELEGRAM_CHAT="$chat" \
+    "${SCRIPT_DIR}/telegram-send.sh" "$msg" || {
+      echo "notify: telegram delivery failed (non-fatal)" >&2
+    }
+}
+
+# ── Slack ─────────────────────────────────────────────────────────────────────
+
+send_slack() {
+  local msg="$1"
+  local webhook=""
+
+  if [[ -f "$CONFIG_FILE" ]]; then
+    local wh_var
+    wh_var=$(yaml_get "$CONFIG_FILE" "notifications.slack.webhook_env" 2>/dev/null || true)
+    [[ -n "$wh_var" ]] && webhook="${!wh_var:-}"
+  fi
+
+  [[ -z "$webhook" ]] && webhook="${MAESTRO_SLACK_WEBHOOK:-}"
+
+  if [[ -z "$webhook" ]]; then
+    echo "notify: slack: webhook not configured — skipping" >&2
+    return 0
+  fi
+
+  local payload
+  local json_msg
+  json_msg=$(printf '%s' "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null) || {
+    # Safe fallback: escape backslashes, quotes, and newlines manually
+    json_msg=$(printf '%s' "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
+    json_msg="\"${json_msg}\""
+  }
+  payload="{\"text\":${json_msg}}"
+
+  curl -s --max-time 5 -X POST "$webhook" \
+    -H "Content-Type: application/json" \
+    -d "$payload" >/dev/null || {
+      echo "notify: slack delivery failed (non-fatal)" >&2
+    }
+}
+
+# ── Discord ───────────────────────────────────────────────────────────────────
+
+send_discord() {
+  local msg="$1"
+  local webhook=""
+
+  if [[ -f "$CONFIG_FILE" ]]; then
+    local wh_var
+    wh_var=$(yaml_get "$CONFIG_FILE" "notifications.discord.webhook_env" 2>/dev/null || true)
+    [[ -n "$wh_var" ]] && webhook="${!wh_var:-}"
+  fi
+
+  [[ -z "$webhook" ]] && webhook="${MAESTRO_DISCORD_WEBHOOK:-}"
+
+  if [[ -z "$webhook" ]]; then
+    echo "notify: discord: webhook not configured — skipping" >&2
+    return 0
+  fi
+
+  local payload
+  local json_msg
+  json_msg=$(printf '%s' "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null) || {
+    json_msg=$(printf '%s' "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
+    json_msg="\"${json_msg}\""
+  }
+  payload="{\"content\":${json_msg}}"
+
+  curl -s --max-time 5 -X POST "$webhook" \
+    -H "Content-Type: application/json" \
+    -d "$payload" >/dev/null || {
+      echo "notify: discord delivery failed (non-fatal)" >&2
+    }
+}
+
+# ── Generic webhook ───────────────────────────────────────────────────────────
+
+send_generic_webhook() {
+  local event="$1"
+  local msg="$2"
+  local webhook=""
+
+  if [[ -f "$CONFIG_FILE" ]]; then
+    local wh_var
+    wh_var=$(yaml_get "$CONFIG_FILE" "notifications.webhook.url_env" 2>/dev/null || true)
+    [[ -n "$wh_var" ]] && webhook="${!wh_var:-}"
+  fi
+
+  [[ -z "$webhook" ]] && webhook="${MAESTRO_WEBHOOK_URL:-}"
+
+  if [[ -z "$webhook" ]]; then
+    return 0
+  fi
+
+  local escaped_event escaped_msg
+  escaped_event=$(printf '%s' "$event" | sed 's/"/\\"/g')
+  escaped_msg=$(printf '%s' "$msg" | sed 's/"/\\"/g')
+  local payload="{\"event\":\"${escaped_event}\",\"message\":\"${escaped_msg}\"}"
+
+  curl -s --max-time 5 -X POST "$webhook" \
+    -H "Content-Type: application/json" \
+    -d "$payload" >/dev/null || {
+      echo "notify: generic webhook delivery failed (non-fatal)" >&2
+    }
+}
+
+# ── Route to providers ────────────────────────────────────────────────────────
+
+# Determine whether a provider should be called.
+# If config.yaml exists, respect the enabled flag.
+# If config.yaml is missing, fall back to env var presence.
+
+should_send_telegram() {
+  if [[ -f "$CONFIG_FILE" ]]; then
+    [[ "$(provider_enabled telegram)" == "true" ]]
+  else
+    [[ -n "${MAESTRO_TELEGRAM_TOKEN:-}" && -n "${MAESTRO_TELEGRAM_CHAT:-}" ]]
+  fi
+}
+
+should_send_slack() {
+  if [[ -f "$CONFIG_FILE" ]]; then
+    [[ "$(provider_enabled slack)" == "true" ]]
+  else
+    local wh_var="${MAESTRO_SLACK_WEBHOOK:-}"
+    [[ -n "$wh_var" ]]
+  fi
+}
+
+should_send_discord() {
+  if [[ -f "$CONFIG_FILE" ]]; then
+    [[ "$(provider_enabled discord)" == "true" ]]
+  else
+    local wh_var="${MAESTRO_DISCORD_WEBHOOK:-}"
+    [[ -n "$wh_var" ]]
+  fi
+}
+
+should_send_generic_webhook() {
+  if [[ -f "$CONFIG_FILE" ]]; then
+    [[ "$(provider_enabled webhook)" == "true" ]]
+  else
+    [[ -n "${MAESTRO_WEBHOOK_URL:-}" ]]
+  fi
+}
+
+# ── Dispatch ──────────────────────────────────────────────────────────────────
+
+DISPATCHED=0
+
+if should_send_telegram; then
+  send_telegram "$MESSAGE"
+  DISPATCHED=$((DISPATCHED + 1))
+fi
+
+if should_send_slack; then
+  send_slack "$MESSAGE"
+  DISPATCHED=$((DISPATCHED + 1))
+fi
+
+if should_send_discord; then
+  send_discord "$MESSAGE"
+  DISPATCHED=$((DISPATCHED + 1))
+fi
+
+if should_send_generic_webhook; then
+  send_generic_webhook "$EVENT" "$MESSAGE"
+  DISPATCHED=$((DISPATCHED + 1))
+fi
+
+if [[ $DISPATCHED -eq 0 ]]; then
+  # No providers configured — silently succeed (notifications are optional)
+  exit 0
+fi
+
+exit 0

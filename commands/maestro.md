@@ -2,7 +2,18 @@
 name: maestro
 description: "Full-stack orchestrator — build features or entire products autonomously"
 argument-hint: "DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast]"
-allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
+  - Skill
+  - Agent
+  - WebSearch
+  - WebFetch
+  - AskUserQuestion
 ---
 
 # Maestro — Full-Stack Orchestrator

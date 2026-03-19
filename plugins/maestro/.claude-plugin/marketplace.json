@@ -3,7 +3,7 @@
   "name": "maestro-orchestrator",
   "description": "Full-stack autonomous development orchestrator for Claude Code",
   "owner": {
-    "name": "Maestro Contributors",
+    "name": "Rodrigo Deepneuron",
     "url": "https://github.com/rjaco/maestro-orchestrator"
   },
   "metadata": {
@@ -21,7 +21,7 @@
       "description": "Full-stack autonomous development orchestrator with kanban (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), session memory, notifications, and visual dashboards. Build features with /maestro, entire products with /maestro magnum-opus.",
       "version": "1.4.0",
       "author": {
-        "name": "Maestro Contributors",
+        "name": "Rodrigo Deepneuron",
         "url": "https://github.com/rjaco/maestro-orchestrator"
       },
       "source": "./plugins/maestro",

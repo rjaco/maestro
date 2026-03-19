@@ -183,7 +183,13 @@ send_slack() {
   fi
 
   local payload
-  payload="{\"text\":$(printf '%s' "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "$msg")}"
+  local json_msg
+  json_msg=$(printf '%s' "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null) || {
+    # Safe fallback: escape backslashes, quotes, and newlines manually
+    json_msg=$(printf '%s' "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
+    json_msg="\"${json_msg}\""
+  }
+  payload="{\"text\":${json_msg}}"
 
   curl -s --max-time 5 -X POST "$webhook" \
     -H "Content-Type: application/json" \
@@ -212,7 +218,12 @@ send_discord() {
   fi
 
   local payload
-  payload="{\"content\":$(printf '%s' "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "$msg")}"
+  local json_msg
+  json_msg=$(printf '%s' "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' 2>/dev/null) || {
+    json_msg=$(printf '%s' "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g' | tr '\n' ' ')
+    json_msg="\"${json_msg}\""
+  }
+  payload="{\"content\":${json_msg}}"
 
   curl -s --max-time 5 -X POST "$webhook" \
     -H "Content-Type: application/json" \

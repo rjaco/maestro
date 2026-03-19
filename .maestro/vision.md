@@ -1,94 +1,70 @@
 ---
-type: opus-grand-ultimate
-created: 2026-03-18
+type: opus-quality-refinement
+created: 2026-03-19
 mode: full_auto
-session: 6
-wave: 6
+session: 7
+wave: 7
 ---
 
-# Vision: Maestro — The Grand Ultimate Development Tool
+# Vision: Anthropic-Grade Quality Refinement
 
 ## Purpose
-Elevate Maestro from an advanced orchestrator into the definitive autonomous development tool — not just for Claude Code, but running *above* it, spawning and coordinating multiple Claude Code instances, communicating through messaging channels, and operating indefinitely with a persistent personality. When developers compare tools, Maestro should be the clear winner in every dimension.
+Review and refine every aspect of Maestro to meet Anthropic's high standard for code quality, organization, security, and polish. This is a comprehensive quality pass — treating Maestro as if Anthropic were about to ship it as a first-party product.
 
 ## North Star
-**Maestro should run like a tireless senior developer who never sleeps.**
-It acknowledges other Maestro instances, avoids conflicts, communicates progress through your preferred channels, and continuously improves the project without being asked.
+**Every file in the project should be clean, consistent, secure, and professional.** No merge conflicts, no dead references, no security vulnerabilities, no inconsistencies. The codebase should inspire confidence in anyone who reads it.
 
-## Target Audience
-1. **Professional developers** — Want structured, plan-first, quality-gated workflows
-2. **Vibe coders** — Want to describe what they want and have it built autonomously
-3. **Teams** — Want shared conventions, squads, and collaborative agent workflows
-4. **SDK builders** — Want to load Maestro programmatically via Agent SDK
-5. **24/7 operators** — Want continuous autonomous improvement via daemon mode
-6. **Remote operators** — Want to control Maestro from phone via Telegram/Slack/Discord
+## Quality Dimensions
 
-## Inspiration Sources
-| Source | Key Patterns to Adopt |
-|--------|----------------------|
-| OpenClaw (321k stars) | SOUL.md personality, 22-platform messaging bridges, Gateway daemon, skill marketplace, declarative dependency gating |
-| Ruflo (21.6k stars) | SPARC methodology, scout/explorer agents, production validators, London School TDD, 12 background workers, Q-learning routing |
-| AIOX Core (2.3k stars) | Squads registry, hook parity across 7 IDEs, 5-layer config, constitutional gates, story format v2 |
-| Codex | Parallel sandboxed execution, deep GitHub integration |
-| Claude Code | Native hooks, worktrees, agent teams, Cowork, Dispatch, Agent SDK |
+### 1. Data Integrity (CRITICAL)
+- Zero merge conflict markers anywhere in the codebase
+- All JSON files valid and free of duplicate keys
+- All YAML frontmatter parseable and consistent
+- Metadata (author, version, counts) accurate everywhere
 
-## Enhancement Pillars — Wave 6
+### 2. Security
+- Shell scripts follow defensive coding practices
+- No command injection vectors
+- Proper quoting, escaping, and input validation
+- Safe temp file handling (mktemp, atomic writes)
+- No hardcoded paths or credentials
 
-### Pillar 1: Full-Auto Reliability (CRITICAL)
-The loop must NEVER silently stop. When it does, it must auto-recover.
-- Fix opus-loop-hook stop_hook_active handling
-- Enhanced session-start-hook with full Opus context re-injection after compact
-- Hardened daemon with progress tracking, stall detection, auto-restart
-- Heartbeat system that detects when Claude stops making progress
+### 3. Consistency
+- Uniform frontmatter format across all agent/command/profile definitions
+- Standardized allowed-tools format (YAML arrays)
+- Consistent naming conventions enforced
+- Mirror sync between root and plugins/maestro/ verified
 
-### Pillar 2: Multi-Instance Coordination
-Multiple Maestros working simultaneously on different features.
-- Instance registry (.maestro/instances/) with lock files
-- Per-instance branch management (auto-create feature branches)
-- Merge conflict auto-resolution when instances converge on development
-- Instance health monitoring (detect crashed/stale instances)
+### 4. Code Quality
+- All shell scripts use `set -euo pipefail` (with documented exceptions)
+- Proper error handling throughout
+- No dead code, orphaned files, or leftover temp artifacts
+- Minimal shellcheck suppressions with justifications
 
-### Pillar 3: Communication Channels
-OpenClaw-like messaging bridges for remote monitoring and control.
-- Telegram bot for status updates and remote commands
-- Slack/Discord webhook notifications
-- Remote command execution (pause, resume, status, redirect)
-- Progress photos/screenshots sent to channels
+### 5. Documentation Accuracy
+- DNA file counts match reality
+- CHANGELOG reflects current state
+- README accurate and professional
+- Agent descriptions complete and useful
 
-### Pillar 4: Autonomous Personality (SOUL)
-Persistent identity that learns and adapts.
-- Enhanced SOUL.md with communication style, humor, preferences
-- Learning personality traits from user feedback
-- Consistent voice across sessions and agents
-- Configurable personality profiles (formal, casual, mentor, peer)
-
-### Pillar 5: Ruflo Feature Adoption
-Best patterns from Ruflo adapted to Maestro's markdown-first architecture.
-- Scout/Explorer agent — recon-only agent that maps territory before modification
-- SPARC methodology — 5-phase dev lifecycle (Spec→Pseudo→Arch→Refine→Complete)
-- Production validator — mock/stub detection gate before shipping
-- Enhanced background workers — 12 workers with priority scheduling
-
-### Pillar 6: OpenClaw-Inspired Enhancements
-Patterns from the most-starred project on GitHub.
-- Declarative skill dependency gating (OS, binaries, env vars in frontmatter)
-- Three-tier skill precedence (workspace > global > bundled)
-- Skill watcher with session-scoped snapshots
-- /btw side-question pattern for quick answers during long runs
+### 6. Organization
+- No orphaned files or abandoned worktrees
+- Clean directory structure
+- Temp files cleaned up
+- Consistent file organization patterns
 
 ## Success Criteria
-1. Full-auto mode runs 100+ iterations without stopping (via daemon)
-2. Multiple Maestro instances work on same repo without conflicts
-3. Telegram/Slack notifications work for all major events
-4. SOUL personality persists across sessions with learned traits
-5. Scout/explorer agent produces actionable recon reports
-6. Production validator blocks shipping of mock implementations
-7. Opus daemon runs 24+ hours without intervention
-8. Instance registry correctly tracks parallel Maestro sessions
+1. Zero merge conflict markers in the entire codebase
+2. All shell scripts pass security audit (no HIGH/CRITICAL findings)
+3. All YAML frontmatter valid and consistent
+4. DNA counts match actual file counts
+5. hooks.json has no duplicate keys
+6. All agent definitions complete and well-specified
+7. Mirror sync verified after all changes
+8. No orphaned temp files or worktrees
 
 ## Anti-Goals
-- NOT building a web dashboard — CLI-first, terminal-native
-- NOT replacing Claude Code — Maestro enhances it
-- NOT supporting non-Claude models as primary
-- NOT breaking existing Wave 5 functionality
-- NOT over-engineering with WASM/Rust/TypeScript — markdown + shell first
+- NOT adding new features — this is refinement only
+- NOT restructuring the architecture — preserve existing patterns
+- NOT rewriting working code — minimal targeted fixes
+- NOT changing functionality — only fixing quality issues

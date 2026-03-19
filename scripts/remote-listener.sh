@@ -106,7 +106,7 @@ update_state_field() {
     /^---$/ { count++; print; next }
     count == 1 && $0 ~ "^" key ":" { print key ": " val; next }
     { print }
-  ' "$STATE_FILE" > "$tmp" && mv "$tmp" "$STATE_FILE"
+  ' "$STATE_FILE" > "$tmp" && mv "$tmp" "$STATE_FILE" || { rm -f "$tmp"; echo "[remote-listener] ERROR: failed to update state field: ${key}" >&2; }
 }
 
 # --- Helper: audit log ---

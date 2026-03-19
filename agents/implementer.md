@@ -4,12 +4,9 @@ description: "Senior developer agent that implements stories using TDD. Dispatch
 model: sonnet
 memory: project
 isolation: worktree
-<<<<<<< HEAD
 effort: medium
-=======
 maxTurns: 50
 disallowedTools: []
->>>>>>> worktree-agent-ae55d890
 ---
 
 # Implementer Agent

@@ -2,7 +2,7 @@
 # Maestro Health Dashboard — terminal health summary for a Maestro project.
 # Usage: health-dashboard.sh [--compact | --json]
 
-set -uo pipefail
+set -euo pipefail
 
 MODE="${1:-}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

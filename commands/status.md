@@ -2,7 +2,14 @@
 name: status
 description: "View Maestro session progress and manage lifecycle — resume, pause, or abort a session"
 argument-hint: "[resume|abort|pause|--detail|--verbose|--tokens|--qa|--cost]"
-allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
+  - AskUserQuestion
 ---
 
 # Maestro Status — Progress, Resume, Abort, Pause

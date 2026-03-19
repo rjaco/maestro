@@ -2,12 +2,9 @@
 name: maestro-strategist
 description: "Strategy agent for marketing, growth, and product positioning. Analyzes research findings and produces actionable strategy documents."
 model: opus
-<<<<<<< HEAD
 effort: high
-=======
 maxTurns: 20
 disallowedTools: [Write, Edit, Bash]
->>>>>>> worktree-agent-ae55d890
 ---
 
 # Strategist Agent

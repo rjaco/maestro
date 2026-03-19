@@ -1,62 +1,53 @@
-# Opus Roadmap — Wave 7: Hook Coverage, Testing, DX Polish
+# Opus Roadmap — Quality Refinement: Anthropic-Grade Polish
 
-## Wave 7
-
-| Milestone | Stories | Status | Focus |
-|-----------|---------|--------|-------|
-| W7-M1 | 6 | executing | Hook coverage & zero-code wins |
-| W7-M2 | 4 | pending | Quality & testing |
-| W7-M3 | 4 | pending | Developer experience polish |
-
-**Total: 14 stories across 3 milestones**
-
-## Wave 6 (complete)
+## Quality Refinement (active)
 
 | Milestone | Stories | Status | Focus |
 |-----------|---------|--------|-------|
-| M1 | 4 | ✓ complete | Full-auto reliability — fix the loop |
-| M2 | 3 | ✓ complete | Multi-instance coordination |
-| M3 | 3 | ✓ complete | Communication channels & remote control |
-| M4 | 3 | ✓ complete | Enhanced SOUL & personality |
-| M5 | 4 | ✓ complete | Ruflo feature adoption (S17 deferred) |
-| M6 | 3 | ✓ complete | OpenClaw-inspired enhancements |
+| QR-M1 | 4 | executing | Critical data integrity fixes |
+| QR-M2 | 3 | pending | Shell script security hardening |
+| QR-M3 | 3 | pending | Consistency & polish |
+
+**Total: 10 stories across 3 milestones**
 
 ---
 
-## M1: Full-Auto Reliability ✓
-Fix the #1 user pain: full-auto mode silently stops after some cycles.
-- ✓ S1: Harden opus-loop-hook — inline vision, escalation, iteration counter, heartbeat
-- ✓ S2: Enhance session-start-hook — full Opus recovery with vision, milestone, stories, directive
-- ✓ S3: Opus-daemon already hardened — stall detection, JSONL history, colored output, vision prompts
-- ✓ S4: Heartbeat system — heartbeat skill, heartbeat command, opus-loop integration
+## QR-M1: Critical Data Integrity Fixes
+Fix all critical blockers — merge conflicts, duplicate JSON keys, metadata inconsistencies.
+- S1: Resolve merge conflict markers in all 6 agent files + mirror
+- S2: Fix hooks.json duplicate PreToolUse key
+- S3: Reconcile author/owner metadata across plugin files
+- S4: Update DNA file with accurate counts
 
-## M2: Multi-Instance Coordination ✓
-Enable parallel Maestro instances without conflicts.
-- ✓ S5: Instance registry — .maestro/instances/ lifecycle, story claiming, stale cleanup
-- ✓ S6: Branch manager — per-instance branches, branch-guard updated for maestro/*
-- ✓ S7: Merge coordinator — rebase strategy, conflict resolution rules, file locking
+## QR-M2: Shell Script Security Hardening
+Fix all HIGH/MEDIUM security issues in shell scripts.
+- S5: Fix unsafe sed/JSON patterns in opus-daemon.sh and notify.sh
+- S6: Fix missing safety flags and temp file handling
+- S7: Fix injection risks in security-drift-check.sh, telegram-send.sh, audio-alert.sh
 
-## M3: Communication Channels & Remote Control ✓
-OpenClaw-inspired messaging bridges for remote monitoring.
-- ✓ S8: Telegram bot skill + telegram-send.sh script
-- ✓ S9: Notification hub — notify.sh + enhanced notification-hook.sh
-- ✓ S10: Remote command receiver — remote-listener.sh with /status /pause /resume /logs
+## QR-M3: Consistency & Polish
+Standardize formats, clean up orphaned files, expand minimal content.
+- S8: Standardize command allowed-tools format
+- S9: Clean up orphaned files and worktrees
+- S10: Expand minimal agent definitions and verify completeness
 
-## M4: Enhanced SOUL & Personality ✓
-Persistent autonomous personality that learns.
-- ✓ S11: Enhanced SOUL.md — personality traits, communication style, decision principles
-- ✓ S12: Personality learning via self-correct skill — learned traits, confirmation signals
-- ✓ S13: Personality profiles deferred to templates/ (future)
+---
 
-## M5: Ruflo Feature Adoption ✓
-Best Ruflo patterns adapted for markdown-first architecture.
-- ✓ S14: Scout/explorer agent — 3 strategies, read-only enforcement, recon reports
-- ✓ S15: SPARC methodology — 5-phase lifecycle with gates
-- ✓ S16: Production validator — mock/stub/TODO detection + production-validate.sh
-- ○ S17: Enhanced background workers — deferred to Wave 7
+## Previous Waves (complete)
 
-## M6: OpenClaw-Inspired Enhancements ✓
-Patterns from the 321k-star project.
-- ✓ S18: Declarative skill dependency gating — requires_os, requires_bins, requires_env
-- ✓ S19: Three-tier skill precedence — workspace > global > bundled
-- ✓ S20: Skill watcher with session-scoped snapshots
+### Wave 7 (complete)
+| Milestone | Stories | Status | Focus |
+|-----------|---------|--------|-------|
+| W7-M1 | 6 | complete | Hook coverage & zero-code wins |
+| W7-M2 | 4 | complete | Quality & testing |
+| W7-M3 | 4 | complete | Developer experience polish |
+
+### Wave 6 (complete)
+| Milestone | Stories | Status | Focus |
+|-----------|---------|--------|-------|
+| M1 | 4 | complete | Full-auto reliability |
+| M2 | 3 | complete | Multi-instance coordination |
+| M3 | 3 | complete | Communication channels |
+| M4 | 3 | complete | Enhanced SOUL & personality |
+| M5 | 4 | complete | Ruflo feature adoption |
+| M6 | 3 | complete | OpenClaw-inspired enhancements |

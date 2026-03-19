@@ -4,12 +4,9 @@ description: "Background agent for scheduled monitoring tasks. Runs health check
 model: haiku
 background: true
 memory: project
-<<<<<<< HEAD
 effort: low
-=======
 maxTurns: 5
 disallowedTools: [Write, Edit]
->>>>>>> worktree-agent-ae55d890
 ---
 
 # Proactive Agent

@@ -1,7 +1,14 @@
 ---
 name: init
 description: "Initialize Maestro for this project — auto-discovers your stack, infers conventions, and writes project DNA"
-allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
+  - AskUserQuestion
 ---
 
 # Maestro Init — Inference-First Onboarding (v1.1.0)

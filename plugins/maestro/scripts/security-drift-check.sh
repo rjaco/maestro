@@ -111,11 +111,13 @@ check_drift() {
     baseline_hash=$(python3 -c "
 import json,sys
 try:
-  d=json.load(open('$BASELINE_FILE'))
-  h=d.get('files',{}).get('$file','')
+  bf=sys.argv[1]
+  fk=sys.argv[2]
+  d=json.load(open(bf))
+  h=d.get('files',{}).get(fk,'')
   print(h.replace('sha256:','') if h else '')
 except: print('')
-" 2>/dev/null || echo "")
+" "$BASELINE_FILE" "$file" 2>/dev/null || echo "")
 
     if [[ -z "$baseline_hash" ]]; then
       printf "  %-50s ⚠️  NEW (not in baseline)\n" "$file"
