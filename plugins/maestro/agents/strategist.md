@@ -2,6 +2,8 @@
 name: maestro-strategist
 description: "Strategy agent for marketing, growth, and product positioning. Analyzes research findings and produces actionable strategy documents."
 model: opus
+maxTurns: 20
+disallowedTools: [Write, Edit, Bash]
 ---
 
 # Strategist Agent

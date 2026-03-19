@@ -2,6 +2,8 @@
 name: maestro-qa-reviewer
 description: "Skeptical QA reviewer that validates story implementations against acceptance criteria. Read-only — never modifies code. Reports APPROVED or REJECTED with confidence-scored issues."
 model: opus
+maxTurns: 10
+disallowedTools: [Write, Edit, Bash]
 ---
 
 # QA Reviewer Agent
