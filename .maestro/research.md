@@ -1,514 +1,257 @@
-# OpenClaw Research: Installation, Startup, and Day-to-Day Flow
+# Wave 10 Research: Gaps, Opportunities, and Acquisition Readiness
 
-**Research date:** 2026-03-18
-**Sources:** docs.openclaw.ai, github.com/openclaw/openclaw, npm, brew, multiple tutorials
-
----
-
-## 1. How to INSTALL OpenClaw
-
-There are four supported methods. All require Node >= 22 (Node 24 recommended).
-
-### Method A — One-line installer script (recommended for new users)
-
-macOS / Linux / WSL2:
-```bash
-curl -fsSL https://openclaw.ai/install.sh | bash
-```
-
-Skip the interactive onboarding if you want to do it manually later:
-```bash
-curl -fsSL https://openclaw.ai/install.sh | bash -s -- --no-onboard
-```
-
-Windows (PowerShell):
-```powershell
-iwr -useb https://openclaw.ai/install.ps1 | iex
-# Skip onboarding variant:
-& ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -NoOnboard
-```
-
-### Method B — npm global install
-
-```bash
-npm install -g openclaw@latest
-```
-
-### Method C — pnpm global install
-
-```bash
-pnpm add -g openclaw@latest
-pnpm approve-builds -g   # required after pnpm install
-```
-
-### Method D — Homebrew (macOS/Linux binary)
-
-OpenClaw is published as `openclaw-cli` on Homebrew Formulae with bottle (pre-built binary) support:
-```bash
-brew install openclaw-cli
-```
-Source: https://formulae.brew.sh/formula/openclaw-cli
-
-### Method E — Build from source
-
-```bash
-git clone https://github.com/openclaw/openclaw.git
-cd openclaw
-pnpm install
-pnpm ui:build
-pnpm build
-pnpm link --global
-```
-
-### Method F — Install from GitHub main branch directly
-
-```bash
-npm install -g github:openclaw/openclaw#main
-# or
-pnpm add -g github:openclaw/openclaw#main
-```
+**Research date:** 2026-03-19
+**Scope:** Acquisition readiness, README quality, npm publishing, test coverage, performance, community readiness
+**Sources:** Claude Code docs (code.claude.com), codebase analysis, companion package.json
 
 ---
 
-## 2. How to START for the First Time
+## Summary
 
-After installing the CLI binary, the canonical first-run command is:
-
-```bash
-openclaw onboard --install-daemon
-```
-
-This is an interactive wizard that walks through:
-- Workspace directory (default `~/.openclaw/workspace`)
-- LLM provider selection and API key entry (Anthropic, OpenAI, Mistral, Ollama local)
-- Gateway port (default 18789) and bind address
-- Channel setup (Telegram, WhatsApp, Discord, etc.)
-- Skills activation
-- Daemon registration (launchd on macOS, systemd on Linux)
-
-Key `onboard` flags:
-```
---workspace <dir>          # agent workspace path
---reset                    # clear config, creds, and sessions
---reset-scope <scope>      # config | config+creds+sessions | full
---non-interactive          # skip all prompts (CI/headless use)
---mode <local|remote>      # local = gateway runs here; remote = connect to existing
---flow <quickstart|advanced|manual>
---auth-choice <provider>
---anthropic-api-key <key>
---openai-api-key <key>
---gateway-port <port>
---gateway-bind <loopback|lan|tailnet|auto|custom>
---tailscale <off|serve|funnel>
---node-manager <npm|pnpm|bun>
---json                     # machine-readable output
-```
-
-After onboarding, verify everything works:
-```bash
-openclaw doctor    # health checks and config validation
-openclaw status    # gateway status and linked session health
-openclaw dashboard # open browser UI at http://127.0.0.1:18789/
-```
+Maestro is feature-dense and technically sound but has several gaps that would matter to Anthropic and to the open-source community. The highest-impact items are: (1) the plugin's hooks.json does not register the newer hook events Claude Code now natively supports, (2) the companion is unpublishable to npm as-is, (3) the agent.ts file uses `context.ts`-style SDK access that does not align with the current Claude Code sub-agent system, (4) the README undersells what Maestro actually does, and (5) five critical TypeScript modules have zero test coverage.
 
 ---
 
-## 3. How the Gateway Daemon Gets Registered
+## 1. Acquisition Readiness: What Anthropic Would Care About
 
-The `--install-daemon` flag in `openclaw onboard` (or `openclaw gateway install`) registers the Gateway as a persistent background service.
+### What Claude Code natively supports now (verified against docs)
 
-### macOS — launchd LaunchAgent
+| Native Claude Code Feature | Maestro's Coverage |
+|---|---|
+| Skills (SKILL.md, frontmatter, `context: fork`, `allowed-tools`) | Covered — Maestro uses SKILL.md across 138 skills |
+| Custom subagents (`.claude/agents/*.md`, `tools`, `model`, `memory`, `hooks`, `permissionMode`) | Partial — Maestro has 6 agents but does not use `memory:`, `isolation: worktree`, or `background: true` frontmatter |
+| Hooks (28 events, `type: command/http/prompt/agent`) | Partial — Maestro registers 12 hooks but misses 16 native events |
+| Plugins (`.claude-plugin/plugin.json`, marketplace) | Covered |
+| Bundled skills (`/batch`, `/simplify`, `/loop`, `/debug`) | Maestro duplicates these without acknowledging overlap |
+| `$ARGUMENTS[N]`, `${CLAUDE_SKILL_DIR}`, `${CLAUDE_SESSION_ID}` substitutions | Not used — Maestro uses manual `$ARGUMENTS` but ignores positional and session vars |
+| `disable-model-invocation: true` / `user-invocable: false` | Not used — all skills are model-invocable by default |
+| LSP server registration in plugins | Not present |
+| `settings.json` in plugin root (set default agent) | Not present |
+| `context: fork` with `agent:` field for subagent delegation | Not present in skills |
 
-The installer creates a plist at:
-```
-~/Library/LaunchAgents/com.openclaw.gateway.plist
-```
+### What would make Anthropic want to acquire this
 
-Managed via launchctl:
-```bash
-launchctl kickstart -k gui/$UID/bot.molt.gateway   # start / restart
-launchctl bootout gui/$UID/bot.molt.gateway         # stop
-```
+Anthropic's native bundled skills (`/batch`, `/simplify`, `/loop`) are generic. Maestro's value is the **opinionated orchestration layer** on top: progressive trust, QA-reviewer-as-separate-agent, self-heal loop, session memory, cost forecasting, the Magnum Opus deep interview. These are not things Anthropic would build natively because they are product-development _methodology_, not tooling infrastructure.
 
-Or via the CLI abstraction:
-```bash
-openclaw gateway install    # register the service
-openclaw gateway start
-openclaw gateway stop
-openclaw gateway restart
-openclaw gateway status
-openclaw gateway uninstall  # remove service registration
-```
+**The gap is that Maestro does not use the most powerful native primitives:**
 
-The manual plist (when not using the CLI installer) looks like:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>com.openclaw.gateway</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>/usr/local/bin/openclaw</string>
-    <string>gateway</string>
-    <string>start</string>
-  </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>StandardOutPath</key><string>/tmp/openclaw-gateway.log</string>
-  <key>StandardErrorPath</key><string>/tmp/openclaw-gateway-error.log</string>
-</dict>
-</plist>
-```
-Load it manually:
-```bash
-launchctl load ~/Library/LaunchAgents/com.openclaw.gateway.plist
-```
+- **Agent persistent memory** (`memory: project` in agent frontmatter) — Maestro builds its own SQLite memory in the companion, but the plugin's agents have no `memory:` field. Every agent definition in `agents/` could have `memory: project` to give it cross-session institutional knowledge natively.
+- **Subagent `isolation: worktree`** — Maestro's delegation hook tries to enforce worktree isolation via a shell script. The native `isolation: worktree` frontmatter on agent definitions does this declaratively and is architecturally cleaner.
+- **`background: true` on agents** — Maestro's worker pool in the companion reimplements what `background: true` does natively.
+- **The `PreToolUse` `type: agent` hook** — Maestro uses `type: command` shell scripts for all hooks. The `type: agent` hook can spawn a subagent that reads context and makes decisions. This would be more reliable than bash parsing YAML frontmatter.
+- **Hook events not registered:** `UserPromptSubmit`, `PostToolUseFailure`, `SubagentStart`, `SubagentStop`, `ConfigChange`, `InstructionsLoaded`, `Elicitation`, `ElicitationResult`, `SessionEnd` — nine events Maestro ignores that could enable richer observability and anti-drift enforcement.
 
-### Linux — systemd user service
-
-The installer creates a systemd unit. Manual equivalent at `/etc/systemd/system/openclaw.service`:
-```ini
-[Unit]
-Description=OpenClaw Gateway
-After=network.target
-
-[Service]
-Type=simple
-User=youruser
-WorkingDirectory=/home/youruser
-ExecStart=/usr/local/bin/openclaw gateway start
-Restart=on-failure
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable openclaw
-sudo systemctl start openclaw
-```
-
-### Alternative — pm2 process manager
-
-```bash
-npm install -g pm2
-pm2 start "openclaw gateway start" --name openclaw
-pm2 save
-pm2 startup
-```
-
-### Alternative — foreground / nohup
-
-```bash
-openclaw gateway --port 18789          # foreground (dev/debug)
-nohup openclaw gateway start &         # detached, no daemon
-```
+**The one thing Anthropic cannot replicate without acquiring Maestro:** the `opus-loop` deep interview plus milestone-driven autonomous loop with live conversation channel. This is genuinely novel. The 10-dimension product interview + 8 parallel research agents + milestone evaluator is not in any native Claude Code feature.
 
 ---
 
-## 4. What Happens When You Open a Terminal
+## 2. README and Documentation
 
-If the daemon was installed via `--install-daemon`:
-- The Gateway is ALREADY running in the background when you open a terminal. It started at login via launchd/systemd.
-- You do not need to run any start command.
-- The gateway listens at `http://127.0.0.1:18789/` by default.
-- The heartbeat runs every 30 minutes (every hour with Anthropic OAuth). On each heartbeat, the agent reads `HEARTBEAT.md` in the workspace, decides whether to act, and either messages you or responds `HEARTBEAT_OK`.
+### Current state
 
-Check gateway state:
-```bash
-openclaw gateway status     # probe RPC and service state
-openclaw health             # fetch gateway /health endpoint
-curl http://localhost:18789/health   # raw HTTP check
-```
+- Version badge says `1.4.0`, skills badge says `128` — actual count appears to be 138 (per dna.md). The badges are stale.
+- Commands table in README lists 21 commands, but FEATURES.md lists 42+ commands. The README is missing approximately half the commands.
+- No architecture diagram showing the three-layer system visually.
+- No GIF or screenshot. The README is wall-of-text for a product that has visual dashboards.
+- No "What's New" or changelog call-out for recent waves.
+- The "Progressive Trust" table and "Cost Tracking" sections are present but buried. These are strong differentiators.
+- "Companion" (17 TypeScript modules, voice, Telegram, worker pool) is not mentioned at all in the README.
+- The marketplace.json `owner.url` points to `https://github.com/anthropics/maestro-orchestrator` — this is aspirational. The actual repo URL (via plugin.json `homepage`) is `https://github.com/rodrigo-deepneuron/maestro`.
 
-If the daemon was NOT installed (manual foreground mode):
-- You must run `openclaw gateway --port 18789` in a terminal each session.
-- Closing that terminal stops the gateway.
+### Specific gaps
 
----
-
-## 5. How to Connect Messaging Channels
-
-### Telegram (simplest first channel)
-
-1. Open Telegram, message `@BotFather`, run `/newbot`, save the token.
-
-2. Add token to config `~/.openclaw/openclaw.json`:
-```json5
-{
-  channels: {
-    telegram: {
-      enabled: true,
-      botToken: "123:abc",
-      dmPolicy: "pairing",
-      groups: { "*": { requireMention: true } },
-    },
-  },
-}
-```
-Or via env var: `TELEGRAM_BOT_TOKEN=123:abc`
-
-3. Start/restart the gateway:
-```bash
-openclaw gateway restart
-```
-
-4. Send the bot a DM in Telegram. A pairing code appears in the gateway log.
-
-5. Approve the pairing:
-```bash
-openclaw pairing list telegram
-openclaw pairing approve telegram <CODE>
-```
-
-Note: Pairing codes expire after 1 hour.
-
-Key Telegram config options:
-- `dmPolicy`: `pairing` | `allowlist` | `open` | `disabled`
-- `allowFrom`: array of numeric Telegram user IDs (for allowlist mode)
-- `groupPolicy`: `open` | `allowlist` | `disabled`
-- `requireMention`: boolean — whether bot must be @mentioned in groups
-
-Important: Telegram does NOT use `openclaw channels login telegram`. The token goes directly in config or env, unlike WhatsApp which uses a QR login flow.
-
-### Other channels via CLI wizard
-
-```bash
-openclaw channels add --channel slack
-openclaw channels add --channel discord
-openclaw channels add --channel whatsapp
-openclaw channels add --channel signal
-openclaw channels add --channel imessage
-openclaw channels add --channel msteams
-openclaw channels add --channel googlechat
-openclaw channels add --channel mattermost
-```
-
-Supported channels: whatsapp, telegram, discord, googlechat, slack, mattermost, signal, imessage, msteams (plus 25+ others including Matrix, IRC, Twitch).
-
-WhatsApp uses a QR-code web session login:
-```bash
-openclaw channels login --channel whatsapp
-```
-
-Check channel health:
-```bash
-openclaw channels list
-openclaw channels status --probe
-openclaw channels logs --channel telegram
-```
-
-Slack uses the Bolt framework. Teams without inbound HTTP can use Socket Mode. The Slack app requires scopes and event delivery configuration done during `openclaw channels add --channel slack`.
-
-Multi-channel: Each channel adapter runs in its own lightweight thread. Multiple channels can run simultaneously without performance degradation. Start with one, verify responses, then add more.
+1. Badges: skills count (128 vs 138), commands count (42 vs 43), hooks count, companion mention.
+2. The companion (Telegram bot, voice, worker pool) is a major differentiator that is absent from the README entirely.
+3. No install-from-git section for contributors who want to work from source before marketplace availability.
+4. The `demo` command and `magnum-opus` are the two most impressive features; they deserve dedicated sections with step-by-step examples, not just table rows.
+5. No links to FEATURES.md or CONTRIBUTING.md from the README.
 
 ---
 
-## 6. Day-to-Day Usage Flow
+## 3. npm Publishing Readiness
 
-Once running, OpenClaw is primarily used by talking to it through a connected messaging channel — you send a natural language message to your bot in Telegram, WhatsApp, Discord, etc., and it responds there. No commands needed. You just talk to it.
+### Current state of `companion/package.json`
 
-### Option A — Chat through messaging app (primary use)
-Just send a message to your bot in Telegram/Slack/Discord/WhatsApp. No terminal needed.
-
-### Option B — Terminal UI (TUI)
-Interactive terminal dashboard showing active channels, request/response logs, model usage, memory state:
-```bash
-openclaw tui
-openclaw tui --url ws://127.0.0.1:18789 --session main
+```json
+"name": "maestro-companion",
+"version": "0.1.0",
+"bin": { "maestro-companion": "./dist/index.js" },
+"main": "dist/index.js"
 ```
 
-### Option C — Direct agent call from CLI
-```bash
-openclaw agent --message "Ship checklist" --thinking high
-openclaw agent --message "Summarize my emails" --deliver --channel telegram
-```
+### Gaps
 
-### Option D — Send a message to a specific recipient
-```bash
-openclaw message send --to +1234567890 --message "Hello"
-openclaw message send --target @user --channel slack --message "Deploy done"
-```
+| Issue | Severity | Detail |
+|---|---|---|
+| No `files` field | High | `npm publish` will upload everything including `node_modules/`, `store/`, `workspace/`. Must add `"files": ["dist/", "scripts/"]`. |
+| `dist/` is not built | High | `tsc` build is required before publish. `npm publish` should run `build` first via `"prepublish": "npm run build"`. |
+| No `exports` field | Medium | Node ESM resolution requires `"exports": { ".": "./dist/index.js" }` for proper module resolution in Node 20+. |
+| `main` points to `dist/index.js` but `type: "module"` — no `module` field | Low | The `main` field works, but `exports` is more correct for ESM packages. |
+| Binary shebang present (`#!/usr/bin/env node`) | Good | Already in `src/index.ts`. |
+| No `publishConfig` | Low | Should add `"publishConfig": { "access": "public" }` for scoped packages, or confirm unscoped name is available. |
+| `@anthropic-ai/claude-agent-sdk: ^0.1.0` | High | This package version may not be on npm public registry. Must verify before publishing. |
+| `better-sqlite3` requires native compilation | High | Binary dependency. Must include `"optionalDependencies"` pattern or document that `node-gyp` is required. |
+| No `.npmignore` or refined `files` | High | Without `files`, `companion/.env`, `store/companion.db`, audit logs would be published. |
+| `bun` used in dev scripts, `node` in bin | Medium | README must clarify bun is only for dev; production `npm install` + `node dist/index.js` must work without bun. |
+| No changelog in companion | Low | npm consumers expect a CHANGELOG.md or releases. |
+| Missing `repository` field | Low | `package.json` has no `repository` field, required for npm homepage link. |
 
-### Option E — Browser dashboard
-```bash
-openclaw dashboard
-# opens http://127.0.0.1:18789/ in browser
-```
+### Build pipeline gap
 
-### Configuration changes
-```bash
-openclaw config get channels.telegram.dmPolicy
-openclaw config set channels.telegram.dmPolicy open
-openclaw config edit                   # opens config in $EDITOR
-openclaw gateway restart               # apply changes
-```
+There is no CI/CD workflow file (`.github/workflows/`) for the companion. npm publishing requires at minimum a release action that runs `tsc`, runs vitest, and then `npm publish`. This is completely absent.
 
 ---
 
-## 7. How `openclaw onboard` Works
+## 4. Testing Gaps
 
-`openclaw onboard` is the interactive setup wizard. When run with `--install-daemon` it covers:
+### Companion test coverage (78 tests across 6 files)
 
-1. **Gateway setup** — port selection (default 18789), bind address, auth token generation
-2. **Workspace init** — creates `~/.openclaw/workspace/` with `HEARTBEAT.md`, `AGENTS.md`, memory files
-3. **LLM auth** — walks through provider selection (Anthropic, OpenAI, Mistral, Ollama) and API key entry
-4. **Channel setup** — optional Telegram/WhatsApp/Discord pairing
-5. **Skills activation** — enables relevant skills based on answers
-6. **Daemon install** — registers the Gateway as launchd (macOS) or systemd (Linux) service so it survives reboots
-7. **Health check** — runs `openclaw doctor` automatically to verify everything
+| Module | Test file | Tests | Critical paths NOT covered |
+|---|---|---|---|
+| `agent.ts` | None | 0 | SDK fallback to CLI, session persistence, cost extraction |
+| `memory.ts` | None | 0 | `saveMemory`, `buildMemoryContext`, `runDecaySweep`, FTS vs LIKE branch |
+| `soul.ts` | None | 0 | `loadSoul` path resolution, PLUGIN_DATA fallback, cache invalidation |
+| `db.ts` | None | 0 | Session get/save, connection close, table creation |
+| `config.ts` | None | 0 | Env file parsing, fallback values, `allowedChatIds` split |
+| `channels/telegram.ts` | None | 0 | Message routing, typing indicator, voice buffer send |
+| `env.ts` | `env.test.ts` | ~5 | Covered |
+| `formatter.ts` | `formatter.test.ts` | ~10 | Covered |
+| `workers/pool.ts` | `pool.test.ts` | ~12 | Covered |
+| `workers/coordinator.ts` | `coordinator.test.ts` | ~11 | Covered |
+| `voice/pipeline.ts` | `voice.test.ts` | ~20 | Covered |
+| `voice/stt.ts` | `voice.test.ts` | ~8 | Covered |
+| `voice/tts.ts` | `voice.test.ts` | ~12 | Covered |
+| `state.ts` | `state.test.ts` | ~20 | Covered |
 
-Non-interactive / scripted onboard (CI or headless):
-```bash
-openclaw onboard \
-  --non-interactive \
-  --mode local \
-  --flow quickstart \
-  --anthropic-api-key sk-ant-... \
-  --gateway-port 18789 \
-  --gateway-bind loopback \
-  --install-daemon
-```
+**The three highest-risk untested paths:**
+1. `agent.ts: runWithAgentSDK` — the SDK streaming loop that extracts session ID and cost. A regression here would silently lose session continuity.
+2. `memory.ts: buildMemoryContext` — the FTS5 vs LIKE fallback branch. If FTS5 is unavailable (common on some SQLite builds), the fallback must work correctly. Currently untested.
+3. `agent.ts: runWithCLI` — the fallback when SDK fails. This is the disaster-recovery path and has zero tests.
 
-Reset and re-run onboarding:
-```bash
-openclaw onboard --reset --reset-scope full
-```
+### Plugin test coverage (shell scripts)
 
----
+The plugin has no automated tests beyond `scripts/smoke-test.sh`. Critical paths with no coverage:
 
-## 8. The macOS Menu Bar App
-
-The macOS companion app is a native Swift application located in `apps/macos/` in the repo. It is a menu-bar-resident app with no Dock icon.
-
-### What it does
-- Sits permanently in the macOS top bar (next to Wi-Fi, battery, clock)
-- Clicking the icon drops a floating panel for: typing a message, seeing recent activity, triggering quick actions, monitoring agent status
-- Owns macOS TCC permission prompts: Notifications, Accessibility, Screen Recording, Microphone, Speech Recognition, Automation/AppleScript
-- Manages and attaches to the Gateway locally (via launchd or manually)
-- Exposes the Mac as a **node** to the Gateway over WebSocket at `ws://127.0.0.1:18789`
-- The app connects to the same Gateway that the CLI and web UI use (standard WebSocket RPC, Bearer token auth)
-
-### Icon states
-- Idle: normal icon
-- Working (main session): full-tint badge with animation + activity glyph (exec/read/write/edit/attach)
-- Working (other session): muted badge, no animation
-- Status bar label format: `"Main · exec: pnpm test"` or `"Other · read: [path]"`
-- Debug override: Settings > Debug > "Icon override"
-
-### Gateway management from the app
-```bash
-openclaw gateway install   # register launchd service (same as --install-daemon)
-launchctl kickstart -k gui/$UID/bot.molt.gateway
-launchctl bootout gui/$UID/bot.molt.gateway
-```
-
-### Node capabilities exposed when app is running
-When the macOS app is running and connected, the agent gains access to macOS-specific tools:
-- `canvas.present`, `canvas.navigate`, `canvas.eval` — overlay/canvas operations
-- `camera.snap`, `camera.clip` — webcam capture
-- `screen.record` — screen recording
-- `system.run` — shell execution
-- `system.notify` — macOS notification delivery
-
-CLI equivalents for remote node control:
-```bash
-openclaw nodes canvas snapshot --node myMac
-openclaw nodes camera snap --node myMac --facing front
-openclaw nodes screen record --node myMac --duration 10s
-openclaw nodes notify --node myMac --title "Done" --body "Deploy complete"
-openclaw nodes run --node myMac ls -la
-```
-
-### Building the app from source
-```bash
-cd apps/macos
-swift build
-# or use the package script:
-scripts/package-mac-app.sh
-```
+1. `hooks/delegation-hook.sh` — the YAML parser built in bash (the `yaml_val()` function). If a value contains a colon, the grep breaks. No test.
+2. `hooks/stop-hook.sh` — session isolation logic (compares `state_session_id` vs `current_session_id`). Edge cases around empty session IDs are untested.
+3. `hooks/branch-guard.sh` — the branch protection logic. No test for the case where `.git/HEAD` is missing or detached HEAD.
+4. `scripts/validate-hooks.sh` — the hook validator script. It validates hooks but is not itself tested.
 
 ---
 
-## 9. Minimal Setup to Run OpenClaw Autonomously
+## 5. Performance
 
-The smallest path to a fully autonomous, always-on agent:
+### Shell script bottlenecks
 
-```bash
-# Step 1: Install
-npm install -g openclaw@latest
+| Script | Bottleneck | Severity |
+|---|---|---|
+| `hooks/delegation-hook.sh` | Forks `jq` twice (once for `file_path`, once for `tool_name`) and runs `sed` + `grep` for YAML parsing on every `PreToolUse` event | Medium — fires on every Edit/Write. At high velocity this adds ~5-15ms per tool call. |
+| `hooks/stop-hook.sh` | Reads entire state file with `cat`, then runs multiple `sed` + `grep` passes for YAML parsing | Low — only fires on Stop events. |
+| `hooks/session-start-hook.sh` | Runs multiple `jq` forks + `grep` chains at session start | Low — only fires once per session. |
+| `hooks/opus-loop-hook.sh` (263 lines) | Largest hook. Reads multiple files, parses YAML, forks multiple subprocesses | Medium — fires on every Stop in opus mode. |
 
-# Step 2: Onboard with daemon (interactive — recommended path)
-openclaw onboard --install-daemon
+**Root cause:** Every hook that parses YAML uses a bespoke `yaml_val()` bash function that forks `grep` and `sed`. This is unavoidable in pure bash, but the delegation-hook fires on every Edit/Write tool call. At 100+ tool calls per Magnum Opus session, this adds up.
 
-# Step 2 (alternative): fully non-interactive
-openclaw onboard \
-  --non-interactive \
-  --anthropic-api-key sk-ant-YOUR_KEY \
-  --gateway-port 18789 \
-  --gateway-bind loopback \
-  --install-daemon
+**Fix options (in order of effort):**
+- Cache the parsed YAML in an env var or temp file across invocations (low effort).
+- Rewrite the highest-frequency hooks in Python/Node (medium effort, adds dependency).
+- Use `type: agent` hook for delegation enforcement instead of shell script (best long-term, removes bash parsing entirely).
 
-# Step 3: Add a channel (Telegram is fastest)
-# Edit ~/.openclaw/openclaw.json directly or:
-openclaw config set channels.telegram.enabled true
-openclaw config set channels.telegram.botToken "123:abc"
-openclaw config set channels.telegram.dmPolicy open
-openclaw gateway restart
+### TypeScript/companion bottlenecks
 
-# Step 4: Verify
-openclaw doctor
-openclaw gateway status
-openclaw channels status --probe
-
-# Step 5: Message the bot in Telegram — it responds immediately
-# (if dmPolicy is "pairing", run: openclaw pairing approve telegram <CODE>)
-```
-
-After this, the gateway runs on every login via launchd/systemd. The agent wakes on:
-- Incoming messages on connected channels
-- Heartbeat timer (every 30 min — reads `~/.openclaw/workspace/HEARTBEAT.md` and acts or responds `HEARTBEAT_OK`)
-- `openclaw system event --text "..." --mode now` (manual trigger)
-- Cron jobs: `openclaw cron add --name daily-report --every 24h --system-event`
-
-No terminal needs to be open.
+| Module | Issue |
+|---|---|
+| `memory.ts: buildMemoryContext` | Runs up to 4 separate SQLite queries per message (FTS search, recent recall, access update). Could be one query with a UNION. |
+| `workers/pool.ts` | The `cleanupWorkerHistory()` function iterates the full worker map on every worker completion. At 100+ workers, this is O(n). |
+| `agent.ts: runWithAgentSDK` | The SDK streaming loop has no timeout. A hung SDK call blocks the Telegram response indefinitely. |
 
 ---
 
-## Technical Patterns
+## 6. Community Readiness
 
-- Gateway runs on port 18789 by default (configurable via `openclaw config set gateway.port <port>` or `--port` flag)
-- All clients (CLI, TUI, browser, macOS app, mobile) connect via WebSocket RPC to the same gateway at `ws://127.0.0.1:18789`
-- Authentication: Bearer token via `Authorization` header (generated during onboard or via `openclaw doctor --generate-gateway-token`)
-- Config file: `~/.openclaw/openclaw.json` (JSON5 format — allows comments)
-- Workspace: `~/.openclaw/workspace/` — contains `HEARTBEAT.md`, `AGENTS.md`, memory files the agent reads and writes
-- State isolation: `--dev` flag uses `~/.openclaw-dev`; `--profile <name>` uses `~/.openclaw-<name>`
-- Multi-agent: `openclaw agents add <name>` creates isolated agents; `openclaw agents bind` routes specific channels to specific agents
-- Model fallback: `openclaw models fallbacks add <model>` — agent tries fallbacks on provider failure
-- `openclaw daemon` is a legacy alias for `openclaw gateway` service commands (status/install/start/stop/restart)
+### What exists
+
+- `CONTRIBUTING.md` — Present and detailed. Covers skills, agents, profiles, squads, commands, naming conventions, PR process. Good quality.
+- `.github/ISSUE_TEMPLATE/bug_report.md` — Present. Asks for the right info.
+- `.github/ISSUE_TEMPLATE/feature_request.md` — Present (seen in glob, not read).
+- `.github/PULL_REQUEST_TEMPLATE.md` — Present.
+- `squads/CONTRIBUTING.md` — Present (separate squad contribution guide).
+
+### What is missing
+
+| Gap | Priority | Detail |
+|---|---|---|
+| No skill development tutorial | High | CONTRIBUTING.md says "create a directory and add SKILL.md" but gives no worked example of a non-trivial skill. New contributors need a "your first skill" walkthrough. |
+| No test harness for skills | High | CONTRIBUTING.md says "there are no automated tests" — this is fine for simple skills but is a barrier for contributions to critical skills like dev-loop. |
+| No CHANGELOG for plugin | Medium | The repo has CHANGELOG.md but it appears to track waves, not semver releases. npm consumers and marketplace users need a conventional changelog. |
+| No `SECURITY.md` | Medium | Standard for any plugin that touches file system and git. Should document what data Maestro reads, what it never does (e.g., exfiltrate secrets). |
+| No skill packs published | Medium | `skills/skill-pack/SKILL.md` exists but no community packs have been published to demonstrate the mechanism. A demo pack would bootstrap the ecosystem. |
+| Companion has no setup script that works without bun | Medium | `scripts/setup.ts` requires bun. The npm-published version needs a `node` equivalent. |
+| No Discord or discussion forum link | Low | Community questions currently go to GitHub Issues. |
+| `CONTRIBUTING.md` says "no automated tests" but pool.test.ts, state.test.ts, etc. now exist | Low | The contributing guide is out of date — it should mention the companion's vitest suite and encourage contributors to add tests for new modules. |
 
 ---
 
-## Sources
+## Competitor Matrix (Claude Code Plugin/Extension Space)
 
-- [Install - OpenClaw](https://docs.openclaw.ai/install)
-- [CLI Reference - OpenClaw](https://docs.openclaw.ai/cli)
-- [Telegram - OpenClaw](https://docs.openclaw.ai/channels/telegram)
-- [Menu Bar - OpenClaw](https://docs.openclaw.ai/platforms/mac/menu-bar)
-- [OpenClaw Docs Index](https://docs.openclaw.ai/llms.txt)
-- [GitHub - openclaw/openclaw](https://github.com/openclaw/openclaw)
-- [openclaw-cli - Homebrew](https://formulae.brew.sh/formula/openclaw-cli)
-- [openclaw - npm](https://www.npmjs.com/package/openclaw)
-- [OpenClaw Gateway: Daemon & Headless Mode - CrewClaw](https://www.crewclaw.com/blog/openclaw-gateway-daemon-guide)
-- [OpenClaw Gateway Commands: Port 18789 Setup - Meta Intelligence](https://www.meta-intelligence.tech/en/insight-openclaw-gateway-commands)
-- [macOS App - OpenClaw](https://openclawcn.com/en/docs/platforms/macos/)
-- [macOS App Installation - DeepWiki](https://deepwiki.com/openclaw/openclaw/2.4-macos-app-installation)
-- [Channel Architecture - DeepWiki](https://deepwiki.com/openclaw/openclaw/4.1-channel-architecture)
-- [How to Install OpenClaw 2026 - Medium](https://medium.com/@guljabeen222/how-to-install-openclaw-2026-the-complete-step-by-step-guide-516b74c163b9)
-- [How to Install and Run OpenClaw on Mac - Medium/Zilliz](https://medium.com/@zilliz_learn/how-to-install-and-run-openclaw-previously-clawdbot-moltbot-on-mac-9cb6adb64eef)
+| Feature | Maestro | Continue.dev | Cody (Sourcegraph) | Copilot Workspace |
+|---|---|---|---|---|
+| Multi-agent orchestration | Yes (6 agents, 7 squads) | No | No | No |
+| Autonomous multi-milestone build | Yes (Magnum Opus) | No | No | Limited |
+| Plugin marketplace | Yes | No | No | No |
+| Progressive trust system | Yes | No | No | No |
+| Kanban integration | Yes (4 providers) | No | No | No |
+| Second brain / knowledge base | Yes | No | No | No |
+| Voice interface | Yes (Telegram bot) | No | No | No |
+| Cost tracking + forecasting | Yes | No | No | No |
+| TDD enforcement | Yes | No | No | No |
+| Self-healing loop | Yes | No | No | No |
+
+---
+
+## Anti-Patterns Observed
+
+1. **Stale badge counts** — README badges show 128 skills/42 commands but dna.md says 138 skills. Every wave adds skills without updating the source-of-truth badges.
+
+2. **Bash YAML parser running on hot path** — The `yaml_val()` function is copy-pasted across 5+ hook scripts. It works for simple cases but breaks silently on values containing colons, quotes, or multi-line values. This is a reliability risk.
+
+3. **`companion/package.json` has no `files` field** — Will publish `node_modules/` and `store/` if `npm publish` is run naively.
+
+4. **`marketplace.json` has aspirational GitHub URL** — Points to `https://github.com/anthropics/maestro-orchestrator` which does not exist. This will cause 404s for anyone who clicks "source" in the marketplace.
+
+5. **`agent.ts` passes `allowDangerouslySkipPermissions: true`** to every worker — including the companion's chat queries, not just build workers. This means casual Telegram conversations run with full bypass permissions. Should be limited to `workers/pool.ts` only.
+
+6. **README and FEATURES.md are out of sync** — FEATURES.md lists 42 commands; README lists 21. CONTRIBUTING.md says there are no automated tests, but there are 78. Any new contributor reads stale information.
+
+---
+
+## Prioritized Action List for Wave 10
+
+**P0 — Blocks npm publish or creates security risk**
+1. Add `files` field to `companion/package.json` (prevents secrets/node_modules upload)
+2. Remove `allowDangerouslySkipPermissions: true` from `agent.ts` chat queries (security)
+3. Fix `marketplace.json` owner URL from aspirational to actual repo
+
+**P1 — Acquisition readiness and technical quality**
+4. Add `memory: project` to all 6 agent definitions (uses native Claude Code memory)
+5. Add `isolation: worktree` to implementer agent definition (replaces delegation hook enforcement)
+6. Register missing hook events: `UserPromptSubmit`, `PostToolUseFailure`, `SubagentStart`, `SubagentStop`, `SessionEnd`
+7. Add `repository` field to `companion/package.json`
+8. Add `exports` field to `companion/package.json` for proper ESM resolution
+
+**P2 — Test coverage for highest-risk paths**
+9. Add tests for `agent.ts` (SDK streaming, CLI fallback, session persistence)
+10. Add tests for `memory.ts` (FTS path, LIKE fallback, decay sweep)
+11. Add tests for `soul.ts` (path resolution, PLUGIN_DATA, cache)
+
+**P3 — README and documentation**
+12. Update all badge counts (138 skills, 43+ commands, 12+ hooks)
+13. Add Companion section to README (Telegram bot, voice, worker pool)
+14. Add architecture diagram (ASCII or Mermaid) showing three-layer system
+15. Update CONTRIBUTING.md to mention companion test suite
+16. Fix README commands table to show full 42-command set or link to FEATURES.md
+
+**P4 — Performance**
+17. Cache YAML parse result in delegation-hook.sh (single `jq` pass, store in temp file)
+18. Add timeout to `agent.ts` SDK streaming (guard against hung calls blocking Telegram)
+19. Consolidate `memory.ts` SQLite queries (UNION instead of 4 separate queries)
