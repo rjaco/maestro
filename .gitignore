@@ -8,3 +8,5 @@
 .maestro/*.lock
 .claude/
 temp/
+.env
+node_modules/

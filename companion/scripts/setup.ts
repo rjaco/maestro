@@ -5,7 +5,7 @@
  * Usage: npx maestro-companion setup
  */
 import { createInterface } from 'node:readline'
-import { writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { writeFileSync, chmodSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
@@ -99,7 +99,8 @@ async function main() {
   ].join('\n')
 
   writeFileSync(ENV_PATH, envContent)
-  console.log('  ✓ .env written')
+  chmodSync(ENV_PATH, 0o600)
+  console.log('  ✓ .env written (permissions: 600)')
 
   // --- Install deps ---
   console.log('\nInstalling dependencies...')

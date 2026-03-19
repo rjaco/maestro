@@ -15,6 +15,16 @@ export interface Worker {
 }
 
 const activeWorkers = new Map<string, Worker>()
+const MAX_WORKER_HISTORY = 100
+
+function cleanupWorkerHistory(): void {
+  if (activeWorkers.size <= MAX_WORKER_HISTORY) return
+  const completed = [...activeWorkers.entries()]
+    .filter(([, w]) => w.status !== 'running')
+    .sort((a, b) => a[1].startedAt.getTime() - b[1].startedAt.getTime())
+  const toRemove = completed.slice(0, completed.length - MAX_WORKER_HISTORY / 2)
+  for (const [id] of toRemove) activeWorkers.delete(id)
+}
 
 function generateId(): string {
   return `worker-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -79,6 +89,7 @@ export async function spawnWorker(
     unregisterInstance(workerId)
   }
   logger.info({ workerId, status: worker.status, costUsd: worker.costUsd }, 'Worker finished')
+  cleanupWorkerHistory()
   return worker
 }
 

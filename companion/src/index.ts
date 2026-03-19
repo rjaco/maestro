@@ -6,8 +6,12 @@ import { logger } from './logger.js'
 import { closeDb, clearSession } from './db.js'
 import { runQuery } from './agent.js'
 import { buildSystemContext } from './soul.js'
-import { markdownToTelegramHtml, chunkMessage } from './formatter.js'
+import { markdownToTelegramHtml } from './formatter.js'
 import { TelegramAdapter } from './channels/telegram.js'
+import { initMemoryTables, saveMemory, buildMemoryContext, runDecaySweep } from './memory.js'
+import { processVoiceInput, synthesizeResponse, isVoiceAvailable } from './voice/pipeline.js'
+import { isBuildRequest, handleBuildRequest } from './workers/coordinator.js'
+import { formatStatus } from './state.js'
 
 // --- Banner ---
 console.log(`
@@ -21,11 +25,9 @@ console.log(`
 mkdirSync(dirname(config.pidPath), { recursive: true })
 
 try {
-  // Atomic: fails if file already exists
   writeFileSync(config.pidPath, String(process.pid), { flag: 'wx' })
 } catch (e: unknown) {
   if ((e as NodeJS.ErrnoException).code === 'EEXIST') {
-    // File exists — check if the process is still alive
     const existingPid = readFileSync(config.pidPath, 'utf-8').trim()
     try {
       process.kill(Number(existingPid), 0)
@@ -34,7 +36,6 @@ try {
       console.error('Stop it first: kill ' + existingPid)
       process.exit(1)
     } catch {
-      // Stale PID — overwrite
       logger.warn({ pid: existingPid }, 'Removing stale PID file')
       writeFileSync(config.pidPath, String(process.pid))
     }
@@ -54,19 +55,25 @@ if (!config.anthropicApiKey) {
   process.exit(1)
 }
 
+// --- Initialize Memory ---
+initMemoryTables()
+
+// --- Memory Decay Sweep (every hour) ---
+setInterval(() => {
+  try { runDecaySweep() } catch (err) { logger.warn({ err }, 'Decay sweep failed') }
+}, 60 * 60 * 1000)
+
+// --- Voice Toggle (per chat) ---
+const voiceEnabled = new Set<string>()
+
 // --- Audit Logger ---
 function audit(chatId: string, action: string, details?: Record<string, unknown>): void {
-  const entry = JSON.stringify({
-    timestamp: new Date().toISOString(),
-    chatId,
-    action,
-    ...details,
-  })
+  const entry = JSON.stringify({ timestamp: new Date().toISOString(), chatId, action, ...details })
   try {
     mkdirSync(dirname(config.auditPath), { recursive: true })
     appendFileSync(config.auditPath, entry + '\n')
-  } catch {
-    // Audit logging is best-effort
+  } catch (err) {
+    logger.debug({ err }, 'Audit log write failed')
   }
 }
 
@@ -79,10 +86,29 @@ channel.onMessage(async (msg) => {
   logger.info({ chatId, username, text: text?.slice(0, 50) }, 'Message received')
   audit(chatId, 'message', { username, textLength: text?.length })
 
-  // Handle commands
+  // --- Commands ---
   if (text === '/newchat') {
     clearSession(chatId)
     await channel.send({ chatId, text: '🔄 Fresh conversation started.' })
+    return
+  }
+  if (text === '/status') {
+    await channel.send({ chatId, text: formatStatus() })
+    return
+  }
+  if (text === '/voice') {
+    const voice = isVoiceAvailable()
+    if (!voice.stt) {
+      await channel.send({ chatId, text: 'Voice not configured. Set GROQ_API_KEY in .env.' })
+      return
+    }
+    if (voiceEnabled.has(chatId)) {
+      voiceEnabled.delete(chatId)
+      await channel.send({ chatId, text: '🔇 Voice replies disabled.' })
+    } else {
+      voiceEnabled.add(chatId)
+      await channel.send({ chatId, text: '🔊 Voice replies enabled.' })
+    }
     return
   }
 
@@ -91,27 +117,73 @@ channel.onMessage(async (msg) => {
     return
   }
 
-  // Build context
-  const systemContext = buildSystemContext()
+  // --- Voice Transcription ---
+  let messageText = text ?? ''
+  let forceVoiceReply = false
 
-  // Send typing indicator
+  if (msg.voiceFileId) {
+    await channel.sendTyping(chatId)
+    try {
+      const transcript = await processVoiceInput(msg.voiceFileId, config.telegramToken)
+      messageText = `[Voice transcribed]: ${transcript}`
+      forceVoiceReply = true
+      logger.info({ chatId, transcriptLength: transcript.length }, 'Voice transcribed')
+    } catch (err) {
+      logger.error({ err, chatId }, 'Voice transcription failed')
+      await channel.send({ chatId, text: '🎙️ Could not transcribe voice. Try again or send text.' })
+      return
+    }
+  }
+
+  // --- Build Request Detection ---
+  if (text && isBuildRequest(text)) {
+    await handleBuildRequest(text, async (status) => {
+      await channel.send({ chatId, text: status })
+    }).then(async (result) => {
+      await channel.send({ chatId, text: result })
+    }).catch(async (err) => {
+      logger.error({ err, chatId }, 'Build request failed')
+      await channel.send({ chatId, text: '❌ Build failed. Check logs.' })
+    })
+    return
+  }
+
+  // --- Memory Context ---
+  const memoryContext = buildMemoryContext(chatId, messageText)
+  const systemContext = buildSystemContext(memoryContext)
+
+  // --- Send Typing ---
   await channel.sendTyping(chatId)
 
-  // Query Claude
+  // --- Query Claude ---
   const result = await runQuery(
     chatId,
-    text ?? '[Media message]',
+    messageText,
     systemContext,
     () => { void channel.sendTyping(chatId) },
   )
 
+  // --- Save to Memory ---
+  if (messageText && !messageText.startsWith('/')) {
+    saveMemory(chatId, messageText)
+  }
   if (result.text) {
-    const html = markdownToTelegramHtml(result.text)
-    // Only chunk once — let the channel adapter handle raw sending
-    const chunks = chunkMessage(html)
-    for (const chunk of chunks) {
-      await channel.send({ chatId, html: chunk })
+    saveMemory(chatId, result.text.slice(0, 500))
+  }
+
+  // --- Send Response ---
+  if (result.text) {
+    // Voice reply if toggled on or voice message received
+    if ((forceVoiceReply || voiceEnabled.has(chatId)) && isVoiceAvailable().tts) {
+      const audio = await synthesizeResponse(result.text.slice(0, 500))
+      if (audio) {
+        await channel.send({ chatId, voiceBuffer: audio })
+      }
     }
+
+    // Always send text too (chunking handled by the adapter)
+    const html = markdownToTelegramHtml(result.text)
+    await channel.send({ chatId, html })
   } else {
     await channel.send({ chatId, text: '🤔 I processed your message but got no response. Try again?' })
   }
@@ -127,17 +199,10 @@ async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return
   shuttingDown = true
   logger.info({ signal }, 'Shutting down...')
-  try {
-    await channel.stop()
-  } catch {
-    // Ignore stop errors during shutdown
-  }
+  try { await channel.stop() } catch { /* ignore */ }
   closeDb()
-  try { unlinkSync(config.pidPath) } catch {
-    // Ignore PID file removal errors
-  }
+  try { unlinkSync(config.pidPath) } catch { /* ignore */ }
   logger.info('Companion stopped')
-  // Let pino flush, then exit
   process.exitCode = 0
 }
 
@@ -145,9 +210,9 @@ process.on('SIGINT', () => { void shutdown('SIGINT') })
 process.on('SIGTERM', () => { void shutdown('SIGTERM') })
 
 // --- Start ---
-logger.info({ channel: 'telegram' }, 'Starting channel adapter...')
+logger.info({ channel: 'telegram', voice: isVoiceAvailable() }, 'Starting companion...')
 channel.start().then(() => {
-  logger.info('Maestro Companion is live. Send a message on Telegram.')
+  logger.info('Maestro Companion is live.')
   console.log('  Maestro Companion is live!')
   console.log('  Send a message to your Telegram bot.')
   console.log('  Press Ctrl+C to stop.')
