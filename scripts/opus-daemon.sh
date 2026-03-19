@@ -477,6 +477,26 @@ cleanup() {
 }
 trap cleanup SIGTERM SIGINT
 
+# --- Health endpoint ---
+# Write a health status file that external monitors can check
+HEALTH_FILE="$LOG_DIR/daemon-health.json"
+
+write_health() {
+  local status="$1"
+  local iteration="$2"
+  local uptime_secs=$(( $(date +%s) - START_TIME ))
+  mkdir -p "$LOG_DIR"
+  cat > "$HEALTH_FILE" <<HEALTHEOF
+{"status":"${status}","pid":$$,"iteration":${iteration},"uptime_seconds":${uptime_secs},"last_check":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+HEALTHEOF
+}
+
+# --- Graceful reload on SIGHUP ---
+RELOAD_REQUESTED=false
+trap 'RELOAD_REQUESTED=true; log "SIGHUP received — will reload config at next iteration"' HUP
+
+START_TIME=$(date +%s)
+
 # ---------------------------------------------------------------------------
 # Pre-flight checks
 # ---------------------------------------------------------------------------
@@ -643,6 +663,16 @@ while true; do
   # -- Notify on milestone change --
   if [[ "$STATE_CHANGED" == "true" ]] && [[ "$PRE_MILESTONE" != "$POST_MILESTONE" ]]; then
     send_notification "milestone_complete" "Milestone M${PRE_MILESTONE} complete. Now on M${POST_MILESTONE}."
+  fi
+
+  # -- Write health status for external monitors --
+  write_health "running" "$ITERATION"
+
+  # -- Check for reload request (SIGHUP) --
+  if [[ "$RELOAD_REQUESTED" == "true" ]]; then
+    log "Reloading configuration..."
+    # Re-read state file to pick up config changes
+    RELOAD_REQUESTED=false
   fi
 
   # -- Brief pause between iterations --

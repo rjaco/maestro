@@ -479,7 +479,20 @@ Send notifications for step completion/failure."
     # 4. Update state
     write_state "$autonomy_mode" "${active_chain:-null}" "$tasks_completed" "$tasks_failed" "0"
 
-    # 5. Sleep until next poll
+    # 5. Write health status for external monitors
+    local loop_iteration=$(( tasks_completed + tasks_failed ))
+    write_health "running" "$loop_iteration"
+
+    # 6. Check for reload request (SIGHUP)
+    if [[ "$RELOAD_REQUESTED" == "true" ]]; then
+      log "INFO" "Reloading configuration..."
+      # Re-read state to pick up config changes
+      autonomy_mode=$(read_state_field "autonomy_mode" || echo "tiered")
+      autonomy_mode="${autonomy_mode:-tiered}"
+      RELOAD_REQUESTED=false
+    fi
+
+    # 7. Sleep until next poll
     sleep "$INTERVAL"
   done
 }
@@ -500,6 +513,9 @@ shutdown_daemon() {
   # Remove PID file
   rm -f "$PID_FILE"
 
+  # Write final health status
+  write_health "stopped" "0"
+
   # Send shutdown notification
   notify_daemon "Daemon stopped gracefully." "info" &
 
@@ -508,6 +524,29 @@ shutdown_daemon() {
 }
 
 trap shutdown_daemon SIGTERM SIGINT
+
+# --- Health endpoint ---
+# Write a health status file that external monitors can check
+HEALTH_FILE="$MAESTRO_DIR/logs/daemon-health.json"
+START_TIME=$(date +%s)
+
+write_health() {
+  local status="$1"
+  local iteration="${2:-0}"
+  local uptime_secs=$(( $(date +%s) - START_TIME ))
+  mkdir -p "$MAESTRO_DIR/logs"
+  cat > "$HEALTH_FILE" <<HEALTHEOF
+{"status":"${status}","pid":$$,"iteration":${iteration},"uptime_seconds":${uptime_secs},"last_check":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+HEALTHEOF
+}
+
+# --- Graceful reload on SIGHUP ---
+RELOAD_REQUESTED=false
+reload_config() {
+  RELOAD_REQUESTED=true
+  log "INFO" "SIGHUP received — will reload config at next iteration"
+}
+trap reload_config HUP
 
 # --- CLI Commands ---
 
@@ -521,8 +560,10 @@ cmd_start() {
 
   ensure_dirs
   write_pid
+  START_TIME=$(date +%s)
   check_crash_recovery
   write_state "tiered" "null" "0" "0" "0"
+  write_health "starting" "0"
 
   echo "Maestro autonomous daemon started (PID $$)."
   echo "Logs: $LOG_FILE"
