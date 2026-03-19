@@ -1,0 +1,13 @@
+name: "cost-saver"
+description: "Minimize cost — yolo mode, haiku default, skip preview and optional reviews"
+mode: yolo
+default_model: haiku
+qa_model: haiku
+enable_multi_review: false
+enable_preview: false
+enable_lighthouse: false
+enable_explain_mode: false
+quality_gates:
+  tsc: true
+  lint: true
+  tests: true

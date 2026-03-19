@@ -1,0 +1,13 @@
+name: "frontend"
+description: "Frontend focus — preview always on, Lighthouse checks, component tests"
+mode: checkpoint
+default_model: sonnet
+qa_model: opus
+enable_multi_review: true
+enable_preview: true
+enable_lighthouse: true
+enable_explain_mode: false
+quality_gates:
+  tsc: true
+  lint: true
+  tests: true
