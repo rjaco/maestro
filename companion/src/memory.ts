@@ -43,9 +43,17 @@ export function buildMemoryContext(chatId: string, userMessage: string): string 
 
   if (ftsAvailable) {
     try {
+      // Sanitize FTS5 operators
       const FTS5_OPERATORS = new Set(['AND', 'OR', 'NOT', 'NEAR'])
-  const terms = userMessage.replace(/[^\w\s]/g, '').split(/\s+/).filter(w => w.length > 2)
-      .filter(w => !FTS5_OPERATORS.has(w.toUpperCase())).slice(0, 5).map(w => `"${w}"`).join(' OR ')
+
+      const terms = userMessage
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 2)
+        .filter(w => !FTS5_OPERATORS.has(w.toUpperCase()))
+        .slice(0, 5)
+        .map(w => `"${w}"`)
+        .join(' OR ')
       if (terms) {
         const rows = db.prepare('SELECT m.id, m.content, m.sector, m.salience FROM memories m JOIN memories_fts fts ON m.id = fts.rowid WHERE m.chat_id = ? AND memories_fts MATCH ? ORDER BY fts.rank LIMIT 3').all(chatId, terms) as MemRow[]
         memories.push(...rows)

@@ -81,6 +81,7 @@ export async function synthesizeResponse(text: string): Promise<Buffer | null> {
 export function isVoiceAvailable(): { stt: boolean; tts: boolean } {
   return {
     stt: Boolean(config.groqApiKey),
+    // ElevenLabs is primary TTS; edge-tts is a free fallback (checked at synthesis time)
     tts: Boolean(config.elevenlabsApiKey && config.elevenlabsVoiceId),
   }
 }

@@ -80,7 +80,7 @@ if echo "$COMMAND" | grep -qE 'git\s+merge.*\bmain\b'; then
 fi
 
 if [[ "$BLOCKED" == "true" ]]; then
-  printf '{"decision":"block","reason":"%s"}\n' "$REASON"
+  jq -n --arg reason "$REASON" '{"decision":"block","reason":$reason}'
 else
   printf '{"decision":"approve"}\n'
 fi

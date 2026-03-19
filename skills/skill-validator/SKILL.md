@@ -72,13 +72,13 @@ description:
 
 ### SK-03 — Name matches directory
 
-The `name` field in frontmatter must match the name of the directory containing the SKILL.md file. A file at `skills/my-analyzer/SKILL.md` must have `name: my-analyzer`.
+The `name` field in frontmatter must match the name of the directory containing the SKILL.md file. A file at `skills/example-skill/SKILL.md (example)` must have `name: my-analyzer`.
 
 **Why:** Prevents registry collisions where two skills claim the same name, and makes skills discoverable by directory traversal.
 
 **Fail example:**
 ```
-skills/my-analyzer/SKILL.md  →  name: data-tool   # mismatch
+skills/example-skill/SKILL.md (example)  →  name: data-tool   # mismatch
 ```
 
 ---
@@ -366,7 +366,7 @@ Security rules are weighted highest because a single bypass can compromise the e
 +---------------------------------------------+
 | Skill Validator                              |
 +---------------------------------------------+
-  File: skills/my-tool/SKILL.md
+  File: skills/example-skill/SKILL.md (example)
   Source: community
 
   Rule   Category       Verdict   Detail
@@ -433,12 +433,12 @@ The skills registry entry includes the trust score:
 ## Manual Invocation
 
 ```
-/skill-validator skills/my-tool/SKILL.md
+/skill-validator skills/example-skill/SKILL.md (example)
 ```
 
 With strict mode disabled (warnings do not block):
 ```
-/skill-validator skills/my-tool/SKILL.md --strict false
+/skill-validator skills/example-skill/SKILL.md (example) --strict false
 ```
 
 Validate all skills in a directory:

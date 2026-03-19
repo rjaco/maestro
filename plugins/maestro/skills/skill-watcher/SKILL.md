@@ -44,13 +44,13 @@ Format: `[<ISO8601 timestamp>] MODIFIED <relative-path> — changes will take ef
 5. Also detect new SKILL.md files that were not in the snapshot (added during the session):
 
 ```
-[2026-03-18T14:06:00Z] ADDED skills/new-skill/SKILL.md — will be loaded next session
+[2026-03-18T14:06:00Z] ADDED skills/example-new/SKILL.md (example) — will be loaded next session
 ```
 
 6. Detect SKILL.md files that were in the snapshot but no longer exist:
 
 ```
-[2026-03-18T14:07:00Z] REMOVED skills/old-skill/SKILL.md — will be unloaded next session
+[2026-03-18T14:07:00Z] REMOVED skills/example-old/SKILL.md (example) — will be unloaded next session
 ```
 
 All log entries use append-only writes to `.maestro/logs/skill-watcher.log`.

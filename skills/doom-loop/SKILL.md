@@ -14,9 +14,9 @@ Identifies and breaks the failure mode where agents make repeated identical call
 The same tool is called with identical arguments 3 or more times in sequence.
 
 ```
-Edit("skills/auth/SKILL.md", old_string="## Auth")
-Edit("skills/auth/SKILL.md", old_string="## Auth")   ← repeat
-Edit("skills/auth/SKILL.md", old_string="## Auth")   ← doom-loop
+Edit("skills/example-auth/SKILL.md (example)", old_string="## Auth")
+Edit("skills/example-auth/SKILL.md (example)", old_string="## Auth")   ← repeat
+Edit("skills/example-auth/SKILL.md (example)", old_string="## Auth")   ← doom-loop
 ```
 
 **Common cause:** `old_string` not found in file. The edit silently fails and the agent retries with no new information.
@@ -78,7 +78,7 @@ Log a warning and inject a system reminder into the agent's next prompt:
 [DOOM-LOOP WARNING]
 You appear to be repeating the same action without progress.
 Pattern detected: exact-repeat
-Action: Edit skills/auth/SKILL.md (same old_string 3 times)
+Action: Edit skills/example-auth/SKILL.md (example) (same old_string 3 times)
 Consider a different approach before retrying.
 ```
 
@@ -101,7 +101,7 @@ Stop execution, save state, and present a diagnostic to the user:
 ```
 Doom-loop detected in Story 03.
 Pattern:    exact-repeat
-Action:     Edit skills/auth/SKILL.md (same old_string 5 times)
+Action:     Edit skills/example-auth/SKILL.md (example) (same old_string 5 times)
 Likely cause: old_string not found in file
 Recommendation: Read the file first, then retry with correct content
 
@@ -179,7 +179,7 @@ Store doom-loop state in `.maestro/state.local.md` under the `doom_loop:` key:
 doom_loop:
   pattern_type: exact-repeat       # exact-repeat | oscillation | expanding-retry | context-chase
   count: 4                         # current repeat count in sliding window
-  last_action: "Edit skills/auth/SKILL.md old_string='## Auth'"
+  last_action: "Edit skills/example-auth/SKILL.md (example) old_string='## Auth'"
   intervention_level: 1            # 0 = none, 1 = warning, 2 = escalation, 3 = halt
   story: "03-auth-skill"           # which story triggered this
   window: []                       # last 10 call signatures (populated at runtime)

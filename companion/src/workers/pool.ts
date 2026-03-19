@@ -73,7 +73,7 @@ export async function spawnWorker(
     for await (const event of query({ prompt, options })) {
       if (event.type === 'assistant' && onProgress) {
         // Extract brief status from assistant messages
-        const content = (event as any).message?.content
+        const content = 'message' in event && (event as any).message?.content
         if (typeof content === 'string' && content.length > 20) {
           const now = Date.now()
           // Send a brief update every ~30 seconds

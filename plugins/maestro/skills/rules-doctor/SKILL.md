@@ -109,7 +109,7 @@ Rules Doctor — Maestro Configuration Linter
 
 Scanning 66 skills, 6 agents, 19 commands, 4 hooks...
 
-❌ ERROR: skills/auth/SKILL.md references 'skills/oauth/SKILL.md' but it doesn't exist
+❌ ERROR: skills/example-auth/SKILL.md (example) references 'skills/example-oauth/SKILL.md (example)' but it doesn't exist
 ⚠️ WARN:  skills/visualize/SKILL.md is 342 lines (consider splitting)
 ⚠️ WARN:  agents/fixer.md has TODO on line 15
 ❌ ERROR: hooks/hooks.json references 'hooks/missing.sh' but file not found

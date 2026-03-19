@@ -30,7 +30,14 @@ ERROR_TYPE=$(printf '%s' "$INPUT" | grep -o '"error"[[:space:]]*:[[:space:]]*"[^
 
 # Get current doom_loop count
 CURRENT_COUNT=$(grep -m1 "doom_loop_count:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "0")
-NEW_COUNT=$((CURRENT_COUNT + 2))
+NEW_COUNT=$((CURRENT_COUNT + 1))
+
+# Persist the counter back to state file
+if grep -q "doom_loop_count:" "$STATE_FILE" 2>/dev/null; then
+  sed -i "s/^doom_loop_count: .*/doom_loop_count: $NEW_COUNT/" "$STATE_FILE"
+else
+  sed -i "/^active:/a doom_loop_count: $NEW_COUNT" "$STATE_FILE"
+fi
 
 # Get current story info
 CURRENT_STORY=$(grep -m1 "current_story:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "unknown")
@@ -76,5 +83,5 @@ if [ "$LEVEL" -ge 1 ]; then
     MSG="$MSG Fix: the loop will attempt to continue automatically; if failures persist, pause and check .maestro/logs/doom-loop.md."
   fi
 
-  echo "{\"systemMessage\": \"${MSG}\"}"
+  jq -n --arg msg "$MSG" '{"systemMessage":$msg}'
 fi
