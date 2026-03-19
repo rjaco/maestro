@@ -3,10 +3,10 @@
 ![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Skills](https://img.shields.io/badge/skills-128-purple)
-![Commands](https://img.shields.io/badge/commands-39-orange)
+![Commands](https://img.shields.io/badge/commands-42-orange)
 ![Agents](https://img.shields.io/badge/agents-6-cyan)
 ![Squads](https://img.shields.io/badge/squads-7-red)
-![Hooks](https://img.shields.io/badge/hooks-6_events-yellow)
+![Hooks](https://img.shields.io/badge/hooks-8_events-yellow)
 
 **Full-Stack Autonomous Development Orchestrator for Claude Code**
 

@@ -1,6 +1,6 @@
 ---
 name: help
-description: "Contextual help, FAQ, and guided walkthroughs for Maestro"
+description: "Contextual help and topic guide — browse commands, modes, cost, trust, integrations, and architecture"
 argument-hint: "[topic]"
 allowed-tools:
   - Read
@@ -11,16 +11,39 @@ allowed-tools:
 
 # Maestro Help
 
-**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+## Usage
 
 ```
-███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
-████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
-██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
-██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
-██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+/maestro help [topic]
 ```
+
+## Topics
+
+| Topic | Description |
+|-------|-------------|
+| `commands` | All commands with examples |
+| `modes` | yolo vs checkpoint vs careful |
+| `opus` | Magnum Opus explained |
+| `cost` | Token tracking and budgets |
+| `trust` | Progressive trust levels |
+| `integrations` | Asana, Jira, Obsidian, Notion |
+| `troubleshooting` | Common issues and fixes |
+| `architecture` | How Maestro works internally |
+
+## Examples
+
+```
+/maestro help
+/maestro help modes
+/maestro help opus
+/maestro help integrations
+/maestro help troubleshooting
+```
+
+## See Also
+
+- `/maestro doctor` — Installation health check
+- `/maestro init` — Set up Maestro for this project
 
 Provides contextual help using an embedded knowledge base. When called with no arguments, shows the topic list. When called with a topic, provides detailed guidance.
 
@@ -54,7 +77,7 @@ Provides contextual help using an embedded knowledge base. When called with no a
 ```
 Commands:
   /maestro "task"         Build a feature autonomously
-  /maestro magnum-opus "vision"  Build an entire product (Magnum Opus)
+  /maestro opus "vision"  Build an entire product (Magnum Opus)
   /maestro init           Initialize for this project
   /maestro status         View progress, resume, pause, abort
   /maestro model          View/change model assignments
@@ -69,7 +92,7 @@ Examples:
   /maestro "Add dark mode toggle"
   /maestro "Build pricing page" --yolo
   /maestro "Refactor API layer" --careful --model opus
-  /maestro magnum-opus "SaaS analytics dashboard"
+  /maestro opus "SaaS analytics dashboard"
 ```
 
 ### Topic: modes
@@ -103,7 +126,7 @@ Use flags to set mode:
 ```
 Magnum Opus — Build Entire Products
 
-  /maestro magnum-opus "Build a personal finance dashboard"
+  /maestro opus "Build a personal finance dashboard"
 
 How it works:
   1. Deep Interview — Maestro asks questions across 10

@@ -22,10 +22,13 @@ Maestro adapts its behavior and output based on which Anthropic platform it's ru
 - **Advantages**: Visual diagrams, better table rendering, file previews
 
 ### Claude Cowork
-- **Detection**: Check for Cowork-specific capabilities (file output, spreadsheet generation)
-- **Capabilities**: File access, multi-step tasks, professional document output
-- **Output format**: Structured file outputs (markdown, HTML)
-- **Adaptations**: Generate exportable reports, structured data files
+- **Detection**: `CLAUDE_COWORK` env var set (checked before CLAUDE_DESKTOP)
+- **Capabilities**: File access, multi-step tasks, team-facing output, markdown rendering
+- **Output format**: Plain markdown — no box-drawing art, no ASCII progress bars
+- **Adaptations**: Shorter output, structured markdown sections, `[For team]` annotations on shared-code changes, suppressed learning-loop output
+- **Status format**: Single-line `**Maestro** | M2/7 S3/5 | Phase: IMPLEMENT | $2.40 spent`
+- **Progress format**: `40% (4/10)` instead of ASCII bar
+- See `desktop-compat` skill for full Cowork output rules
 
 ### Agent SDK
 - **Detection**: Running as programmatic agent (no interactive UI)
@@ -130,20 +133,33 @@ Maestro:
 
 ## Environment Detection Logic
 
-At the start of each Maestro session:
+At the start of each Maestro session, check in this exact order:
 
-1. Check for `CLAUDE_DESKTOP` env var → Desktop mode
-2. Check for `CLAUDE_COWORK` env var → Cowork mode
+1. Check for `CLAUDE_COWORK` env var → Cowork mode
+2. Check for `CLAUDE_DESKTOP` env var → Desktop mode
 3. Check for `CLAUDE_SDK` env var → Agent SDK mode
-4. Check for AskUserQuestion tool availability → Interactive mode
-5. Default → Terminal mode
+4. Check for `TERM` set and not `dumb` → Terminal mode
+5. Default → SDK/headless mode
+
+```
+if env.CLAUDE_COWORK:
+    mode = "cowork"
+elif env.CLAUDE_DESKTOP:
+    mode = "desktop"
+elif env.CLAUDE_SDK:
+    mode = "agent_sdk"
+elif env.TERM and env.TERM != "dumb":
+    mode = "terminal"
+else:
+    mode = "agent_sdk"
+```
 
 Store detected environment in session state:
 ```yaml
 environment: terminal | desktop | cowork | agent_sdk
 ```
 
-Adapt all subsequent output based on this detection.
+Adapt all subsequent output based on this detection. See the `desktop-compat` skill for full rules on Cowork and Desktop output adaptations.
 
 ## Remote Control Compatibility
 

@@ -1,11 +1,6 @@
 ---
 name: context-engine
 description: "Optimal context management engine. Composes right-sized context packages for each agent based on role, task, and relevance. Reduces token usage by 70-85% while improving agent performance."
-effort: low
-maxTurns: 3
-disallowedTools:
-  - Write
-  - Edit
 ---
 
 # Context Engine
@@ -322,19 +317,102 @@ The memory skill and context engine serve complementary roles. They do not dupli
 
 **Example:** If memory contains "auth refresh uses sliding window expiry — see src/auth/session.ts", and the current story is tagged `auth features`, that memory fact boosts the relevance score of `src/auth/session.ts` even before the prediction step runs.
 
-## MCP Tool Search — 85% Context Reduction
+## Context Optimization
 
-Claude Code v2.1.76 introduced MCP Tool Search (lazy loading for tool definitions). When enabled, MCP tool descriptions are NOT loaded into the initial context — they are fetched on demand via the `ToolSearch` tool only when needed.
+### Context Deduplication
 
-**Impact:** In projects with many MCP servers, tool definitions can consume 77K+ tokens of context. With Tool Search, this drops to ~8.7K. This is an **85% reduction** in context overhead.
+Before composing a context package, the engine checks for duplicate file contents across all candidate context sources. The same file may appear in multiple places — as a direct story reference, as a pattern match, as a predicted file from context history, and as a recently changed file. Including it multiple times wastes tokens without adding information.
 
-**How to leverage in Maestro:**
+**Deduplication algorithm:**
 
-1. **For SDK-based agents:** Pass `tools: ["ToolSearch", ...]` instead of listing all MCP tools.
-2. **For plugin-level configuration:** Skills that interact with MCP servers should use `ToolSearch` to discover available tools rather than pre-loading all definitions.
-3. **Context budget impact:** When calculating tier budgets, subtract MCP tool overhead if Tool Search is enabled. T3/T4 agents gain significant headroom.
+1. Collect all candidate context pieces from every source (story spec, relevance filter output, predictions, recent-changes flags, memory skill facts).
+2. Build a map keyed by canonical file path: `{ "src/auth/session.ts": [piece_A, piece_B] }`.
+3. For any file with more than one candidate piece, merge them into a single piece:
+   - Use the union of all requested line ranges (e.g., `[1-30]` + `[25-60]` → `[1-60]`).
+   - Carry forward all labels from every source (e.g., `[predicted]`, `[RECENTLY CHANGED]`).
+   - Keep the highest relevance score of the duplicates.
+4. Replace the duplicate entries with the single merged piece.
+5. Log the deduplication result:
 
-**Recommendation:** Add `ToolSearch` to all agent `allowed-tools` lists to enable on-demand tool discovery.
+```
+[2026-03-18T10:00:00] Dedup | Story 07-auth-refresh
+  Merged: src/auth/session.ts appeared in 3 sources → merged to [1-80], saved 412 tokens
+  Merged: src/types/vehicles.ts appeared in 2 sources → merged to [88-140], saved 198 tokens
+  Net savings: 610 tokens
+```
+
+**Identical content guard:** If two context sources reference the same file at the exact same line range, deduplicate trivially — include once, discard the duplicate. No merge needed.
+
+**Do not deduplicate across different files**, even if their content overlaps (e.g., a type exported from one file and re-exported from another). Treat file path as the identity boundary.
+
+### Cache-Friendly Ordering
+
+Order the assembled context package to maximize Anthropic's prompt caching. Anthropic caches the longest matching prefix of a prompt. Stable content at the front of the context window is more likely to hit the cache on repeated dispatches.
+
+**Ordering tiers (assemble in this sequence):**
+
+1. **Stable context** — content that changes rarely and is shared across many dispatches. Cache hits here yield the highest savings. Include first.
+   - `CLAUDE.md` (project conventions)
+   - `.maestro/dna.md` (product DNA)
+   - Steering documents and global constraints
+   - Skill definitions referenced by this agent role
+
+2. **Semi-stable context** — content that changes occasionally (between milestones or sprints, not between stories). Include second.
+   - Architecture documents
+   - Component maps and API contracts
+   - Shared type definitions (e.g., `src/types/*.ts` files that rarely change)
+   - Pattern libraries and code conventions extracted from the codebase
+
+3. **Volatile context** — content that changes with every story or dispatch. Include last.
+   - Story spec and acceptance criteria
+   - Recently changed files (flagged by recent-changes detection)
+   - QA feedback from the current session
+   - The specific file contents and line ranges targeted by this story
+
+**Why this ordering matters:** Anthropic's cache operates on a prefix match. If the first 8K tokens of a 12K prompt are identical to a prior request, those 8K tokens are served from cache at 10% of the normal input cost. By placing stable content first, repeated dispatches (same session, or next-day continuation) benefit from cache hits on the most expensive context sources.
+
+**Log the ordering in the context log:**
+
+```
+[2026-03-18T10:05:00] Cache-friendly assembly | Story 07-auth-refresh
+  Stable (6,200 tokens): CLAUDE.md, dna.md, implementer-skill-def
+  Semi-stable (1,800 tokens): api-patterns, src/types/vehicles.ts[88-140]
+  Volatile (2,400 tokens): story-spec, src/auth/session.ts[1-80][RECENTLY CHANGED], qa-feedback
+  Total: 10,400 tokens | Cache prefix opportunity: up to 6,200 tokens
+```
+
+**Do not reorder within each tier.** The priority ordering from Step 4 (Compose Package) governs ranking within tiers. This cache-friendly ordering governs the sequence of tiers, not the internal order of items within a tier.
+
+### Relevance Threshold
+
+Only include context pieces that score above the minimum relevance threshold for their tier. Pieces below the threshold add noise without value — they consume token budget and can distract agents with irrelevant information.
+
+**Per-tier thresholds (updated):**
+
+| Tier | Include Threshold | Hard Floor | Max Items |
+|------|------------------|------------|-----------|
+| T0 | 0.0 (include all) | 0.0 | No limit |
+| T1 | 0.2 | 0.15 | 20 |
+| T2 | 0.3 | 0.25 | 15 |
+| T3 | 0.5 | 0.30 | 10 |
+| T4 | 0.7 | 0.50 | 5 |
+
+The **Hard Floor** is the absolute minimum below which a piece is excluded regardless of budget. Even if the assembled package is under budget, pieces below the hard floor are not included — budget slack does not justify including irrelevant content.
+
+**The 0.3 rule:** No file scoring below 0.3 relevance is included in any package, for any tier. Files below this threshold are categorically noise. Log all such exclusions explicitly:
+
+```
+Excluded (below 0.3 threshold): vision.md(0.05), roadmap.md(0.08), research-notes.md(0.12),
+  competitor-analysis.md(0.21), monetization-strategy.md(0.18)
+```
+
+**Threshold override for predicted files:** Files pre-included by the prediction step (based on context history hit-rate ≥ 0.7) bypass the relevance threshold check. They were included because historical evidence suggests they will be needed, not because the relevance scorer scored them highly. Log these separately:
+
+```
+Predicted (bypassing threshold): src/auth/session.ts (hit-rate: 0.92, relevance: 0.45 — included via prediction)
+```
+
+**Threshold tuning:** After 10+ sessions, the orchestrator may adjust per-tier thresholds based on observed NEEDS_CONTEXT rates. If T3 packages frequently trigger NEEDS_CONTEXT, lower the T3 threshold toward 0.4. If T3 packages are frequently over budget, raise it toward 0.6. Log any threshold adjustments in `.maestro/memory/context-history.md` under a `## Threshold History` section.
 
 ## Integration Points
 

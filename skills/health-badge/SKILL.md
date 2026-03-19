@@ -79,7 +79,7 @@ Replace `+` with `%2B` in shield URLs to ensure correct encoding.
 
 ```json
 {
-  "version": "1.1.0",
+  "version": "1.4.0",
   "license": "MIT",
   "skills_count": 84,
   "commands_count": 25,
@@ -91,7 +91,7 @@ Replace `+` with `%2B` in shield URLs to ensure correct encoding.
 ## Example Output (Markdown)
 
 ```markdown
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Skills](https://img.shields.io/badge/skills-84%2B-purple)
 ![Commands](https://img.shields.io/badge/commands-25%2B-orange)

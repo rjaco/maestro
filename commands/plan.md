@@ -1,6 +1,6 @@
 ---
 name: plan
-description: "Deep planning mode — brainstorm, explore codebase, design architecture, decompose into stories, and validate before execution"
+description: "Plan a feature before building — brainstorm requirements, explore the codebase, design architecture, decompose into stories, and validate"
 argument-hint: "DESCRIPTION [--quick] [--no-explore] [--model opus|sonnet]"
 allowed-tools:
   - Read
@@ -18,24 +18,35 @@ allowed-tools:
 
 # Maestro Plan — Deep Planning Mode
 
-**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+## Usage
 
 ```
-███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
-████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
-██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
-██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
-██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+/maestro plan DESCRIPTION [--quick] [--no-explore] [--model opus|sonnet]
 ```
 
-This command ENHANCES Claude Code's native plan mode (EnterPlanMode tool).
-When the user runs /maestro plan, you MUST:
-1. First enter Claude Code's native plan mode via EnterPlanMode
-2. Use plan mode's structured exploration (read-only, no writes)
-3. Then layer Maestro's decomposition, cost estimation, and story generation on top
+## Flags
 
-This ensures plans have the SAME depth as native plan mode PLUS Maestro's story decomposition.
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--quick` | Skip explore and architect phases (brainstorm → decompose → review) | off |
+| `--no-explore` | Skip codebase exploration (use when you already know the codebase) | off |
+| `--model opus` | Force Opus for all planning agents | sonnet |
+| `--model sonnet` | Explicitly use Sonnet for planning agents | sonnet |
+
+## Examples
+
+```
+/maestro plan "Add real-time notifications"
+/maestro plan "Migrate to microservices" --model opus
+/maestro plan "Add dark mode" --quick
+/maestro plan "Refactor auth middleware" --no-explore
+```
+
+## See Also
+
+- `/maestro` — Execute the built plan (or any feature directly)
+- `/maestro status` — Check progress of an active session
+- `/maestro board` — Visual kanban view of stories
 
 You are Maestro in planning mode. Your job is to produce a thoroughly researched, validated implementation plan before any code is written. This goes beyond Claude Code's native plan mode by adding codebase exploration, architectural design, cost estimation, and story decomposition — all in one guided flow.
 
@@ -46,7 +57,6 @@ You are Maestro in planning mode. Your job is to produce a thoroughly researched
 | `--quick` | Skip explore + architect phases (brainstorm → decompose → review) | off |
 | `--no-explore` | Skip codebase exploration (use when you already know the codebase) | off |
 | `--model opus` | Force Opus for all planning agents | sonnet |
-| `--deep` | Maximum exploration depth: read every file to be modified, trace all execution paths, map all dependencies | off |
 
 ## Step 0: Prerequisites
 
@@ -89,7 +99,6 @@ If `$ARGUMENTS` is empty, show help:
   Flags:
     --quick        Skip exploration and architecture
     --no-explore   Skip codebase exploration only
-    --deep         Maximum depth: read every affected file, trace all paths
     --model opus   Use Opus for all planning agents
 ```
 
@@ -180,16 +189,6 @@ Use AskUserQuestion:
 
 Wait for confirmation. If the user adjusts, update the summary.
 
-### Artifact Output
-
-Write brainstorm results to `.maestro/plans/[SLUG]/brainstorm.md`:
-- Problem statement
-- Stakeholder analysis
-- Constraint identification
-- Initial scope definition
-
-This file survives context compaction and can be loaded independently.
-
 ## Phase 2: EXPLORE (skip if --quick or --no-explore)
 
 Goal: Understand the relevant parts of the codebase before designing.
@@ -239,63 +238,6 @@ Combine explorer results into a codebase analysis:
 
   Risks:
     - [potential conflict or complexity]
-```
-
-### Artifact Output
-
-Write exploration results to `.maestro/plans/[SLUG]/codebase-analysis.md`:
-- File map of affected areas
-- Pattern inventory
-- Dependency graph
-- Technical constraints discovered
-
-## Phase 2c: DEEP EXPLORATION (only if --deep)
-
-Goal: Exhaustive pre-architecture analysis so no surprises surface during implementation.
-
-When `--deep` is set, perform all of the following before entering Phase 3:
-
-1. **Read every file that will be modified** — not just files identified as likely candidates, but every file the implementation will touch. Open each one and read its full content.
-
-2. **Trace execution paths for affected code** — follow the call chain from entry point to data layer for each flow that will change. Document the path explicitly:
-   ```
-   Entry: routes/api/[endpoint].ts
-     → middleware/auth.ts (validates token)
-     → controllers/[name].ts (dispatches)
-     → services/[name].ts (business logic)
-     → models/[name].ts (data access)
-     → db/queries/[name].sql
-   ```
-
-3. **Map dependencies between files** — for each file to be modified, list what it imports and what imports it. Identify any shared state or side effects.
-
-4. **Identify all interfaces and contracts that must be maintained** — function signatures, API response shapes, event payloads, database schemas. Document the current contract so the plan can preserve it or explicitly plan the migration.
-
-5. **Document edge cases and error scenarios** — for each flow, identify:
-   - What happens when input is null/empty/malformed?
-   - What happens when an external service is unavailable?
-   - What happens under concurrent access?
-   - What are the failure modes and their user-visible effects?
-
-6. **List all tests that need updating** — scan the test directory for files that exercise the affected code. List each test file and what specifically will need to change.
-
-Present a deep analysis summary before proceeding to Phase 3:
-
-```
-+---------------------------------------------+
-| Deep Analysis                               |
-+---------------------------------------------+
-
-  Files Read:       [N] files fully read
-  Execution Paths:  [N] paths traced
-  Contracts:        [N] interfaces documented
-  Edge Cases:       [N] scenarios identified
-  Tests to Update:  [N] test files affected
-
-  Key Findings:
-    - [finding 1 — something non-obvious discovered]
-    - [finding 2 — a constraint or gotcha]
-    - [finding 3 — an opportunity to reuse something]
 ```
 
 ## Phase 3: ARCHITECT (skip if --quick)
@@ -360,15 +302,6 @@ Use AskUserQuestion:
 
 Wait for approval. If the user wants alternatives, propose a different approach and compare.
 
-### Artifact Output
-
-Write architecture decisions to `.maestro/plans/[SLUG]/architecture.md`:
-- Approach selection with rationale
-- Component boundaries
-- Data model changes
-- API contract changes
-- Interface definitions
-
 ## Phase 4: DECOMPOSE
 
 Goal: Break the approved architecture into executable stories.
@@ -421,15 +354,6 @@ Each story gets:
        depends_on: [3, 4]
 ```
 
-### Artifact Output
-
-Write each story to `.maestro/plans/[SLUG]/stories/NN-title.md` with FULL embedded context (not just references):
-- Requirements excerpt relevant to this story
-- Architecture decisions relevant to this story
-- Acceptance criteria in BDD format (Given/When/Then)
-- File paths to create/modify with expected changes
-- Interfaces to maintain or create
-
 ## Phase 5: REVIEW
 
 Goal: Validate the plan is realistic and complete.
@@ -467,91 +391,9 @@ Use AskUserQuestion:
 
 Auto-fix adds missing stories or adjusts plan based on findings.
 
-## Phase 5.5: READINESS GATE
-
-Before presenting the plan, validate completeness:
-
-### Readiness Checklist
-1. [ ] Every story has acceptance criteria (not just titles)
-2. [ ] Every story has file paths (create/modify/reference)
-3. [ ] Dependencies between stories form a valid DAG (no cycles)
-4. [ ] Architecture decisions reference existing code patterns
-5. [ ] No story references files that don't exist (unless creating them)
-6. [ ] Edge cases identified in Phase 2c are covered by at least one story
-7. [ ] Test strategy covers all modified code paths
-
-### Readiness Classification
-
-| Status | Meaning | Action |
-|--------|---------|--------|
-| PASS | All 7 checks pass | Proceed to present |
-| CONCERNS | 1-2 checks fail with minor gaps | Present with warnings |
-| FAIL | 3+ checks fail or critical gaps | Return to the failed phase |
-
-Display:
-```
-+---------------------------------------------+
-| Readiness Gate                              |
-+---------------------------------------------+
-  [✓] Acceptance criteria    7/7 stories
-  [✓] File paths             7/7 stories
-  [✓] Dependency DAG         valid (no cycles)
-  [✓] Architecture refs      all grounded
-  [!] Missing file refs      1 story refs nonexistent util
-  [✓] Edge case coverage     12/14 cases covered
-  [✓] Test coverage          all paths have tests
-
-  Status: CONCERNS (1 minor gap)
-  Note: Story 4 references utils/format.ts which doesn't
-        exist yet — verify it will be created in Story 2.
-```
-
-If FAIL, do NOT present the plan. Instead, identify which phase needs
-revisiting and return to it.
-
 ## Phase 6: PRESENT
 
 Goal: Final presentation of the complete plan for approval.
-
-Display the full structured plan output:
-
-```
-+---------------------------------------------+
-| Maestro Plan: [feature]                     |
-+---------------------------------------------+
-
-## Architecture Analysis
-[How the feature fits into the existing codebase — which layers are affected, which are not]
-[Which patterns from the codebase this plan follows]
-[Which files are affected and WHY — not just a list, but the reasoning]
-
-## Detailed Design
-[Data model changes — new fields, tables, or schema migrations]
-[API contract changes — new endpoints, modified signatures, response shape changes]
-[Component/module structure — how the new code is organized]
-[State management approach — how data flows and where it lives]
-
-## Edge Cases & Error Handling
-[What happens when X fails? — cover every external dependency]
-[Empty state handling — first run, no data, zero results]
-[Concurrent access scenarios — race conditions, optimistic locking needs]
-[Rate limiting / throttling — if any external services are called]
-
-## Test Strategy
-[Unit tests needed — list specific functions/modules requiring unit coverage]
-[Integration tests needed — list flows requiring end-to-end validation]
-[E2E scenarios — user-facing flows to verify]
-[Tests requiring updates — existing tests that will break and why]
-
-## Story Breakdown
-[Decomposed stories with their dependency chain — matches Phase 4 output]
-
-## Risk Assessment
-[What could go wrong — ranked by likelihood × impact]
-[Rollback strategy — how to undo this if it causes problems in production]
-```
-
-Then show the summary box:
 
 ```
 +---------------------------------------------+
@@ -566,13 +408,6 @@ Then show the summary box:
 
   Plan saved to: .maestro/plans/[slug].md
 ```
-
-After presenting the plan, tell the user:
-  "Plan artifacts saved to .maestro/plans/[SLUG]/"
-  "Review and edit any file before confirming execution."
-
-This mirrors Claude Code's Ctrl+G pattern — the user can edit
-plan artifacts directly before approving.
 
 Use AskUserQuestion:
 - Question: "Plan is ready. What would you like to do?"
@@ -647,5 +482,3 @@ Phase 7: SAVE
 ```
 
 This is useful for small features where you already know the codebase and just want story decomposition with validation.
-
-Note: `--quick` and `--deep` are mutually exclusive. If both are passed, `--quick` takes precedence and a warning is shown.

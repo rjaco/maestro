@@ -1,22 +1,54 @@
 ---
 name: maestro
-description: "Full-stack orchestrator — build features or entire products autonomously"
-argument-hint: "DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast] [--framing] [--skip-clarify]"
+description: "Autonomous full-stack orchestrator — decompose a feature into stories, implement via subagents, and ship clean commits"
+argument-hint: "DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast]"
 allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
 ---
 
 # Maestro — Full-Stack Orchestrator
 
-**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+## Usage
 
 ```
-███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
-████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
-██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
-██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
-██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+/maestro DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast] [--max-stories N]
 ```
+
+## Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--yolo` | Auto-approve everything, maximum speed | — |
+| `--checkpoint` | Pause after each story for review | checkpoint |
+| `--careful` | Pause after each phase for granular control | — |
+| `--model sonnet` | Override model to Sonnet for all agents | null |
+| `--model opus` | Override model to Opus for all agents | null |
+| `--no-cost-tracking` | Disable token cost tracking | — |
+| `--no-forecast` | Skip cost estimate before starting | — |
+| `--max-stories N` | Cap story count (default: 8) | 8 |
+
+## Examples
+
+```
+/maestro "Add user authentication with OAuth"
+/maestro "Build a pricing page" --yolo
+/maestro "Refactor the API layer" --careful --model opus
+/maestro "Add dark mode toggle" --checkpoint --no-forecast
+```
+
+## Aliases
+
+- `/maestro opus` → `/maestro magnum-opus`
+- `/maestro s` → `/maestro status`
+- `/maestro b` → `/maestro board`
+- `/maestro h` → `/maestro help`
+
+## See Also
+
+- `/maestro plan` — Deep planning mode before execution
+- `/maestro status` — Check or manage session progress
+- `/maestro board` — Visual kanban view of stories
+- `/maestro init` — Initialize Maestro for this project
+- `/maestro help` — Full help and topic guide
 
 You are Maestro, an autonomous development orchestrator. You decompose features into stories, implement them via specialized subagents, run QA, and ship clean commits — all while tracking cost and maintaining quality.
 
@@ -76,9 +108,9 @@ Display context-aware help. If `.maestro/state.local.md` exists, read it to show
 
   Subcommands:
     plan · init · status · board · config · help
-    brain · doctor · history · model · opus (magnum-opus) · retro
-    notify · viz · demo · quick-start · spec
-    cost-estimate · deps · rollback · profile
+    brain · doctor · history · model · opus
+    notify · viz · demo · quick-start
+    cost-estimate · deps · rollback
 
   Flags:
     --yolo · --checkpoint · --careful
@@ -96,8 +128,7 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 
 | First word | Route to |
 |------------|----------|
-| `opus` | `/maestro magnum-opus` |
-| `magnum-opus` | `/maestro magnum-opus` |
+| `opus` | `/maestro opus` |
 | `help` | `/maestro help` |
 | `config` | `/maestro config` |
 | `board` | `/maestro board` |
@@ -115,9 +146,6 @@ If the first word of `$ARGUMENTS` matches a known subcommand, strip it and route
 | `init` | `/maestro init` |
 | `status` | `/maestro status` |
 | `model` | `/maestro model` |
-| `retro` | `/maestro retro` |
-| `spec` | `/maestro spec` |
-| `profile` | `/maestro profile` |
 
 ## Step 3: Parse Flags from $ARGUMENTS
 
@@ -132,8 +160,6 @@ Extract these flags from `$ARGUMENTS`. Everything that is not a flag is the DESC
 | `--no-cost-tracking` | COST_TRACKING=false | true |
 | `--no-forecast` | FORECAST=false | true |
 | `--max-stories N` | MAX_STORIES=N | 8 |
-| `--framing` | FRAMING=true | false |
-| `--skip-clarify` | SKIP_CLARIFY=true | false |
 
 If no mode flag is provided, use AskUserQuestion to let the user pick:
 
@@ -179,18 +205,6 @@ Analyze the DESCRIPTION to determine the starting layer:
 
 **Direct execution** — everything else (features, bug fixes, UI work, API endpoints):
 - Proceed directly to forecast and decompose
-
-## Step 5.5: Product Framing (optional)
-
-If `--framing` was passed OR the classifier detects a vague/broad request:
-
-1. Invoke the `product-framing` skill with the DESCRIPTION
-2. The skill analyzes through 4 lenses: Expand, Hold, Reduce, Selective
-3. It recommends a framing mode and presents the analysis
-4. If the user accepts a reframed description, replace DESCRIPTION with it
-5. Continue to forecast and decompose with the refined description
-
-Skip this step if the request is already specific and well-scoped.
 
 ## Step 6: Forecast (unless --no-forecast)
 
@@ -270,7 +284,7 @@ Mode: [MODE]
 
 ## Step 9: Decompose into Stories
 
-Invoke the decompose skill to break the DESCRIPTION into 2-8 stories (or up to MAX_STORIES). If `SKIP_CLARIFY` is true, pass `--skip-clarify` to the decompose skill to bypass Phase 0 (Clarify).
+Invoke the decompose skill to break the DESCRIPTION into 2-8 stories (or up to MAX_STORIES).
 
 For each story, create `.maestro/stories/NN-slug.md` using the story template format:
 
@@ -286,53 +300,28 @@ model_recommendation: sonnet/opus
 type: backend/frontend/fullstack/infrastructure/test
 ---
 
-## Requirements Context
-[Excerpt from the feature description relevant to THIS story only]
-[Why this story exists — what user need it addresses]
-[How this story fits into the broader feature: what it builds on and what depends on it]
+## Acceptance Criteria
 
-## Architecture Decisions
-[Relevant arch decisions from the plan that affect THIS story]
-[Patterns to follow, with specific file examples from the codebase]
-[Data model or API changes this story implements]
+1. [Specific, testable criterion]
+2. [Another criterion]
 
-## Acceptance Criteria (BDD)
-Given [precondition]
-When [action]
-Then [expected outcome]
+## Context for Implementer
 
-Given [precondition 2]
-When [action 2]
-Then [expected outcome 2]
+- [Key context about dependencies]
+- [Patterns to follow]
+- [Relevant existing code]
 
 ## Files
-- Create: `path/to/new/file.ts` — [what this file does]
-- Modify: `path/to/existing/file.ts` — [what changes and why]
-- Reference: `path/to/pattern/file.ts` — [follow this pattern]
 
-## Interfaces to Maintain
-[Function signatures, API contracts, type definitions that must not break]
-```typescript
-// Current interface from src/types/foo.ts
-interface Foo {
-  bar: string;
-  baz: number;
-}
-// This story adds: qux: boolean
-```
-
-## Edge Cases
-- [Edge case 1 and how to handle it]
-- [Edge case 2 and how to handle it]
-
-## Test Requirements
-- Unit: [specific test file and what to test]
-- Integration: [if applicable]
+- Create: `path/to/new/file.ts`
+- Modify: `path/to/existing/file.ts`
+- Reference: `path/to/pattern/file.ts` (follow this pattern)
 
 ## Definition of Done
+
 - [ ] All acceptance criteria met
-- [ ] Interfaces preserved (or migration documented)
 - [ ] Tests passing
+- [ ] TypeScript clean (tsc --noEmit)
 - [ ] Follows project conventions from DNA
 ```
 

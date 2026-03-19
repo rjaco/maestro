@@ -1,6 +1,6 @@
 ---
 name: config
-description: "Interactive configuration editor for Maestro"
+description: "View and edit Maestro project configuration — execution mode, quality gates, integrations, and cost tracking"
 argument-hint: "[show|set KEY VALUE|reset]"
 allowed-tools:
   - Read
@@ -12,16 +12,37 @@ allowed-tools:
 
 # Maestro Config
 
-**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+## Usage
 
 ```
-███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
-████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
-██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
-██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
-██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+/maestro config [show|set KEY VALUE|reset]
 ```
+
+## Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| _(none)_ or `show` | Display current config with an interactive edit menu |
+| `set KEY VALUE` | Update a single setting using dot-notation keys |
+| `reset` | Restore all settings to their defaults |
+
+## Examples
+
+```
+/maestro config
+/maestro config show
+/maestro config set default_mode yolo
+/maestro config set quality.max_qa_iterations 3
+/maestro config set integrations.kanban.provider github
+/maestro config set models.execution opus
+/maestro config reset
+```
+
+## See Also
+
+- `/maestro model` — Focused UI for changing model assignments
+- `/maestro doctor` — Verify that configured integrations are reachable
+- `/maestro init` — Re-initialize config from scratch
 
 View and edit Maestro configuration for this project. All settings are stored in `.maestro/config.yaml`.
 
@@ -33,28 +54,29 @@ Read `.maestro/config.yaml` and display it with inline annotations:
 +---------------------------------------------+
 | Maestro Configuration                       |
 +---------------------------------------------+
-  Execution
+
+  Execution:
     default_mode         checkpoint
     default_model        sonnet
 
-  Quality Gates
+  Quality Gates:
     max_qa_iterations    5          (QA review cycles per story)
     max_self_heal        3          (auto-fix attempts per story)
     run_tsc              true       (TypeScript type checking)
     run_lint             true       (linter)
     run_tests            true       (test suite)
 
-  Cost Tracking
+  Cost Tracking:
     enabled              true
     forecast             true       (estimate before starting)
     ledger               true       (log per-story costs)
     budget_enforcement   true       (pause at budget limit)
 
-  Integrations
-    Kanban
+  Integrations:
+    Kanban:
       provider           (not set)
       sync_enabled       false
-    Knowledge Base
+    Knowledge Base:
       provider           (not set)
       vault_path         (not set)
       sync_enabled       false

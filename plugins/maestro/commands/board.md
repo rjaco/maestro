@@ -1,7 +1,7 @@
 ---
 name: board
-description: "View and manage stories as a text-based kanban board"
-argument-hint: "[view|sync|move STORY_ID STATUS]"
+description: "View and manage stories as a text-based kanban board, with optional sync to Asana, Jira, Linear, or GitHub Issues"
+argument-hint: "[view|sync|move STORY_ID STATUS|open]"
 allowed-tools:
   - Read
   - Write
@@ -15,16 +15,37 @@ allowed-tools:
 
 # Maestro Board
 
-**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+## Usage
 
 ```
-███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
-████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
-██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
-██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
-██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+/maestro board [view|sync|move STORY_ID STATUS|open]
 ```
+
+## Subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| _(none)_ or `view` | Display the kanban board with interactive actions |
+| `sync` | Sync stories with the configured kanban provider |
+| `move STORY_ID STATUS` | Move a story to a different status column |
+| `open` | Open the board in the external provider's web UI |
+
+Valid statuses for `move`: `pending`, `in_progress`, `in_review`, `done`, `skipped`
+
+## Examples
+
+```
+/maestro board
+/maestro board view
+/maestro board sync
+/maestro board move 03 done
+/maestro board open
+```
+
+## See Also
+
+- `/maestro status` — Session progress with resume/abort/pause
+- `/maestro config` — Configure the kanban provider
 
 View and manage stories as a text-based kanban board. Syncs with external kanban tools (Asana, Jira, Linear, GitHub Issues) if configured.
 
@@ -58,13 +79,14 @@ Group stories by status and display as a text kanban board:
 +---------------------------------------------+
 | Board: Add user authentication              |
 +---------------------------------------------+
+
   BACKLOG          IN PROGRESS      DONE
   -----------      -----------      -----------
   04-tests         03-frontend      01-schema
-  05-middleware                     02-api-routes
+  05-middleware                      02-api-routes
 
-  Skipped  (none)
-  Blocked  (none)
+  Skipped: (none)
+  Blocked: (none)
 
   ---- 2/5 stories complete ----
 ```
@@ -106,7 +128,8 @@ Use AskUserQuestion:
    +---------------------------------------------+
    | Kanban Sync                                 |
    +---------------------------------------------+
-     Changes from [provider]
+
+     Changes from [provider]:
        (!) Story 03 moved to "Cancelled" on board
        (!) Story 05 description updated on board
        (i) No new cards added

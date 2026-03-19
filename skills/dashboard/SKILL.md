@@ -132,3 +132,170 @@ output_contract:
     - .maestro/logs/costs.jsonl
   side_effects: terminal output only
 ```
+
+---
+
+## Opus Progress Display
+
+When a Magnum Opus session is active, the dashboard renders an enhanced progress box that surfaces wave-level, milestone-level, and story-level state simultaneously.
+
+### When to Show
+
+- After each story completes inside `opus-loop` (replaces the standard story-completion render)
+- When the user runs `/maestro status` during an active Opus session
+- At milestone boundaries — both before (upcoming milestone header) and after (milestone summary)
+- In Cowork or Dispatch mode, substitute the compact single-line format instead of the full box
+
+### Full Progress Box (Terminal Mode)
+
+Rendered when `unicode_box: true` or `unicode_box: auto` and the terminal is detected as UTF-8 capable.
+
+```
+╔══════════════════════════════════════════════════════╗
+║  MAGNUM OPUS — [Wave Name]                           ║
+╠══════════════════════════════════════════════════════╣
+║  Milestone [N]/[M]: [milestone name]                 ║
+║  Story [N]/[M]: [story name]                         ║
+║  Phase: [VALIDATE|DELEGATE|IMPLEMENT|QA|GIT|CHECK]   ║
+║  ████████░░░░░░░░░░ [N]% complete                    ║
+╠──────────────────────────────────────────────────────╣
+║  Stories: ✓✓✓▶○○ ([done] done, [remaining] left)    ║
+║  Cost: ~$[spent] spent | ~$[remaining] remaining     ║
+║  Time: [elapsed] elapsed | ~[eta] ETA               ║
+║  QA Pass Rate: [rate]% ([passed]/[total] first-pass) ║
+╚══════════════════════════════════════════════════════╝
+```
+
+Box width: 54 characters (inner content: 52). The double-rule separator (`╠══╣`) divides the identity/phase section from the metrics section. The thin-rule separator (`╠──╣`) is used only inside the metrics section when a sub-section break aids readability.
+
+Fall back to ASCII (`+`, `-`, `|`) when `unicode_box: false` or when the terminal cannot be confirmed as UTF-8.
+
+### Story Status Indicators
+
+Each completed, active, or pending story within the current milestone is represented by a single character in the Stories line:
+
+| Character | Meaning |
+|-----------|---------|
+| `✓` | Completed and passed QA |
+| `✗` | Failed QA — scheduled for retry |
+| `▶` | Currently executing |
+| `○` | Pending (not yet started) |
+
+Indicators are rendered left-to-right in story order. When the milestone has more than 20 stories, truncate the indicator string to 19 characters and append `…` to signal overflow.
+
+### Progress Bar
+
+```
+████████░░░░░░░░░░░░ 40% complete
+```
+
+- Width: 20 characters total
+- Filled segment: `█` — `filled = round(pct / 100 * 20)`
+- Empty segment: `░` — `empty = 20 - filled`
+- Percentage: `(completed_stories / total_stories) × 100`, rounded to nearest integer
+- Label: `[N]% complete` where N is the rounded percentage
+- Counts are shown on the Story line, not on the bar line itself
+
+### Phase Field
+
+Display the current phase of the story-in-progress using the canonical phase names from the dev-loop:
+
+```
+VALIDATE | DELEGATE | IMPLEMENT | QA | GIT | CHECK
+```
+
+When rendering at a milestone boundary rather than mid-story, display `Milestone complete` (after) or `Milestone [N] starting` (before).
+
+### Metrics Section
+
+#### Cost Display
+
+Read all cost data from `.maestro/logs/costs.jsonl` (same source as the standard dashboard). Do not re-derive costs independently.
+
+- **Spent**: sum of all story costs recorded since the Opus session started
+- **Remaining**: `avg_cost_per_story × remaining_stories`, where `avg_cost_per_story = total_spent / completed_stories`
+- If no stories are completed yet, display `remaining: estimating...`
+- Format: `~$X.XX spent | ~$X.XX remaining`
+- Round all dollar amounts to two decimal places
+
+#### Time / ETA Display
+
+- **Elapsed**: wall-clock time since the Opus session started, formatted as `Xh Ym` (omit hours if under 60 min, e.g. `14m`)
+- **ETA**: `avg_time_per_story × remaining_stories`
+  - `avg_time = total_elapsed / completed_stories`
+  - Format result as `~Xh Ym` or `~Ym`
+  - If no stories completed yet: `~estimating`
+  - If all stories done: display `complete` for both fields
+- Format: `[elapsed] elapsed | ~[eta] ETA`
+
+#### QA Pass Rate
+
+- **Rate**: `first_pass_count / total_qa_reviews × 100`, rounded to nearest integer
+- **First-pass**: a story passes on its first QA dispatch with no rework loop triggered
+- Format: `[rate]% ([passed]/[total] first-pass)`
+- If fewer than 2 stories have completed QA, display `n/a (insufficient data)` for the rate
+
+### Compact Format (Cowork / Dispatch Mode)
+
+When Maestro is operating in Cowork or Dispatch mode, the full box is suppressed to avoid overwhelming conversation context. Instead, emit a single line after each story completion:
+
+```
+**Maestro** | M[N]/[M] S[N]/[M] | [PHASE] | $[spent] | [elapsed]
+```
+
+Example:
+
+```
+**Maestro** | M2/5 S3/8 | IMPLEMENT | $6.40 | 42m
+```
+
+Fields:
+- `M[N]/[M]` — current milestone number / total milestones
+- `S[N]/[M]` — current story number within the milestone / total stories in milestone
+- `[PHASE]` — current dev-loop phase (abbreviated, uppercase)
+- `$[spent]` — total spent so far, no decimals if under $10 (`$6` not `$6.00`), two decimals otherwise
+- `[elapsed]` — session wall-clock time (`14m` or `1h 6m`)
+
+### Trigger Points in Opus Loop
+
+The following events in `opus-loop` trigger a dashboard render:
+
+| Event | Format |
+|-------|--------|
+| Story delegation sent | Compact (Cowork) or none (Terminal) |
+| Story CHECKPOINT complete | Full box (Terminal) or Compact (Cowork) |
+| Milestone all-stories complete | Full box with `Milestone complete` phase |
+| `/maestro status` command | Full box regardless of mode |
+| Wave complete | Full box with summary totals, all stories `✓` or `✗` |
+
+### Data Sources for Opus Fields
+
+| Field | Source |
+|-------|--------|
+| Wave name | `.maestro/state.local.md` — `opusWaveName` |
+| Milestone N/M | `.maestro/state.local.md` — `currentMilestone`, `totalMilestones` |
+| Story N/M | `.maestro/state.local.md` — `storiesCompleted`, `storiesTotal` (within milestone) |
+| Story indicators | `.maestro/state.local.md` — `storyStatuses[]` array |
+| Current phase | Dev-loop phase tracker in state |
+| Cost (spent) | `.maestro/logs/costs.jsonl` — session aggregate |
+| Cost (remaining) | Derived: `avg × remaining` |
+| Elapsed time | Session start timestamp in `.maestro/state.local.md` — `opusSessionStart` |
+| QA pass rate | `.maestro/state.local.md` — `qaFirstPassCount`, `qaTotalReviews` |
+
+### Configuration
+
+The existing `dashboard` config block in `.maestro/config.yaml` governs Opus display as well. No new keys are required. The `unicode_box` setting controls whether the full Unicode box or the ASCII fallback is used for the Opus progress box.
+
+```yaml
+dashboard:
+  enabled: true           # also controls Opus progress display
+  milestone_only: false   # if true, suppress per-story renders inside opus-loop
+  unicode_box: auto       # auto | true | false
+```
+
+### Integration Points
+
+- **opus-loop/SKILL.md** — calls dashboard render at each story CHECKPOINT and at each milestone boundary
+- **dev-loop/SKILL.md** — unchanged; continues to call the standard dashboard render outside Opus sessions
+- **token-ledger/SKILL.md** — session start timestamp used for elapsed-time calculation; read `opusSessionStart` field
+- **cowork/SKILL.md** — signals compact-format mode; dashboard checks active mode before choosing render path

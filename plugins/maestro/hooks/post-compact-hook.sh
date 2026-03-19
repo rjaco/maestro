@@ -29,5 +29,11 @@ TOTAL_STORIES=$(grep -m1 "^total_stories:" "$STATE_FILE" 2>/dev/null | awk '{pri
 
 echo "${TIMESTAMP} [compact] feature=${FEATURE} phase=${PHASE} story=${CURRENT_STORY}/${TOTAL_STORIES}" >> "${LOG_DIR}/compact.log"
 
+# Inform the user (via stderr) what was preserved through compaction
+echo "[MAESTRO] Context compaction occurred during active session." >&2
+echo "  → Cause: The conversation context exceeded Claude's window and was automatically summarized" >&2
+echo "  → What was preserved: .maestro/state.local.md contains the full session state (feature, phase, story progress)" >&2
+echo "  → Next step: The SessionStart hook will re-inject Maestro context automatically; no action needed unless the session stalls" >&2
+
 # Exit cleanly — no stdout output (would be ignored anyway)
 exit 0

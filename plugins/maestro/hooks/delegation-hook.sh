@@ -88,10 +88,9 @@ if [[ -n "$HOOK_INPUT" ]]; then
 fi
 
 # Build a helpful rejection message
-REASON="Maestro delegation enforcement: During active execution (phase: ${PHASE}), "
-REASON="${REASON}code changes must go through dispatched agents in worktrees. "
-REASON="${REASON}Use Agent(subagent_type: 'maestro:maestro-implementer', isolation: 'worktree') "
-REASON="${REASON}to dispatch an implementer instead of using ${TOOL_NAME:-Edit/Write} directly."
+REASON="[MAESTRO] The orchestrator cannot edit files directly during active execution (phase: ${PHASE})."
+REASON="${REASON} Cause: delegation means code changes must flow through isolated implementer agents in worktrees — this prevents the orchestrator from drifting into implementation and losing its coordination context."
+REASON="${REASON} Fix: use Agent(subagent_type: 'maestro:maestro-implementer', isolation: 'worktree') to dispatch an implementer agent instead of calling ${TOOL_NAME:-Edit/Write} directly."
 
 if [[ -n "$FILE_PATH" ]]; then
   REASON="${REASON} Attempted to modify: ${FILE_PATH}"

@@ -8,13 +8,13 @@
   },
   "metadata": {
     "description": "Build features with /maestro, entire products with /maestro magnum-opus. Kanban integration, second brain, session memory, notifications, and visual dashboards.",
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "plugins": [
     {
       "name": "maestro",
       "description": "Full-stack autonomous development orchestrator with kanban (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), session memory, notifications, and visual dashboards. Build features with /maestro, entire products with /maestro magnum-opus.",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "author": {
         "name": "Maestro Contributors",
         "url": "https://github.com/anthropics/maestro-orchestrator"

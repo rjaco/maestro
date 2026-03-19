@@ -1,7 +1,7 @@
 ---
 name: model
-description: "View and edit model assignments per task type — interactive menu"
-argument-hint: ""
+description: "View and change which AI model is used for each task type — planning, execution, review, and research"
+argument-hint: "[preset]"
 allowed-tools:
   - Read
   - Write
@@ -12,16 +12,36 @@ allowed-tools:
 
 # Maestro Model — Interactive Model Manager
 
-**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+## Usage
 
 ```
-███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
-████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
-██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
-██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
-██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+/maestro model [preset]
 ```
+
+## Presets
+
+| Preset | planning | execution | review | simple | research |
+|--------|----------|-----------|--------|--------|----------|
+| `budget` | haiku | sonnet | haiku | haiku | haiku |
+| `balanced` | opus | sonnet | opus | haiku | sonnet |
+| `quality` | opus | sonnet | opus | sonnet | opus |
+| `max` | opus | opus | opus | opus | opus |
+
+## Examples
+
+```
+/maestro model
+/maestro model budget
+/maestro model quality
+/maestro model max
+```
+
+_(Without arguments, displays current assignments and opens an interactive selection form.)_
+
+## See Also
+
+- `/maestro config` — Full configuration editor (includes model settings)
+- `/maestro help cost` — Model pricing and cost tracking details
 
 View and edit which AI model is used for each task type. Uses a single multi-question form to configure all task types at once.
 
@@ -54,13 +74,10 @@ Display the current assignments briefly:
 +---------------------------------------------+
 | Model Assignments                           |
 +---------------------------------------------+
-  planning    opus
-  execution   sonnet
-  review      opus
-  simple      haiku
-  research    sonnet
+  planning   opus    |  execution  sonnet
+  review     opus    |  simple     haiku
+  research   sonnet  |
 
-  Pricing (input/output per 1M tokens)
   Haiku $0.80/$4  Sonnet $3/$15  Opus $15/$75
 ```
 

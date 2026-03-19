@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: "Health check and diagnostics for Maestro installation"
+description: "Run a full health check on Maestro — validates config, DNA, trust metrics, git state, hooks, and integration connectivity"
 argument-hint: ""
 allowed-tools:
   - Read
@@ -12,16 +12,39 @@ allowed-tools:
 
 # Maestro Doctor
 
-**ALWAYS display this ASCII banner as the FIRST thing in your response, before any other output:**
+## Usage
 
 ```
-███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
-████╗ ████║██╔══██╗██╔════╝██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗
-██╔████╔██║███████║█████╗  ███████╗   ██║   ██████╔╝██║   ██║
-██║╚██╔╝██║██╔══██║██╔══╝  ╚════██║   ██║   ██╔══██╗██║   ██║
-██║ ╚═╝ ██║██║  ██║███████╗███████║   ██║   ██║  ██║╚██████╔╝
-╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝
+/maestro doctor
 ```
+
+## Examples
+
+```
+/maestro doctor
+```
+
+_(Doctor runs automatically and produces a structured report. No flags or subcommands are needed.)_
+
+## What It Checks
+
+| Check | Description |
+|-------|-------------|
+| Core files | `.maestro/` directory, `dna.md`, `config.yaml`, `trust.yaml` |
+| Config validation | Mode, quality gates, and provider names are valid |
+| Trust metrics | `trust_level` and rates are within expected ranges |
+| Session state | Warns on stale sessions older than 24 hours |
+| Git status | Branch, uncommitted changes, session branch alignment |
+| Hook installation | Stop hook is installed and executable |
+| Integration detection | MCP servers and CLI tools vs. configured providers |
+| Knowledge base | Vault path exists (Obsidian) or MCP available (Notion) |
+| Kanban connectivity | Provider authentication and reachability |
+
+## See Also
+
+- `/maestro config` — Fix configuration issues found by doctor
+- `/maestro init` — Re-initialize if core files are missing
+- `/maestro help integrations` — Set up MCP integrations
 
 Runs a comprehensive diagnostic on the Maestro installation and reports health status with actionable recommendations.
 

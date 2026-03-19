@@ -1,14 +1,27 @@
 {
   "name": "maestro",
-  "description": "Full-stack autonomous development orchestrator with kanban integration (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), and session memory. Build features with /maestro, build entire products with /maestro magnum-opus. Three-layer orchestration with self-improving agents, context management, and cost tracking.",
-  "version": "1.3.0",
+  "description": "Autonomous multi-agent orchestrator for Claude Code — plan, delegate, and ship full features with a single command.",
+  "version": "1.4.0",
   "author": {
-    "name": "Maestro Contributors",
-    "url": "https://github.com/anthropics/maestro-orchestrator"
+    "name": "Rodrigo Deepneuron",
+    "email": "rodrigo@deepneuron.ai",
+    "url": "https://github.com/rodrigo-deepneuron"
+  },
+  "homepage": "https://github.com/rodrigo-deepneuron/maestro",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rodrigo-deepneuron/maestro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rodrigo-deepneuron/maestro/issues"
   },
   "license": "MIT",
   "keywords": [
+    "claude-code",
+    "plugin",
     "orchestrator",
+    "dev-tools",
+    "agentic",
     "autonomous",
     "agents",
     "strategy",
@@ -17,19 +30,21 @@
     "self-improving",
     "magnum-opus",
     "kanban",
-    "second-brain",
-    "memory",
-    "TDD",
-    "quality-gates",
-    "multi-agent",
-    "Claude Code",
     "asana",
     "jira",
     "linear",
     "obsidian",
-    "notion"
+    "notion",
+    "second-brain",
+    "memory"
   ],
-  "homepage": "https://github.com/anthropics/maestro-orchestrator",
-  "repository": "https://github.com/anthropics/maestro-orchestrator",
-  "categories": ["development", "productivity", "automation"]
+  "categories": [
+    "productivity",
+    "developer-tools",
+    "automation",
+    "project-management"
+  ],
+  "engines": {
+    "claude-code": ">=1.0.0"
+  }
 }

@@ -1,5 +1,10 @@
-# Maestro session state (local only)
+# Maestro session state (local only, never committed)
 .maestro/state.local.md
+.maestro/logs/
+.maestro/instances/
+.maestro/locks/
+.maestro/recon/
+.maestro/sparc/
 .maestro/*.lock
+.claude/worktrees/
 temp/
-.maestro/

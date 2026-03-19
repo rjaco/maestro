@@ -139,3 +139,143 @@ Model routing accuracy:
 ```
 
 Propose model boundary or override threshold adjustments when under-routing or over-routing rate exceeds 20% for any tier.
+
+---
+
+## Historical Performance Tracking
+
+After each agent dispatch completes (including QA outcome), record performance data to `.maestro/model-performance.md`. The delegation skill reads this file at routing time to adjust model selection based on observed outcomes.
+
+### Performance Log Format
+
+The performance log is a Markdown file maintained by the orchestrator. Each run appends or updates the relevant row. The file header contains the last-updated timestamp.
+
+```markdown
+## Model Performance Log
+Updated: [timestamp]
+
+| Task Type      | Model  | Dispatches | Success Rate | Avg Tokens | QA First-Pass |
+|----------------|--------|-----------|-------------|------------|---------------|
+| implementation | sonnet | 15        | 87%         | 12K        | 80%           |
+| implementation | haiku  | 5         | 40%         | 4K         | 20%           |
+| review         | haiku  | 20        | 95%         | 3K         | N/A           |
+| planning       | opus   | 8         | 100%        | 25K        | N/A           |
+| research       | sonnet | 10        | 90%         | 18K        | N/A           |
+```
+
+**Column definitions:**
+
+- **Task Type** — One of the canonical types from the classification table below.
+- **Model** — The model that was dispatched (`haiku`, `sonnet`, or `opus`).
+- **Dispatches** — Total number of times this task-type/model combination has been dispatched.
+- **Success Rate** — Percentage of dispatches that completed without a BLOCKED or NEEDS_CONTEXT outcome. Retries count as separate dispatches.
+- **Avg Tokens** — Rolling average of total tokens (input + output) consumed per dispatch.
+- **QA First-Pass** — Percentage of implementation dispatches that passed QA on the first attempt. Set to `N/A` for non-implementation task types where QA is not applicable.
+
+### Task Type Classification
+
+Before recording or reading performance data, classify the task into one of the canonical types below. Use the examples as a guide; when a story spans multiple types, pick the dominant one.
+
+| Type            | Examples                                         | Default Model |
+|-----------------|--------------------------------------------------|---------------|
+| implementation  | Writing code, creating files, adding features    | sonnet        |
+| review          | Code review, QA validation, audit               | haiku         |
+| planning        | Architecture decisions, story decomposition      | opus          |
+| research        | Web research, competitor analysis, fact-finding  | sonnet        |
+| documentation   | README, API docs, inline comments, changelogs   | haiku         |
+| testing         | Test generation, test execution, coverage        | sonnet        |
+
+The default model column represents the model used when no historical data exists for the combination. It does not override the 10-dimension scoring result — it only applies when the performance log has zero dispatches for the combination being evaluated.
+
+### Adaptive Selection Algorithm
+
+When routing a new task, the orchestrator applies the following algorithm after the 10-dimension score is computed but before any override rules are evaluated:
+
+1. **Look up historical data.** Query `.maestro/model-performance.md` for the (task type, proposed model) row.
+
+2. **Check sample sufficiency.** If the row has fewer than 10 dispatches, historical data is considered insufficient. Skip adaptive adjustment and proceed with the scored model.
+
+3. **Evaluate under-performance threshold.** If the proposed model has a success rate below 60% for this task type, apply an automatic upgrade:
+   - `haiku` → `sonnet`
+   - `sonnet` → `opus`
+   - `opus` stays `opus` (no higher tier available)
+
+   Log the upgrade in the routing output block with reason `historical: success_rate < 60%`.
+
+4. **Evaluate downgrade opportunity.** If both of the following are true, flag a potential downgrade for cost savings. Do not apply the downgrade automatically — present it as a recommendation in the routing output:
+   - The proposed model has a success rate above 90% for this task type.
+   - The next-cheaper model has a success rate above 80% for this task type (and has at least 10 dispatches).
+
+   Log the recommendation in the routing output block as `historical: downgrade_candidate`.
+
+5. **Apply override rules.** Historical adjustments are applied before override rules (§ Override Rules). Override rules may still escalate after a historical downgrade recommendation.
+
+6. **Record outcome.** After the dispatch completes and QA runs, update the performance log row with the new dispatch count, recalculated success rate, updated token average, and QA first-pass result (if applicable).
+
+### Routing Output Block — Extended Format
+
+When historical data influences the routing decision, extend the standard output block with a `History` line:
+
+```
+Model Router: Story [ID] — [Story Title]
+Dimensions: files:[0-3] logic:[0-3] novelty:[0-3] tests:[0-3] security:[0-3] ambiguity:[0-3] cross:[0-3] errors:[0-3] api:[0-3] refactor:[0-3]
+Total: [sum]/30 → [scored model]
+History: [task type] / [proposed model] — [N] dispatches, [success rate]% success → [adjustment or "no change"]
+Override: [override rule applied, or "none"]
+Final: [model]
+```
+
+Example with historical upgrade:
+
+```
+Model Router: Story 12 — Parse uploaded CSV
+Dimensions: files:1 logic:1 novelty:0 tests:1 security:0 ambiguity:0 cross:0 errors:0 api:0 refactor:0
+Total: 3/30 → haiku
+History: implementation / haiku — 5 dispatches, 40% success → upgraded to sonnet (success_rate < 60%)
+Override: none
+Final: sonnet
+```
+
+Example with downgrade candidate:
+
+```
+Model Router: Story 19 — Update changelog entry
+Dimensions: files:1 logic:0 novelty:0 tests:0 security:0 ambiguity:0 cross:0 errors:0 api:0 refactor:0
+Total: 1/30 → haiku
+History: documentation / haiku — 18 dispatches, 94% success, haiku also at 94% → downgrade_candidate (already at minimum tier)
+Override: none
+Final: haiku
+```
+
+### Performance Data File Location
+
+The performance log lives at `.maestro/model-performance.md` in the project root. This file is:
+
+- **Loaded** by the delegation skill at the start of every model routing decision.
+- **Updated** by the orchestrator after every dispatch outcome is known (post-QA).
+- **Not committed** to version control by default — it is a local operational file, similar to `.maestro/state.local.md`.
+- **Bootstrapped** automatically if it does not exist. The orchestrator creates an empty table with zero dispatches for all task-type/model combinations before the first dispatch of a new project.
+
+If the file is missing or unreadable at routing time, the adaptive algorithm is skipped entirely. Log a warning in the audit log and proceed with the scored model.
+
+### User Override
+
+The user can always override both the scored model and any historical adjustment. Override mechanisms, in priority order:
+
+1. **Story-level `model` field** — Set in the story YAML/Markdown front matter. Skips scoring and historical lookup entirely.
+2. **Global `model_override` in state** — Set via `/maestro model <model>`. Applies to all dispatches until cleared.
+3. **Per-session override via `/maestro model` command** — Interactively select a model. Takes precedence over historical data for the duration of the session.
+
+User preferences always take priority over historical data. The adaptive algorithm never downgrades below a user-specified model, and never upgrades above one without surfacing an explicit confirmation prompt.
+
+### Interaction with Existing Override Rules
+
+Historical adjustments integrate with the existing override rules (§ Override Rules) as follows:
+
+| Situation | Outcome |
+|-----------|---------|
+| Historical upgrade + security floor also applies | Both escalate independently; the higher result wins |
+| Historical upgrade + ambiguity == 3 | Both force `opus`; result is `opus` |
+| Historical upgrade + QA failure bump | Both apply; score adjusted first, then historical, then QA bump |
+| Historical downgrade candidate + security floor | Security floor suppresses downgrade; recommendation is not emitted |
+| User override present | All historical logic is skipped |

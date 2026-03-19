@@ -11,6 +11,9 @@ LOG_FILE="${LOG_DIR}/doom-loop.md"
 
 # Only act if we have an active Maestro session
 if [ ! -f "$STATE_FILE" ]; then
+  echo "[MAESTRO] StopFailure hook: state file not found at .maestro/state.local.md" >&2
+  echo "  → Cause: A stop failure occurred but no Maestro session state exists to record it" >&2
+  echo "  → Fix: If you expected a Maestro session to be active, check whether .maestro/state.local.md was accidentally deleted; run '/maestro init' to reinitialize" >&2
   exit 0
 fi
 
@@ -58,6 +61,20 @@ elif [ "$NEW_COUNT" -ge 3 ]; then
 fi
 
 # Output system message for Claude to see
-if [ "$LEVEL" -ge 2 ]; then
-  echo "{\"systemMessage\": \"[DOOM-LOOP] API failure detected (${ERROR_TYPE}). doom_loop.count=${NEW_COUNT}, intervention_level=${LEVEL}. Consider pausing or escalating.\"}"
+if [ "$LEVEL" -ge 1 ]; then
+  MSG="[MAESTRO] API failure detected during active session."
+  MSG="$MSG Error: ${ERROR_TYPE}. doom_loop.count=${NEW_COUNT} (intervention_level=${LEVEL})."
+
+  if [ "$LEVEL" -ge 3 ]; then
+    MSG="$MSG Cause: repeated failures suggest a systemic problem (rate limiting, network issues, or an unrecoverable error state)."
+    MSG="$MSG Fix: pause the session with '/maestro pause', review .maestro/logs/doom-loop.md for the error history, resolve the underlying issue, then resume with '/maestro opus --resume'."
+  elif [ "$LEVEL" -ge 2 ]; then
+    MSG="$MSG Cause: multiple consecutive failures detected — the loop may be stuck."
+    MSG="$MSG Fix: consider pausing with '/maestro pause' and reviewing .maestro/logs/doom-loop.md before continuing."
+  else
+    MSG="$MSG Cause: an API error interrupted the session."
+    MSG="$MSG Fix: the loop will attempt to continue automatically; if failures persist, pause and check .maestro/logs/doom-loop.md."
+  fi
+
+  echo "{\"systemMessage\": \"${MSG}\"}"
 fi

@@ -302,6 +302,176 @@ remote:
     skip_tables: true         # Always skip tables in dispatch
 ```
 
+## Mobile-Friendly Status Format
+
+When in a Dispatch or remote context, Maestro emits a compact single-block status header on every checkpoint. This format is optimised for a phone notification or a narrow terminal pane.
+
+### Status Line Format
+
+```
+Maestro M2/7 S3/5 ▶ IMPLEMENT
+✓✓✓○○ | $2.40 | 45m elapsed
+QA: 80% first-pass | ETA: ~1h
+```
+
+**Line 1** — Session snapshot:
+- `M2/7` — current milestone / total milestones
+- `S3/5` — current story / stories in this milestone
+- `▶ IMPLEMENT` — active phase (PLAN | IMPLEMENT | QA | SHIP)
+
+**Line 2** — Progress bar + cost + time:
+- `✓` filled story completed, `○` story pending
+- `$2.40` cumulative session cost
+- `45m elapsed` wall-clock time since session start
+
+**Line 3** — Quality signal + estimate:
+- `QA: 80% first-pass` — percentage of stories that passed QA without rework
+- `ETA: ~1h` — rough estimate to milestone completion (omit if unknown)
+
+Emit this header before any question or action prompt in dispatch/remote mode.
+
+### Status Header Examples
+
+Mid-session, all well:
+```
+Maestro M1/3 S4/6 ▶ QA
+✓✓✓✓○○ | $1.10 | 22m elapsed
+QA: 100% first-pass | ETA: ~30m
+```
+
+Mid-session, one rework:
+```
+Maestro M2/4 S2/5 ▶ IMPLEMENT
+✓○○○○ | $0.80 | 18m elapsed
+QA: 75% first-pass | ETA: ~2h
+```
+
+Session complete:
+```
+Maestro M3/3 S5/5 ▶ SHIP
+✓✓✓✓✓ | $8.20 | 3h 12m elapsed
+QA: 90% first-pass
+```
+
+## Remote Commands
+
+When Maestro is running unattended, an operator can send commands to control the session without interrupting the current Claude turn. Commands are processed at the next safe checkpoint.
+
+### Command Reference
+
+| Command | Action |
+|---------|--------|
+| `PAUSE` | Graceful stop after the current story completes. State is saved. |
+| `RESUME` | Continue from the last saved position after a PAUSE. |
+| `STATUS` | Emit the current mobile-friendly status block immediately. |
+| `ABORT` | Immediate halt at the next checkpoint. Full state saved to `.maestro/state.json`. |
+| `DETAIL` | Emit detailed progress with per-story status list. |
+
+### Command Delivery
+
+Commands can be sent through any of the following channels:
+
+1. **Webhook** — POST to the session's webhook endpoint (see Webhook JSON Format below)
+2. **File trigger** — Write the command word to `.maestro/command` (Maestro polls this file)
+3. **Signal** — Send SIGUSR1 to the session process to trigger a STATUS dump
+4. **Remote Control skill** — Use the remote-control skill integration (see `skills/remote-control`)
+
+### File Trigger Usage
+
+```bash
+# Pause after current story
+echo "PAUSE" > .maestro/command
+
+# Request immediate status
+echo "STATUS" > .maestro/command
+
+# Abort and save
+echo "ABORT" > .maestro/command
+```
+
+Maestro reads and deletes `.maestro/command` at the start of each checkpoint. The command is acknowledged by writing a timestamped entry to `.maestro/command-log`.
+
+### DETAIL Command Output
+
+When DETAIL is received, Maestro emits a per-story breakdown suitable for a mobile scroll view:
+
+```
+Maestro M2/7 S3/5 ▶ IMPLEMENT
+✓✓✓○○ | $2.40 | 45m elapsed
+
+Stories this milestone:
+  ✓ S1: Setup auth service (SHIP)
+  ✓ S2: User model + migrations (SHIP)
+  ✓ S3: Login endpoint (QA - in progress)
+  ○ S4: Refresh token flow (pending)
+  ○ S5: Logout + session cleanup (pending)
+```
+
+## Webhook JSON Format
+
+Maestro exposes a lightweight webhook interface for CI/CD systems and remote-control bots.
+
+### Request Format
+
+```json
+{"command": "STATUS", "session_id": "optional"}
+```
+
+All fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `command` | string | yes | One of: STATUS, PAUSE, RESUME, ABORT, DETAIL |
+| `session_id` | string | no | Session identifier for multi-session hosts |
+| `auth_token` | string | no | Bearer token if webhook auth is enabled |
+
+### Response Format
+
+```json
+{
+  "milestone": {"current": 2, "total": 7, "name": "Advanced Orchestration"},
+  "story": {"current": 3, "total": 5, "name": "Knowledge Graph"},
+  "phase": "IMPLEMENT",
+  "cost": {"spent": 2.40, "remaining": 3.60},
+  "elapsed_minutes": 45,
+  "qa_first_pass_rate": 0.80
+}
+```
+
+Full response schema:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `milestone.current` | int | Current milestone index (1-based) |
+| `milestone.total` | int | Total milestones in the plan |
+| `milestone.name` | string | Human-readable milestone name |
+| `story.current` | int | Current story index within milestone (1-based) |
+| `story.total` | int | Total stories in current milestone |
+| `story.name` | string | Current story name |
+| `phase` | string | Active phase: PLAN, IMPLEMENT, QA, SHIP |
+| `cost.spent` | float | Cumulative USD spent this session |
+| `cost.remaining` | float | Estimated remaining spend (null if no budget set) |
+| `elapsed_minutes` | int | Wall-clock minutes since session start |
+| `qa_first_pass_rate` | float | 0.0–1.0, fraction of stories passing QA first try |
+
+### Error Response
+
+```json
+{"error": "unknown_command", "message": "Valid commands: STATUS PAUSE RESUME ABORT DETAIL"}
+```
+
+### Webhook Configuration
+
+```yaml
+remote:
+  webhook:
+    enabled: false
+    port: 7474
+    path: /maestro/command
+    auth_token: ""          # Leave empty to disable auth
+    cors_origin: ""         # Leave empty to restrict to localhost
+```
+
 ## Output Contract
 
 ```yaml
@@ -324,4 +494,12 @@ output_contract:
   detection:
     env_vars: [CLAUDE_REMOTE_SESSION, CLAUDE_DISPATCH_SESSION, CLAUDE_CLIENT_TYPE, CLAUDE_SESSION_TYPE]
     fallback: local
+  mobile_status_header:
+    emit_on: [checkpoint, question, error, ship]
+    format: "M{m}/{M} S{s}/{S} ▶ {phase} | {progress_bar} | ${cost} | {elapsed}"
+  remote_commands:
+    poll_file: .maestro/command
+    poll_interval_seconds: 30
+    ack_log: .maestro/command-log
+    valid: [PAUSE, RESUME, STATUS, ABORT, DETAIL]
 ```

@@ -1,165 +1,160 @@
 #!/usr/bin/env bash
 # Maestro Status Line for Claude Code
-# Displays: phase, story progress, cost, trust level
-# Uses ANSI colors + unicode progress bars
+# Displays model name, context percentage, and Maestro session status.
 #
 # Install: Add to settings.json:
 #   "statusLine": {
 #     "type": "command",
-#     "command": "${CLAUDE_PLUGIN_ROOT}/scripts/statusline.sh"
+#     "command": "~/.claude/plugins/cache/maestro-orchestrator/maestro/1.0.0/scripts/statusline.sh"
 #   }
+#
+# Output formats:
+#   Opus session active:       [Opus 4.6] 42% ctx | Maestro M2/7 S3/5 opus
+#   Maestro initialized:       [Opus 4.6] 42% ctx | Maestro v1.4.0 (109 skills)
+#   Maestro not initialized:   [Opus 4.6] 42% ctx
 
 set -euo pipefail
 
-# --- Colors ---
-RESET='\033[0m'
-BOLD='\033[1m'
-DIM='\033[2m'
-GREEN='\033[32m'
-YELLOW='\033[33m'
-BLUE='\033[34m'
-MAGENTA='\033[35m'
-CYAN='\033[36m'
-RED='\033[31m'
-WHITE='\033[37m'
-BG_BLUE='\033[44m'
-BG_GREEN='\033[42m'
-BG_YELLOW='\033[43m'
-
-# --- Read session data from stdin (Claude Code sends JSON) ---
-SESSION_DATA=""
+# --- Read JSON from stdin (pure bash, no jq, no python) ---
+SESSION_JSON=""
 if [[ ! -t 0 ]]; then
-  SESSION_DATA=$(cat 2>/dev/null || true)
+  SESSION_JSON=$(cat 2>/dev/null || true)
 fi
 
-# --- Find Maestro state ---
-# Look for .maestro/state.local.md in the working directory
-CWD=""
-if [[ -n "$SESSION_DATA" ]]; then
-  CWD=$(printf '%s' "$SESSION_DATA" | jq -r '.cwd // empty' 2>/dev/null || true)
+# --- Parse model display name from JSON ---
+# Input: {"model": {"display_name": "Opus 4.6"}, ...}
+MODEL_NAME=""
+if [[ -n "$SESSION_JSON" ]]; then
+  MODEL_NAME=$(printf '%s' "$SESSION_JSON" \
+    | grep -o '"display_name"[[:space:]]*:[[:space:]]*"[^"]*"' \
+    | head -1 \
+    | sed 's/.*"display_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' \
+    2>/dev/null || true)
 fi
-CWD="${CWD:-$(pwd)}"
+MODEL_NAME="${MODEL_NAME:-Claude}"
 
-STATE_FILE="$CWD/.maestro/state.local.md"
-CONFIG_FILE="$CWD/.maestro/config.yaml"
-TRUST_FILE="$CWD/.maestro/trust.yaml"
+# --- Parse context used_percentage from JSON ---
+# Input: {"context_window": {"used_percentage": 42, ...}, ...}
+CTX_PCT=""
+if [[ -n "$SESSION_JSON" ]]; then
+  CTX_PCT=$(printf '%s' "$SESSION_JSON" \
+    | grep -o '"used_percentage"[[:space:]]*:[[:space:]]*[0-9]*' \
+    | head -1 \
+    | grep -o '[0-9]*$' \
+    2>/dev/null || true)
+fi
+CTX_PCT="${CTX_PCT:-0}"
 
-# --- No Maestro state? Show minimal line ---
-if [[ ! -f "$STATE_FILE" ]]; then
-  # Check if Maestro is initialized
-  if [[ -f "$CWD/.maestro/dna.md" ]]; then
-    printf "${DIM}maestro${RESET} ${GREEN}ready${RESET}"
-  fi
+# --- Base output: [Model] CTX% ctx ---
+BASE_OUTPUT="[${MODEL_NAME}] ${CTX_PCT}% ctx"
+
+# --- Locate git project root for Maestro state files ---
+PROJECT_ROOT=""
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+
+DNA_FILE="${PROJECT_ROOT}/.maestro/dna.md"
+STATE_FILE="${PROJECT_ROOT}/.maestro/state.local.md"
+
+# --- No Maestro at all ---
+if [[ -z "$PROJECT_ROOT" || ! -f "$DNA_FILE" ]]; then
+  printf '%s\n' "$BASE_OUTPUT"
   exit 0
 fi
 
-# --- Parse state frontmatter ---
-frontmatter=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | sed '1d;$d')
+# --- Caching for state file reads (5s TTL) ---
+CACHE_FILE="/tmp/maestro-statusline-cache"
+CACHE_TTL=5
+MAESTRO_STATUS=""
 
-yaml_val() {
-  local key="$1"
-  local line
-  line=$(printf '%s\n' "$frontmatter" | grep -E "^${key}:" | head -1)
-  [[ -z "$line" ]] && echo "" && return
-  local val="${line#*:}"
-  val="${val#"${val%%[![:space:]]*}"}"
-  val="${val%\"}" ; val="${val#\"}"
-  val="${val%\'}" ; val="${val#\'}"
-  printf '%s' "$val"
-}
-
-active=$(yaml_val "active")
-feature=$(yaml_val "feature")
-phase=$(yaml_val "phase")
-mode=$(yaml_val "mode")
-current_story=$(yaml_val "current_story")
-total_stories=$(yaml_val "total_stories")
-token_spend=$(yaml_val "token_spend")
-layer=$(yaml_val "layer")
-
-# --- Not active? ---
-if [[ "$active" != "true" ]]; then
-  if [[ "$phase" == "completed" ]]; then
-    printf "${GREEN}maestro${RESET} ${DIM}completed${RESET}"
-  elif [[ "$phase" == "aborted" ]]; then
-    printf "${YELLOW}maestro${RESET} ${DIM}aborted${RESET}"
-  fi
-  exit 0
-fi
-
-# --- Phase colors ---
-phase_color() {
-  case "$1" in
-    validate|delegate) printf "$BLUE" ;;
-    implement) printf "$CYAN" ;;
-    self_heal) printf "$YELLOW" ;;
-    qa_review) printf "$MAGENTA" ;;
-    git_craft) printf "$GREEN" ;;
-    checkpoint) printf "$GREEN" ;;
-    decompose) printf "$BLUE" ;;
-    paused) printf "$YELLOW" ;;
-    *) printf "$WHITE" ;;
-  esac
-}
-
-# --- Progress bar ---
-progress_bar() {
-  local current=$1
-  local total=$2
-  local width=10
-
-  if [[ $total -eq 0 ]]; then
-    printf "${DIM}[          ]${RESET}"
-    return
-  fi
-
-  local filled=$(( current * width / total ))
-  local empty=$(( width - filled ))
-
-  printf "${GREEN}"
-  for ((i=0; i<filled; i++)); do printf "█"; done
-  printf "${DIM}"
-  for ((i=0; i<empty; i++)); do printf "░"; done
-  printf "${RESET}"
-}
-
-# --- Mode indicator ---
-mode_icon() {
-  case "$1" in
-    yolo) printf "${RED}⚡${RESET}" ;;
-    checkpoint) printf "${YELLOW}◆${RESET}" ;;
-    careful) printf "${BLUE}◈${RESET}" ;;
-    *) printf "·" ;;
-  esac
-}
-
-# --- Build status line ---
-
-# Line 1: Phase + Progress
-PHASE_CLR=$(phase_color "$phase")
-PHASE_UPPER=$(printf '%s' "$phase" | tr '[:lower:]' '[:upper:]')
-
-# Truncate feature name to 25 chars
-FEAT="${feature:0:25}"
-[[ ${#feature} -gt 25 ]] && FEAT="${FEAT}…"
-
-printf "${BOLD}maestro${RESET} "
-printf "$(mode_icon "$mode") "
-printf "${PHASE_CLR}${PHASE_UPPER}${RESET} "
-
-if [[ -n "$current_story" && -n "$total_stories" && "$total_stories" -gt 0 ]] 2>/dev/null; then
-  printf "$(progress_bar "${current_story:-0}" "$total_stories") "
-  printf "${DIM}${current_story}/${total_stories}${RESET} "
-fi
-
-# Cost
-if [[ -n "$token_spend" && "$token_spend" -gt 0 ]] 2>/dev/null; then
-  # Rough cost estimate (assuming sonnet average)
-  cost_cents=$(( token_spend * 9 / 1000000 ))
-  if [[ $cost_cents -gt 0 ]]; then
-    printf "${DIM}\$$(printf '%.2f' "$(echo "scale=2; $cost_cents / 100" | bc)")${RESET} "
+if [[ -f "$CACHE_FILE" ]]; then
+  # Cross-platform mtime: try Linux stat first, then macOS stat
+  CACHE_AGE=$(( $(date +%s) - $(stat -c%Y "$CACHE_FILE" 2>/dev/null || stat -f%m "$CACHE_FILE" 2>/dev/null || echo 0) ))
+  if [[ "$CACHE_AGE" -lt "$CACHE_TTL" ]]; then
+    MAESTRO_STATUS=$(cat "$CACHE_FILE" 2>/dev/null || true)
   fi
 fi
 
-# Feature name
-printf "${DIM}${FEAT}${RESET}"
+if [[ -z "$MAESTRO_STATUS" ]]; then
+  # --- Build Maestro status string ---
+
+  if [[ -f "$STATE_FILE" ]]; then
+    # Parse state frontmatter (pure bash with sed/grep)
+    frontmatter=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | sed '1d;$d' || true)
+
+    yaml_val() {
+      local key="$1"
+      printf '%s\n' "$frontmatter" \
+        | grep -E "^${key}:" \
+        | head -1 \
+        | sed "s/^${key}:[[:space:]]*//" \
+        | sed 's/^"\(.*\)"$/\1/' \
+        | sed "s/^'\(.*\)'$/\1/" \
+        | xargs 2>/dev/null \
+        || echo ""
+    }
+
+    active=$(yaml_val "active")
+    milestone=$(yaml_val "milestone")
+    total_milestones=$(yaml_val "total_milestones")
+    current_story=$(yaml_val "current_story")
+    total_stories=$(yaml_val "total_stories")
+    layer=$(yaml_val "layer")
+
+    if [[ "$active" == "true" ]]; then
+      # Active Opus session: Maestro M2/7 S3/5 opus
+      SESSION_PART="Maestro"
+
+      if [[ -n "$milestone" && -n "$total_milestones" && "$total_milestones" != "0" ]]; then
+        SESSION_PART="${SESSION_PART} M${milestone}/${total_milestones}"
+      fi
+
+      if [[ -n "$current_story" && -n "$total_stories" && "$total_stories" != "0" ]]; then
+        SESSION_PART="${SESSION_PART} S${current_story}/${total_stories}"
+      fi
+
+      if [[ -n "$layer" ]]; then
+        SESSION_PART="${SESSION_PART} ${layer}"
+      fi
+
+      MAESTRO_STATUS="$SESSION_PART"
+    fi
+    # If state exists but active != true, fall through to initialized (no-session) display
+  fi
+
+  # --- Fallback: Maestro initialized but no active session ---
+  if [[ -z "$MAESTRO_STATUS" ]]; then
+    # Parse version from dna.md frontmatter
+    MAESTRO_VERSION=""
+    MAESTRO_VERSION=$(grep -E "^maestro_version:" "$DNA_FILE" 2>/dev/null \
+      | head -1 \
+      | sed 's/^maestro_version:[[:space:]]*//' \
+      | sed 's/^"\(.*\)"$/\1/' \
+      | sed "s/^'\(.*\)'$/\1/" \
+      | xargs 2>/dev/null \
+      || true)
+    MAESTRO_VERSION="${MAESTRO_VERSION:-1.4.0}"
+
+    # Count skills by counting .md files in the skills directory
+    SKILLS_DIR="${PROJECT_ROOT}/skills"
+    SKILL_COUNT=0
+    if [[ -d "$SKILLS_DIR" ]]; then
+      SKILL_COUNT=$(find "$SKILLS_DIR" -maxdepth 1 -name "*.md" 2>/dev/null | wc -l | xargs)
+    fi
+
+    if [[ "$SKILL_COUNT" -gt 0 ]]; then
+      MAESTRO_STATUS="Maestro v${MAESTRO_VERSION} (${SKILL_COUNT} skills)"
+    else
+      MAESTRO_STATUS="Maestro v${MAESTRO_VERSION}"
+    fi
+  fi
+
+  # Write to cache
+  printf '%s' "$MAESTRO_STATUS" > "$CACHE_FILE" 2>/dev/null || true
+fi
+
+# --- Output final status line ---
+if [[ -n "$MAESTRO_STATUS" ]]; then
+  printf '%s | %s\n' "$BASE_OUTPUT" "$MAESTRO_STATUS"
+else
+  printf '%s\n' "$BASE_OUTPUT"
+fi

@@ -152,14 +152,15 @@ if [[ "$layer" == "opus" ]]; then
   fi
 
   # Build system message for opus mode
-  sys_msg="Maestro Opus (Magnum Opus) is active."
+  sys_msg="[MAESTRO] Stop intercepted — Magnum Opus autonomous loop is active."
+  sys_msg="$sys_msg Cause: the session is in an autonomous execution phase and exiting would abandon in-progress work."
   sys_msg="$sys_msg Feature: ${feature:-unknown}."
   sys_msg="$sys_msg Milestone: ${current_milestone:-?}/${total_milestones:-?}."
   sys_msg="$sys_msg Story: ${current_story:-?}/${total_stories:-?}."
   sys_msg="$sys_msg Phase: ${phase:-unknown}."
   sys_msg="$sys_msg Token spend: ${token_spend:-0} / budget: ${token_budget:-unlimited}."
   sys_msg="$sys_msg Mode: ${opus_mode:-standard}."
-  sys_msg="$sys_msg Do NOT stop. Continue the Magnum Opus loop."
+  sys_msg="$sys_msg Do NOT stop. Continue the Magnum Opus loop. To pause intentionally, set phase: paused in .maestro/state.local.md."
 
   block_exit "$prompt_text" "$sys_msg"
 fi
@@ -169,10 +170,9 @@ fi
 # Autonomous phases: BLOCK exit
 case "$phase" in
   validate|delegate|implement|self_heal|qa_review|git_craft)
-    sys_msg="Maestro dev-loop is active."
+    sys_msg="[MAESTRO] Stop intercepted — the Maestro dev-loop is in an autonomous execution phase."
+    sys_msg="$sys_msg Cause: exiting now would leave story ${current_story:-?}/${total_stories:-?} incomplete in phase '${phase}'."
     sys_msg="$sys_msg Feature: ${feature:-unknown}."
-    sys_msg="$sys_msg Story: ${current_story:-?}/${total_stories:-?}."
-    sys_msg="$sys_msg Phase: ${phase}."
     sys_msg="$sys_msg Mode: ${mode:-checkpoint}."
 
     if [[ "$phase" == "qa_review" && -n "$qa_iteration" ]]; then
@@ -183,7 +183,7 @@ case "$phase" in
       sys_msg="$sys_msg Self-heal iteration: ${self_heal_iteration}/${max_self_heal:-3}."
     fi
 
-    sys_msg="$sys_msg Do NOT stop. Continue the dev-loop."
+    sys_msg="$sys_msg Do NOT stop. Continue the dev-loop. To pause intentionally, use '/maestro pause'."
 
     block_exit "$prompt_text" "$sys_msg"
     ;;
