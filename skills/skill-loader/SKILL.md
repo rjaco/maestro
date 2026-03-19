@@ -13,6 +13,10 @@ Skills can declare requirements in their YAML frontmatter. If any requirement is
 
 ### Supported Gate Fields
 
+Two formats are accepted and may coexist in the same frontmatter.
+
+**Flat fields (original format — fully supported):**
+
 ```yaml
 ---
 name: my-skill
@@ -23,15 +27,47 @@ requires_env: [MY_API_KEY]  # All env vars must be set and non-empty
 ---
 ```
 
-All gate fields are optional. A skill with no `requires_*` fields loads unconditionally (backwards compatible with all existing skills).
+**Nested `requires:` block (extended format):**
+
+```yaml
+---
+name: browser-automation
+description: "Automate browser tasks with Playwright"
+requires:
+  bins:
+    - playwright
+    - node
+  env:
+    - PLAYWRIGHT_BROWSERS_PATH
+  config:
+    - integrations.playwright
+  skills:
+    - context-engine
+---
+```
+
+All gate fields are optional. A skill with no `requires_*` fields and no `requires:` block loads unconditionally (backwards compatible with all existing skills).
+
+### Requirement Types (Extended Format)
+
+| Type | Check Method | On Failure |
+|------|-------------|------------|
+| `requires.bins` | `command -v [binary]` | Skip skill, log warning |
+| `requires.env` | Check env var is set and non-empty | Skip skill, log warning |
+| `requires.config` | Check `.maestro/config.yaml` for dotted key path | Skip skill, log warning |
+| `requires.skills` | Check that a skill named `[name]` passed gating | Skip skill, log warning |
+
+When both flat fields and a nested `requires:` block are present, merge them: all requirements from both sources must be satisfied.
 
 ### Gate Evaluation Order
 
 At skill load time, evaluate gates in this order:
 
 1. **OS gate** — If `requires_os` is set, compare against the current platform (`linux`, `darwin`, `win32`). If it does not match, skip the skill.
-2. **Binary gate** — If `requires_bins` is set, run `command -v <bin>` for each entry. If any binary is missing, skip the skill.
-3. **Env gate** — If `requires_env` is set, check that each named env var is set and non-empty. If any is missing or empty, skip the skill.
+2. **Binary gate** — If `requires_bins` or `requires.bins` is set, run `command -v <bin>` for each entry. If any binary is missing, skip the skill.
+3. **Env gate** — If `requires_env` or `requires.env` is set, check that each named env var is set and non-empty. If any is missing or empty, skip the skill.
+4. **Config gate** — If `requires.config` is set, parse `.maestro/config.yaml` and verify each dotted key path exists with a non-null value. If any key is absent, skip the skill.
+5. **Skill gate** — If `requires.skills` is set, verify that each named skill has been resolved and passed all its own gates. If any dependency skill was skipped or not found, skip the dependant skill.
 
 Stop at the first failing gate — do not evaluate subsequent gates for a skipped skill.
 
@@ -43,9 +79,13 @@ Append a line to `.maestro/logs/skill-loader.log` whenever a skill is skipped:
 [2026-03-18T14:00:00Z] SKIP my-skill: requires_bins 'ffmpeg' not found
 [2026-03-18T14:00:00Z] SKIP video-encoder: requires_os 'darwin' but current OS is 'linux'
 [2026-03-18T14:00:00Z] SKIP cloud-deploy: requires_env 'AWS_ACCESS_KEY_ID' not set
+[2026-03-18T14:00:00Z] SKIP browser-automation: requires.config 'integrations.playwright' not found in .maestro/config.yaml
+[2026-03-18T14:00:00Z] SKIP kanban-sync: requires.skills 'context-engine' was skipped
 ```
 
 Format: `[<ISO8601 timestamp>] SKIP <skill-name>: <gate-type> '<value>' <reason>`
+
+A dedicated log for gating events is also written to `.maestro/logs/skill-gating.log` (same format) so the doctor check and user tooling can read gating history independently from the general skill-loader log.
 
 Create `.maestro/logs/` if it does not exist.
 
@@ -81,6 +121,77 @@ name: git-craft
 description: "Git workflow automation"
 ---
 ```
+
+**Browser automation skill (nested requires block):**
+
+```yaml
+---
+name: browser-automation
+description: "Automate browser tasks with Playwright"
+requires:
+  bins:
+    - playwright
+    - node
+  env:
+    - PLAYWRIGHT_BROWSERS_PATH
+  config:
+    - integrations.playwright
+  skills:
+    - context-engine
+---
+```
+
+**Kanban sync skill (requires jq binary and a config key):**
+
+```yaml
+---
+name: kanban-sync
+description: "Sync tasks to a kanban board"
+requires:
+  bins: [jq]
+  config: [integrations.kanban.board_id]
+---
+```
+
+### User Feedback for Gated-Out Skills
+
+When the user attempts to invoke a skill that was gated out, respond with a structured message:
+
+```
+Skill 'browser-automation' is not available.
+Missing requirements:
+  - Binary: playwright (install: npm install -g playwright)
+  - Env var: PLAYWRIGHT_BROWSERS_PATH
+
+Run the following to enable:
+  npm install -g playwright
+  export PLAYWRIGHT_BROWSERS_PATH=~/.cache/ms-playwright
+```
+
+Do not silently fail or hallucinate what the skill would have done. Always surface the gating reason and remediation steps.
+
+### Install Hints
+
+When reporting missing binaries, append an install hint drawn from this table:
+
+| Binary | Install Hint |
+|--------|-------------|
+| `playwright` | `npm install -g playwright` |
+| `jq` | `sudo apt install jq` (Linux) / `brew install jq` (macOS) |
+| `gh` | `sudo apt install gh` (Linux) / `brew install gh` (macOS) |
+| `python3` | `sudo apt install python3` |
+| `node` | `nvm install --lts` |
+| `aws` | `pip install awscli` |
+| `ffmpeg` | `sudo apt install ffmpeg` (Linux) / `brew install ffmpeg` (macOS) |
+| `curl` | `sudo apt install curl` |
+
+For binaries not in the table, omit the install hint rather than guessing.
+
+### Precedence Resolution with Gating
+
+When multiple tiers have a skill with the same name, gating runs after precedence resolution — the winning tier's skill is the one whose gates are evaluated. If the winning skill is gated out, the next lower-tier candidate is NOT automatically promoted; the skill is simply unavailable.
+
+This keeps behaviour predictable: shadowing and gating are independent operations. Shadowing is resolved first (workspace > global > bundled). Then the single winning skill's gates are evaluated.
 
 ## Three-Tier Skill Precedence
 
@@ -146,7 +257,7 @@ At session start, the skill loader runs the following steps:
 
 1. **Discover** — Scan all three tier directories, build candidate list (bundled → global → workspace).
 2. **Resolve precedence** — Apply three-tier precedence, build the active skill map, log SHADOW events.
-3. **Evaluate gates** — For each active skill, evaluate `requires_os`, `requires_bins`, `requires_env`. Remove skipped skills from the active map, log SKIP events.
+3. **Evaluate gates** — For each active skill, evaluate all gate fields in order: OS → binaries → env vars → config keys → skill dependencies. Remove skipped skills from the active map, log SKIP events to both `skill-loader.log` and `skill-gating.log`.
 4. **Report** — Log a summary line to `.maestro/logs/skill-loader.log`:
    ```
    [2026-03-18T14:00:01Z] LOADED 42 skills (3 skipped, 2 shadowed)
@@ -154,7 +265,7 @@ At session start, the skill loader runs the following steps:
 
 ## Doctor Integration
 
-`/maestro doctor` performs a skill gate audit as part of its diagnostic run. For each skill in the active skill map, re-evaluate its gates and report any that are unsatisfied.
+`/maestro doctor` performs a skill gate audit as part of its diagnostic run. It reads `.maestro/logs/skill-gating.log` for the current session's gating events and re-evaluates live gates for any skill that was loaded.
 
 ### Doctor Output Section
 
@@ -164,6 +275,19 @@ At session start, the skill loader runs the following steps:
     (!)  audio-encode       SKIPPED — requires_bins 'ffmpeg' not found
     (!)  cloud-deploy       SKIPPED — requires_env 'AWS_ACCESS_KEY_ID' not set
     (!)  video-encoder      SKIPPED — requires_os 'darwin' (current: linux)
+    (!)  browser-automation SKIPPED — requires.config 'integrations.playwright' missing
+    (!)  kanban-sync        SKIPPED — requires.bins 'jq' not found
+    (!)  remote-control     SKIPPED — requires.env 'TELEGRAM_BOT_TOKEN' not set
+```
+
+The aggregate summary line also reflects gated-out skills:
+
+```
+(ok) Skills  161/161 valid SKILL.md
+(!) Skills  3 skills gated out (missing dependencies)
+     - browser-automation: missing playwright
+     - kanban-sync: missing jq
+     - remote-control: missing TELEGRAM_BOT_TOKEN
 ```
 
 - `(ok)` — skill loaded successfully
@@ -179,13 +303,15 @@ The doctor section is titled **Skills** and appears after the **Hooks** section 
 
 | Condition | Recommendation |
 |-----------|----------------|
-| Skill skipped due to missing binary | `brew install <bin>` or `apt install <bin>` based on OS |
+| Skill skipped due to missing binary | Use the install hint from the binary table; fall back to `brew install <bin>` or `apt install <bin>` based on OS |
 | Skill skipped due to missing env var | Set `<VAR>` in your shell profile or `.env` |
+| Skill skipped due to missing config key | Add the key to `.maestro/config.yaml` |
+| Skill skipped due to missing skill dependency | Resolve that skill's own gating failures first |
 | Skill skipped due to OS mismatch | Informational only — no action needed |
 
 ## Integration Points
 
 - **Invoked by:** session start (dev-loop, auto-init)
-- **Reads from:** `./skills/*/SKILL.md`, `~/.maestro/skills/*/SKILL.md`, `plugins/maestro/skills/*/SKILL.md`
-- **Writes to:** `.maestro/logs/skill-loader.log` (append-only)
-- **Used by:** `skill-watcher` (provides the initial snapshot), `/maestro doctor` (gate audit)
+- **Reads from:** `./skills/*/SKILL.md`, `~/.maestro/skills/*/SKILL.md`, `plugins/maestro/skills/*/SKILL.md`, `.maestro/config.yaml`
+- **Writes to:** `.maestro/logs/skill-loader.log` (append-only), `.maestro/logs/skill-gating.log` (append-only, SKIP events only)
+- **Used by:** `skill-watcher` (provides the initial snapshot), `/maestro doctor` (gate audit reads `skill-gating.log`)
