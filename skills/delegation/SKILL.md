@@ -304,3 +304,38 @@ On every agent failure (timeout, BLOCKED, or error):
 On every agent success:
 1. Reset `consecutive_agent_failures` to 0
 2. If circuit breaker was `half-open`, set to `closed`
+
+## Provider Selection
+
+Maestro supports multiple LLM providers. The delegation skill selects the provider before selecting the model.
+
+### Provider Configuration
+
+In `.maestro/config.yaml`:
+```yaml
+providers:
+  default: anthropic
+  available:
+    - anthropic
+    - ollama
+  routing:
+    budget: ollama    # Use local for cheap tasks
+    standard: anthropic
+    premium: anthropic
+```
+
+### Selection Logic
+
+1. Read `providers.routing` from config
+2. Map the story's model tier to a provider
+3. If configured provider is unavailable (health check fails), fall back to `providers.default`
+4. Load provider definition from `providers/[name].md`
+5. Select model from provider's catalog based on tier
+
+### Provider Health Check
+
+Before dispatching to a non-default provider:
+1. Check if the provider binary/API is reachable
+2. For Ollama: `curl -s http://localhost:11434/api/tags | jq '.models | length'`
+3. For OpenRouter: verify API key is set and valid
+4. If unhealthy, fall back to default provider and log the fallback
