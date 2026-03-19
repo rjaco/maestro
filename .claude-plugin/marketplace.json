@@ -4,11 +4,7 @@
   "description": "Full-stack autonomous development orchestrator for Claude Code",
   "owner": {
     "name": "Maestro Contributors",
-<<<<<<< HEAD
-    "url": "https://github.com/anthropics/maestro-orchestrator"
-=======
     "url": "https://github.com/rjaco/maestro-orchestrator"
->>>>>>> 88681eb (docs: add companion section to README + fix marketplace.json)
   },
   "metadata": {
     "description": "Build features with /maestro, entire products with /maestro magnum-opus. Kanban integration, second brain, session memory, notifications, and visual dashboards.",
@@ -29,7 +25,11 @@
         "url": "https://github.com/anthropics/maestro-orchestrator"
       },
       "source": "./plugins/maestro",
-      "categories": ["development", "productivity", "automation"],
+      "categories": [
+        "development",
+        "productivity",
+        "automation"
+      ],
       "license": "MIT",
       "keywords": [
         "orchestrator",
