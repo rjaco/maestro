@@ -169,3 +169,139 @@ If the user runs `/maestro model` and types "preset" or "budget" or "quality" or
 | max | opus | opus | opus | opus | opus |
 
 Show confirmation and the full mapping after applying.
+
+---
+
+## Preset Argument — Direct Application
+
+If `$ARGUMENTS` exactly matches a preset name (`budget`, `balanced`, `quality`, `max`), skip the interactive form entirely and apply the preset directly:
+
+1. Read `.maestro/config.yaml`. If it does not exist, show "Not initialized" and stop.
+2. Apply the preset's model mapping to the `models` section.
+3. Write the updated config.
+4. Show confirmation:
+
+```
+[maestro] Preset applied: quality
+
+  planning    opus
+  execution   sonnet
+  review      opus
+  simple      sonnet
+  research    opus
+```
+
+If the preset name is unrecognized (not one of the four valid presets and not empty), show:
+
+```
+[maestro] Unknown preset: "<arg>"
+
+  Valid presets: budget, balanced, quality, max
+  Run /maestro model to use the interactive form.
+```
+
+## Error Handling
+
+| Condition | Action |
+|-----------|--------|
+| `.maestro/config.yaml` missing | Show "Not initialized" and stop |
+| `models` section missing from config | Use defaults (shown in Step 1); note "(default)" labels |
+| Config write fails | Show `(x) Cannot write config: <reason>`. Do not leave a partial write. |
+| AskUserQuestion returns an unexpected option | Treat as "no change" for that question and proceed |
+| Unknown model name in "Other" free-form input | Show `(x) Unknown model: "<value>". Valid models: haiku, sonnet, opus.` and re-prompt |
+
+## Config Section Format
+
+The `models` section written to `.maestro/config.yaml`:
+
+```yaml
+models:
+  planning: opus
+  execution: sonnet
+  review: opus
+  simple: haiku
+  research: sonnet
+```
+
+When writing, preserve all other keys in the file. Only update the fields that changed. If the `models` key does not exist, insert it after the top-level `default_mode` key (or at the end of the file if that key is not present).
+
+## Model Pricing Reference
+
+Include pricing in the display so users can make cost-informed choices:
+
+| Model | Input (per M tokens) | Output (per M tokens) |
+|-------|----------------------|-----------------------|
+| Haiku | $0.80 | $4.00 |
+| Sonnet | $3.00 | $15.00 |
+| Opus | $15.00 | $75.00 |
+
+Cost estimates per story (shown during execution model selection):
+- Haiku execution: ~$0.07/story
+- Sonnet execution: ~$0.27/story
+- Opus execution: ~$1.35/story
+
+These are approximate and depend on story complexity and context size.
+
+## Examples
+
+### Example 1: Apply a preset directly
+
+```
+/maestro model budget
+```
+
+```
+[maestro] Preset applied: budget
+
+  planning    haiku
+  execution   sonnet
+  review      haiku
+  simple      haiku
+  research    haiku
+```
+
+### Example 2: Interactive — view current assignments
+
+```
+/maestro model
+```
+
+```
++---------------------------------------------+
+| Model Assignments                           |
++---------------------------------------------+
+  planning   opus    |  execution  sonnet
+  review     opus    |  simple     haiku
+  research   sonnet  |
+
+  Haiku $0.80/$4  Sonnet $3/$15  Opus $15/$75
+
+[interactive form opens with 4 questions]
+```
+
+### Example 3: Apply changes with summary
+
+After the interactive form, if execution was changed from sonnet to opus:
+
+```
+[maestro] Models updated:
+
+  planning    opus           (unchanged)
+  execution   sonnet -> opus
+  review      opus           (unchanged)
+  simple      haiku          (unchanged)
+  research    sonnet         (unchanged)
+```
+
+### Example 4: Unknown preset
+
+```
+/maestro model turbo
+```
+
+```
+[maestro] Unknown preset: "turbo"
+
+  Valid presets: budget, balanced, quality, max
+  Run /maestro model to use the interactive form.
+```

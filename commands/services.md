@@ -153,3 +153,145 @@ If the service key is not found in the registry, show:
   Known services: aws, cloudflare, vercel, digitalocean, stripe, sendgrid,
                   twilio, namecheap, telegram, slack, github
 ```
+
+---
+
+## Argument Parsing
+
+| Invocation | Behavior |
+|-----------|----------|
+| `/maestro services` | Show full registry table (same as `status`) |
+| `/maestro services status` | Show full registry table |
+| `/maestro services health` | Run live health checks for all services |
+| `/maestro services <name>` | Show detailed inspection view for a single service |
+
+`<name>` must exactly match a key in `.maestro/services.yaml` (case-sensitive, lowercase).
+
+## Services File Format Reference
+
+`.maestro/services.yaml` has this structure:
+
+```yaml
+services:
+  github:
+    name: GitHub
+    type: development
+    auth_method: env
+    credentials:
+      - GITHUB_TOKEN
+    cli_tool: gh
+    capabilities:
+      - repos
+      - issues
+      - actions
+      - packages
+    health_check: "gh auth status"
+    status: connected
+
+  stripe:
+    name: Stripe
+    type: payment
+    auth_method: env
+    credentials:
+      - STRIPE_SECRET_KEY
+    capabilities:
+      - payments
+      - subscriptions
+      - invoicing
+    health_check: "curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: Bearer ${STRIPE_SECRET_KEY}' https://api.stripe.com/v1/charges?limit=1"
+    status: disconnected
+```
+
+The `health_check` field is a shell command string. Environment variable references in the form `${VAR_NAME}` are expanded at runtime. Never log expanded values.
+
+## Error Handling
+
+| Condition | Action |
+|-----------|--------|
+| `.maestro/services.yaml` missing | Show "No service registry found" message with init instructions |
+| YAML file is malformed | Show `(x) services.yaml is not valid YAML — run /maestro init to recreate` |
+| `services` key missing from YAML | Treat as empty registry (0 services) |
+| Health check command exits non-zero | Mark service `error`, capture stderr (truncated to 100 chars) |
+| Health check times out (>15s) | Mark service `error` with note "health check timed out" |
+| Env var missing for `auth_method: env` service | Mark service `error` with note "missing env var: VAR_NAME" |
+| Redacted credential appears in health check output | Replace with `[REDACTED]` before displaying |
+
+## Examples
+
+### Example 1: Show all services
+
+```
+/maestro services
+```
+
+```
++------------------------------------------------------------------+
+| Maestro Services                                                 |
++------------------------------------------------------------------+
+
+  Service        Type           Status         Capabilities
+  ─────────────────────────────────────────────────────────────────
+  aws            cloud          connected      compute, storage, dns, serverless
+  github         development    connected      repos, issues, actions, packages
+  stripe         payment        error (!)      payments, subscriptions, invoicing
+  cloudflare     cloud          disconnected   dns, cdn, serverless
+
+  Summary: 2 connected  |  1 error  |  1 disconnected
+
+  (!) Services with errors — run /maestro connect <service> to reconfigure:
+      stripe
+
+  (i) Connect a service: /maestro connect <service>
+  (i) Run health checks: /maestro services health
+```
+
+### Example 2: Inspect a single service
+
+```
+/maestro services github
+```
+
+```
+Service: github
+─────────────────────────────────────────────────────
+Name:         GitHub
+Type:         development
+Auth:         env
+Status:       connected
+
+Credentials:
+  GITHUB_TOKEN             [set]
+
+CLI Tool:     gh
+Capabilities: repos, issues, actions, packages
+
+Health check: gh auth status
+
+Last updated: (not tracked — run /maestro services health to refresh)
+```
+
+### Example 3: Run health checks
+
+```
+/maestro services health
+```
+
+```
+[maestro] Running health checks...
+
+  aws            checking...
+  aws            connected (aws sts get-caller-identity: ok)
+
+  github         checking...
+  github         connected (gh auth status: ok)
+
+  stripe         checking...
+  stripe         error — missing env var: STRIPE_SECRET_KEY
+
+  cloudflare     checking...
+  cloudflare     error — missing env var: CLOUDFLARE_API_TOKEN
+
+  Health check complete. Registry updated.
+
+  (i) To fix a failed service: /maestro connect <service>
+```

@@ -111,3 +111,134 @@ output_contract:
   state_mutations: none
   session_impact: none
 ```
+
+---
+
+## Argument Parsing
+
+`$ARGUMENTS` is the full question text. It may be quoted or unquoted:
+
+- `/maestro btw "What is the difference between null and undefined?"` — quoted
+- `/maestro btw What is the difference between null and undefined?` — unquoted (both work)
+
+Strip outer quotes if present. The entire argument string (after stripping quotes) is the question.
+
+If `$ARGUMENTS` is empty or whitespace-only, show the usage message and stop — do not dispatch a skill.
+
+**Maximum question length:** 500 characters. If longer, truncate to 500 and append `(i) Question truncated to 500 characters.`
+
+## Answer Length and Formatting
+
+The answer should be:
+- **Concise** — 1–5 sentences for simple factual questions
+- **Structured** — use a short bullet list when the question asks "what are the differences" or "what are the options"
+- **Code-bearing** — include a brief code snippet if the question is about syntax or an API
+
+The answer must NOT:
+- Reference the current session, story, or project
+- Use headers (`##`, `###`)
+- Exceed ~300 words
+
+If the question is long or multi-part, answer the most important part first, then add a note: `(i) This is a complex question — for full depth, consider opening a focused conversation.`
+
+## Context Awareness (Read-Only)
+
+When Step 2 detects an active session (state file exists with `active: true`), the command may silently use the current language, framework, or stack preferences to improve answer relevance — but must NOT expose or reference session-specific details in the output.
+
+**Allowed:** Using `TypeScript` context to frame a language-specific answer.
+**Not allowed:** Mentioning story names, milestone numbers, or in-progress work.
+
+## Examples
+
+### Example 1: Quick factual question
+
+```
+/maestro btw "What's the Next.js convention for API routes?"
+```
+
+```
+██████╗ ████████╗██╗    ██╗
+...
+
++---------------------------------------------+
+| btw                                         |
++---------------------------------------------+
+
+  Q: What's the Next.js convention for API routes?
+
+  In the App Router, API routes are defined as `route.ts` files inside
+  `app/` directories. For example: `app/api/users/route.ts` exports
+  named functions `GET`, `POST`, `PUT`, `DELETE`, etc.
+
+  In the Pages Router (legacy), API routes live in `pages/api/` and
+  export a default handler function.
+
+  (i) This answer was not saved to session state.
+  (i) Your active session is unaffected. Resuming where you left off.
+```
+
+### Example 2: Question requiring a code snippet
+
+```
+/maestro btw "How do I type a React ref for a div element?"
+```
+
+```
++---------------------------------------------+
+| btw                                         |
++---------------------------------------------+
+
+  Q: How do I type a React ref for a div element?
+
+  Use `useRef<HTMLDivElement>(null)`:
+
+  ```typescript
+  const ref = useRef<HTMLDivElement>(null);
+  ```
+
+  Access the DOM node via `ref.current` (it will be `null` until the
+  component mounts, so check `if (ref.current)` before use).
+
+  (i) This answer was not saved to session state.
+```
+
+### Example 3: Missing question
+
+```
+/maestro btw
+```
+
+```
+[btw] Usage: /maestro btw "your question here"
+
+  Example:
+    /maestro btw "What's the Next.js convention for API routes?"
+    /maestro btw "What does RFC 9110 say about 409 vs 422?"
+    /maestro btw "What's the difference between useEffect and useLayoutEffect?"
+
+  Note: Answers are shown inline and NOT saved to session state.
+```
+
+### Example 4: Project-context question redirected
+
+```
+/maestro btw "What are the current stories in this project?"
+```
+
+```
++---------------------------------------------+
+| btw                                         |
++---------------------------------------------+
+
+  Q: What are the current stories in this project?
+
+  /maestro btw is stateless — it cannot access your project's stories
+  or session history.
+
+  For project-specific context, use:
+    /maestro status      — current session and story progress
+    /maestro brain       — search project knowledge base
+    /maestro stories     — list all stories
+
+  (i) This answer was not saved to session state.
+```

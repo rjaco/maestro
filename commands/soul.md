@@ -228,3 +228,148 @@ When `--global` is used, all file paths in output and confirmation messages refl
 | Learned Patterns | Injected as high-priority notes at story planning time |
 
 SOUL is loaded at T0 (orchestrator tier) — before DNA, preferences, or any project context. It is always fully included (relevance score 1.0) and typically consumes 300-600 tokens from the orchestrator budget.
+
+---
+
+## Argument Parsing
+
+| Invocation | Behavior |
+|-----------|----------|
+| `/maestro soul` | Show current SOUL, then interactive menu |
+| `/maestro soul show` | Show current SOUL (same as no args) |
+| `/maestro soul evolve "<pattern>"` | Append a learned pattern |
+| `/maestro soul reset` | Reset to template defaults (with confirmation) |
+| `/maestro soul show --global` | Show the global SOUL file |
+| `/maestro soul evolve "..." --global` | Add pattern to global SOUL |
+| `/maestro soul reset --global` | Reset global SOUL to template |
+
+The `--global` flag may appear anywhere in `$ARGUMENTS`. Strip it before processing the rest of the argument string.
+
+## Error Handling
+
+| Condition | Action |
+|-----------|--------|
+| `.maestro/config.yaml` missing | Print "Not initialized" and stop |
+| `templates/soul.md` missing | Print `(x) Cannot find soul template. Reinstall the Maestro plugin.` and stop |
+| Pattern argument is empty string | Print `[maestro] Pattern cannot be empty.` and stop |
+| Pattern is a duplicate | Print `[maestro] Pattern already exists in soul.md` with the existing entry shown |
+| Soul file has invalid frontmatter | Warn `(!) soul.md frontmatter is malformed — evolution_count not updated` and proceed with content edit only |
+| `~/.claude/` directory does not exist | Create it before writing `~/.claude/maestro-soul.md` |
+
+## SOUL File Format Reference
+
+A valid soul file has this structure:
+
+```markdown
+---
+created: YYYY-MM-DD
+last_evolved: YYYY-MM-DD
+evolution_count: N
+---
+
+## Decision Principles
+- ...
+
+## Communication Style
+- ...
+
+## Quality Bar
+qa_confidence_threshold: 0.85
+self_heal_max_cycles: 3
+minimum_test_coverage: 80
+
+## Autonomy Level
+mode_preference: checkpoint
+auto_approve_simple_stories: false
+escalate_on:
+  - schema_migration
+  - external_api_change
+  - security_change
+
+## Learned Patterns
+- [YYYY-MM-DD] <pattern>
+```
+
+When appending a pattern, locate the `## Learned Patterns` heading and add the new entry on the next available line. If the heading does not exist, append the section at the end of the file.
+
+## Examples
+
+### Example 1: Show soul (no arguments)
+
+```
+/maestro soul
+```
+
+```
+███╗   ███╗ █████╗ ███████╗███████╗████████╗██████╗  ██████╗
+...
+
++---------------------------------------------+
+| Soul                                        |
++---------------------------------------------+
+
+  Source:           project-local
+  File:             .maestro/soul.md
+  Last evolved:     2026-03-15
+  Evolution count:  4
+
+  Decision Principles (3)
+    - Prefer incremental, reversible changes
+    - Ask before modifying public API surface
+    - Treat test coverage as a non-negotiable gate
+
+  Communication Style (2)
+    - Concise status updates, no filler phrases
+    - Surface blockers immediately, don't buffer them
+
+  Quality Bar
+    QA confidence threshold:  0.85
+    Self-heal max cycles:     3
+    Minimum test coverage:    80%
+
+  Autonomy Level
+    Mode preference:           checkpoint
+    Auto-approve simple stories: false
+    Escalate on:               schema_migration, security_change
+
+  Learned Patterns (1)
+    - [2026-03-15] Always propose a rollback plan when the story modifies database schema
+```
+
+### Example 2: Add a learned pattern
+
+```
+/maestro soul evolve "Run the full test suite before marking any story complete, even for trivial changes"
+```
+
+```
++---------------------------------------------+
+| Soul Evolved                                |
++---------------------------------------------+
+
+  Pattern:   Run the full test suite before marking any story complete, even for trivial changes
+  Added to:  .maestro/soul.md
+  Total patterns: 2
+  Evolution count: 5
+
+  (i) This pattern will be active at the next orchestrator invocation.
+  (i) Patterns are injected at T0 priority — they shape all dispatching decisions.
+```
+
+### Example 3: Invalid (vague) pattern rejected
+
+```
+/maestro soul evolve "be more careful"
+```
+
+```
+[maestro] Pattern rejected.
+
+  Reason: Too vague — patterns must describe a specific, observable behavior.
+
+  Example of a valid pattern:
+    "Ask for human approval before running any migration that drops a column."
+
+  Example of an invalid pattern:
+    "Be more careful with databases."
+```

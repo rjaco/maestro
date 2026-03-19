@@ -196,3 +196,214 @@ Ensure `.maestro/browser-screenshots/` exists before saving. Create it with Bash
 ```
 
 This subcommand does not close the browser — it is intended for exploration and debugging.
+
+---
+
+## Argument Parsing
+
+| Invocation | Behavior |
+|-----------|----------|
+| `/maestro browser` | Show status overview + interactive menu |
+| `/maestro browser profiles` | List all saved profiles |
+| `/maestro browser login <site>` | Login to `<site>` and save a profile |
+| `/maestro browser screenshot <url>` | Take a screenshot of `<url>` |
+| `/maestro browser open <url>` | Navigate to `<url>` and show snapshot |
+
+`<site>` is a bare domain (e.g., `github.com`). `<url>` is a full URL including `https://`.
+
+If `<site>` or `<url>` is missing for a subcommand that requires it:
+```
+[browser] Usage: /maestro browser login <site>
+  Example: /maestro browser login github.com
+```
+
+## Playwright MCP Availability Check
+
+Before attempting any Playwright operation (navigate, snapshot, screenshot), confirm Playwright MCP is available by checking whether the `mcp__plugin_playwright_playwright__browser_navigate` tool is listed as allowed in this command's frontmatter. If Playwright tools are unavailable:
+
+```
+(x) Playwright MCP is not available.
+
+  Browser automation requires the Playwright MCP server to be running.
+  To enable it:
+    1. Install Playwright MCP: npm install -g @playwright/mcp
+    2. Restart the Claude Code session
+    3. Verify with: /maestro doctor
+```
+
+Stop here if Playwright is unavailable.
+
+## Profile Expiry Logic
+
+A profile's `status` field is determined at display time, not stored in the file. Compute it as follows:
+
+| Condition | Status |
+|-----------|--------|
+| `last_login` within the last 7 days | `active` |
+| `last_login` 7–30 days ago | `stale` |
+| `last_login` more than 30 days ago | `expired` |
+| `last_login` field is missing | `unknown` |
+
+When displaying profiles, use these status labels in the output. When a profile is `expired`, add:
+```
+  (i) Profile expired — run /maestro browser login <site> to refresh.
+```
+
+## Profile File Format Reference
+
+Each profile is stored at `.maestro/browser-profiles/<site>.json`:
+
+```json
+{
+  "site": "github.com",
+  "login_url": "https://github.com/login",
+  "cookies": [
+    { "name": "__Host-user_session_same_site", "value": "...", "domain": ".github.com" }
+  ],
+  "localStorage": {
+    "user-preference-theme": "dark"
+  },
+  "last_login": "2026-03-19T14:00:00Z",
+  "status": "active"
+}
+```
+
+The `cookies` array contains the browser cookies extracted after login. The `localStorage` object contains key-value pairs from `window.localStorage`. Both fields are used to restore a session in future automation runs.
+
+**Security note:** Profile files contain live session credentials. They are stored locally and never transmitted. Do not commit `.maestro/browser-profiles/` to git. Verify `.gitignore` includes `browser-profiles/`.
+
+## Login Flow Details
+
+When executing the login flow in `login <site>`:
+
+### Step 3a: Navigate and detect fields
+
+After `browser_navigate` to the login URL, call `browser_snapshot` and look for:
+- An input with `type="email"` or `name` containing "email", "username", or "login"
+- An input with `type="password"`
+- A submit button with text "Sign in", "Log in", "Login", or "Continue"
+
+If the expected fields are not found, check if already logged in (look for user avatar, "Dashboard", or username in the page title). If already logged in, skip the form fill and proceed to session extraction.
+
+### Step 3b: Handle 2FA / CAPTCHA
+
+After clicking submit, take a screenshot and check the snapshot for:
+- A 2FA prompt (look for "verification code", "authenticator", "OTP")
+- A CAPTCHA element (look for "captcha", "I'm not a robot", hCaptcha)
+
+If 2FA is detected:
+```
+[browser] Two-factor authentication required for <site>.
+
+  Please complete the 2FA step manually, then confirm when done.
+```
+Use AskUserQuestion to ask the user to confirm once 2FA is complete.
+
+If CAPTCHA is detected:
+```
+[browser] CAPTCHA detected for <site>. Automated login cannot proceed.
+
+  Please complete the CAPTCHA manually in the browser window,
+  then run /maestro browser login <site> again.
+```
+Take a screenshot showing the CAPTCHA. Stop here.
+
+## Screenshot Directory Setup
+
+Before saving any screenshot, ensure `.maestro/browser-screenshots/` exists:
+
+```bash
+mkdir -p .maestro/browser-screenshots
+```
+
+Screenshot filenames follow the pattern `<YYYY-MM-DD-HHmmss>-<label>.png`:
+- Manual screenshots: `<timestamp>-manual.png`
+- Login confirmation screenshots: `<timestamp>-login-<site>.png`
+- Error screenshots: `<timestamp>-error-<site>.png`
+
+## Error Handling
+
+| Condition | Action |
+|-----------|--------|
+| Playwright MCP unavailable | Show setup instructions and stop |
+| `browser_navigate` fails (network error) | Show `(x) Cannot reach <url>. Check your connection.` |
+| `browser_navigate` returns HTTP error page | Note the status code and proceed to snapshot; do not treat as fatal |
+| Login page not found at known URL | Ask user for the login URL before proceeding |
+| Login fails — wrong credentials | Take error screenshot; show failure message; do not save profile |
+| Session extraction returns empty cookies | Warn `(!) No cookies extracted — session may not have been established` |
+| `.maestro/browser-profiles/` cannot be created | Show `(x) Cannot create browser-profiles directory: <reason>` |
+| Profile JSON file is malformed | Skip that profile in `list`/`profiles` and show `(!) Skipped malformed profile: <site>.json` |
+| `browser_take_screenshot` fails | Log the failure but do not stop the overall operation |
+
+## Examples
+
+### Example 1: Show browser status
+
+```
+/maestro browser
+```
+
+```
++---------------------------------------------+
+| Browser Automation                          |
++---------------------------------------------+
+
+  Playwright MCP    available
+
+  Saved Profiles:
+    (ok) github.com      active    last login: 2026-03-19
+    (ok) linkedin.com    active    last login: 2026-03-18
+    (x)  instagram.com   expired   last login: 2026-02-01
+
+  Screenshots: .maestro/browser-screenshots/ (7 files)
+
+  (i) Run /maestro browser login <site> to add or refresh a profile.
+```
+
+### Example 2: Take a screenshot
+
+```
+/maestro browser screenshot https://github.com/trending
+```
+
+```
+[browser] Navigating to https://github.com/trending...
+[browser] Page loaded.
+[browser] Screenshot saved:
+  .maestro/browser-screenshots/2026-03-19-143022-manual.png
+```
+
+### Example 3: Login to GitHub
+
+```
+/maestro browser login github.com
+```
+
+```
+[browser] Navigating to https://github.com/login...
+[browser] Login form detected.
+[browser] Filling credentials...
+[browser] Submitting...
+[browser] Login successful — session established.
+[browser] Profile saved: .maestro/browser-profiles/github.com.json
+  Cookies: 8
+  Last login: 2026-03-19T14:30:00Z
+```
+
+### Example 4: Open a URL for inspection
+
+```
+/maestro browser open https://api.github.com/repos/anthropics/claude-code
+```
+
+```
+[browser] Navigated to: https://api.github.com/repos/anthropics/claude-code
+
+  Title:   (JSON response)
+  Content: {"id": 12345, "name": "claude-code", "full_name": "anthropics/claude-code", ...}
+
+  Interactive elements:
+    (none — JSON response page)
+
+  (i) Run /maestro browser screenshot <url> to capture the page.
+```
