@@ -1,108 +1,16 @@
 {
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/opus-loop-hook.sh"
-          },
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
-          }
-        ]
-      }
-    ],
-    "StopFailure": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-failure-hook.sh"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact-hook.sh"
-          }
-        ]
-      }
-    ],
-    "PermissionRequest": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/permission-request-hook.sh"
-          }
-        ]
-      }
-    ],
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/notification-hook.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use-hook.sh"
-          }
-        ]
-      }
-    ],
-    "TeammateIdle": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/teammate-idle-hook.sh"
-          }
-        ]
-      }
-    ],
-    "TaskCompleted": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/task-completed-hook.sh"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.sh"
-          }
-        ]
-      }
-    ],
-    "PostCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-compact-hook.sh"
-          }
-        ]
-      }
-    ]
+    "Stop": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/opus-loop-hook.sh"},{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"}]}],
+    "StopFailure": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-failure-hook.sh"}]}],
+    "PreCompact": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact-hook.sh"}]}],
+    "PostCompact": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-compact-hook.sh"}]}],
+    "PermissionRequest": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/permission-request-hook.sh"}]}],
+    "Notification": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/notification-hook.sh"}]}],
+    "PostToolUse": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use-hook.sh"}]}],
+    "SessionStart": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-start-hook.sh"}]}],
+    "TeammateIdle": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/teammate-idle-hook.sh"}]}],
+    "TaskCompleted": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/task-completed-hook.sh"}]}],
+    "WorktreeCreate": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/worktree-create-hook.sh"}]}],
+    "WorktreeRemove": [{"hooks": [{"type": "command","command": "${CLAUDE_PLUGIN_ROOT}/hooks/worktree-remove-hook.sh"}]}]
   }
 }
