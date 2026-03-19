@@ -1,31 +1,34 @@
 #!/usr/bin/env bash
-# Maestro Opus Daemon — External loop driver for 24/7 Magnum Opus operation
+# Maestro Opus Daemon v2.0 — Smart Orchestrator Above Claude Code
+#
+# Runs "above" Claude Code — spawns and coordinates Claude instances,
+# manages state, sends notifications, and loops endlessly until the
+# vision is achieved. Inspired by OpenClaw's Gateway daemon.
 #
 # Usage:
-#   ./scripts/opus-daemon.sh                        # Start loop (reads .maestro/state.local.md)
-#   ./scripts/opus-daemon.sh --interval 30          # Wait 30s between iterations (default: 10)
-#   ./scripts/opus-daemon.sh --max-iterations 50    # Stop after 50 iterations (default: unlimited)
-#   ./scripts/opus-daemon.sh --stop                 # Gracefully stop by setting active: false
-#   ./scripts/opus-daemon.sh --verbose              # Enable debug output
-#   ./scripts/opus-daemon.sh --dry-run              # Show what would happen without calling claude
+#   ./scripts/opus-daemon.sh                        # Start serial loop
+#   ./scripts/opus-daemon.sh --parallel 3           # Spawn 3 parallel workers
+#   ./scripts/opus-daemon.sh --interval 30          # 30s between iterations
+#   ./scripts/opus-daemon.sh --max-iterations 50    # Stop after 50 iterations
+#   ./scripts/opus-daemon.sh --stop                 # Gracefully stop
+#   ./scripts/opus-daemon.sh --verbose              # Debug output
+#   ./scripts/opus-daemon.sh --dry-run              # Show without executing
 #
-# How it works:
-#   1. Reads .maestro/state.local.md to check if an Opus session is active
-#   2. Calls `claude --continue "Continue the Magnum Opus loop..."`
-#   3. Waits for Claude to finish
-#   4. Checks state again — if still active, loops back to step 2
-#   5. If active: false or phase: completed/paused/aborted, exits
+# For full autonomous operation with remote control:
+#   ./scripts/remote-listener.sh &   # Telegram bot in background
+#   ./scripts/opus-daemon.sh         # Daemon in foreground
 #
-# Stall detection:
-#   - Reads .maestro/logs/heartbeat before each iteration
-#   - If heartbeat is older than 5 minutes AND last iteration made no state
-#     change, increments stall counter
-#   - After 3 consecutive stalls: kills orphaned claude processes, restarts
-#     with a stronger prompt
+# Control from Telegram:
+#   /status  — check progress
+#   /pause   — pause after current story
+#   /resume  — resume execution
+#   /logs    — view daemon logs
 #
-# This is the same pattern OpenClaw uses for always-on operation.
-# It works because each `claude` invocation is a fresh CLI process,
-# bypassing the stop_hook_active limitation.
+# Architecture:
+#   Each `claude` invocation is a fresh CLI process. This bypasses the
+#   stop_hook_active limitation. The daemon reads state, builds a smart
+#   prompt, invokes Claude, detects progress, sends notifications, and
+#   loops. In parallel mode, it spawns N workers with file-based claiming.
 
 set -euo pipefail
 
@@ -63,6 +66,9 @@ DRY_RUN=false
 STALL_COUNT=0
 STALL_THRESHOLD=3
 HEARTBEAT_MAX_AGE=300  # seconds (5 minutes)
+PARALLEL=0             # 0 = serial mode, N = spawn N parallel workers
+MAX_RETRIES=3
+RETRY_DELAY=5
 
 # ---------------------------------------------------------------------------
 # Argument parsing
@@ -84,6 +90,10 @@ while [[ $# -gt 0 ]]; do
     --dry-run)
       DRY_RUN=true
       shift
+      ;;
+    --parallel)
+      PARALLEL="${2:?--parallel requires a value}"
+      shift 2
       ;;
     --stop)
       # Gracefully stop a running daemon by flipping active: false in state
@@ -109,7 +119,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       echo "Unknown option: $1" >&2
-      echo "Usage: $0 [--interval N] [--max-iterations N] [--stop] [--verbose] [--dry-run]" >&2
+      echo "Usage: $0 [--interval N] [--max-iterations N] [--parallel N] [--stop] [--verbose] [--dry-run]" >&2
       exit 1
       ;;
   esac
@@ -325,6 +335,133 @@ This is an INFINITE improvement cycle. Do not stop.' \
 }
 
 # ---------------------------------------------------------------------------
+# Send notification (fire-and-forget)
+# ---------------------------------------------------------------------------
+send_notification() {
+  local event="$1"
+  local message="$2"
+  if [[ -x "$PROJECT_DIR/scripts/notify.sh" ]]; then
+    "$PROJECT_DIR/scripts/notify.sh" --event "$event" --message "$message" 2>/dev/null &
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Run Claude with retry + exponential backoff
+# ---------------------------------------------------------------------------
+run_with_retry() {
+  local prompt="$1"
+  local attempt=0
+  local exit_code=0
+
+  while [[ $attempt -lt $MAX_RETRIES ]]; do
+    exit_code=0
+    claude --continue "$prompt" --yes --model opus || exit_code=$?
+
+    if [[ $exit_code -eq 0 ]]; then
+      return 0
+    fi
+
+    attempt=$((attempt + 1))
+    if [[ $attempt -lt $MAX_RETRIES ]]; then
+      local delay=$((RETRY_DELAY * attempt))
+      log "Claude exited with code $exit_code. Retry $attempt/$MAX_RETRIES in ${delay}s..."
+      sleep "$delay"
+    fi
+  done
+
+  log "All $MAX_RETRIES retries failed (last exit code: $exit_code)"
+  send_notification "error" "Daemon: $MAX_RETRIES retries failed (exit $exit_code)"
+  return "$exit_code"
+}
+
+# ---------------------------------------------------------------------------
+# Parallel worker: spawn N claude processes for independent stories
+# ---------------------------------------------------------------------------
+run_parallel_workers() {
+  local num_workers="$1"
+  local stories_dir="$PROJECT_DIR/.maestro/stories"
+  local claim_dir="$PROJECT_DIR/.maestro/locks"
+  mkdir -p "$claim_dir"
+
+  local milestone
+  milestone="$(parse_state current_milestone)"
+  local pids=()
+  local worker_names=()
+  local claimed=0
+
+  for story_file in "$stories_dir"/M"${milestone}"-*.md; do
+    [[ -f "$story_file" ]] || continue
+    [[ "$claimed" -ge "$num_workers" ]] && break
+
+    # Skip completed stories
+    if grep -qi "Status:.*[Cc]omplete" "$story_file" 2>/dev/null; then
+      continue
+    fi
+
+    local story_name
+    story_name=$(basename "$story_file" .md)
+    local claim_file="$claim_dir/${story_name}.lock"
+
+    # Atomic claim using noclobber
+    if ( set -C; echo "$$-$claimed" > "$claim_file" ) 2>/dev/null; then
+      claimed=$((claimed + 1))
+      local worker_id="worker-${claimed}"
+      worker_names+=("$story_name")
+
+      log "[$worker_id] Claimed $story_name"
+
+      if [[ "$DRY_RUN" == "true" ]]; then
+        log "[dry-run] Would spawn: claude for $story_name"
+      else
+        local prompt
+        prompt="Implement this Maestro story. Read the story file, implement the changes, commit your work, then report DONE.
+
+Story: $story_file
+Read the story file for full details.
+Read .maestro/vision.md for North Star context.
+Commit all changes when done."
+
+        claude -p "$prompt" --yes --model sonnet \
+          &> "$LOG_DIR/${worker_id}-${story_name}.log" &
+        pids+=($!)
+      fi
+    fi
+  done
+
+  if [[ ${#pids[@]} -gt 0 ]]; then
+    log "Waiting for ${#pids[@]} parallel workers..."
+    local i=0
+    for pid in "${pids[@]}"; do
+      wait "$pid" 2>/dev/null || log "Worker ${worker_names[$i]:-$pid} exited with error"
+      i=$((i + 1))
+    done
+    log "All ${#pids[@]} workers finished"
+    send_notification "story_complete" "${#pids[@]} parallel workers completed in M${milestone}"
+  elif [[ "$claimed" -eq 0 ]]; then
+    log "No unclaimed stories for parallel execution"
+  fi
+
+  # Cleanup claims
+  rm -f "$claim_dir"/M*.lock 2>/dev/null
+}
+
+# ---------------------------------------------------------------------------
+# Show startup banner
+# ---------------------------------------------------------------------------
+show_banner() {
+  # shellcheck disable=SC2059
+  printf "${CLR_BOLD}"
+  cat << 'BANNER'
+  ╔══════════════════════════════════════╗
+  ║     MAESTRO OPUS DAEMON v2.0       ║
+  ║   Autonomous Development Engine    ║
+  ╚══════════════════════════════════════╝
+BANNER
+  # shellcheck disable=SC2059
+  printf "${CLR_RESET}"
+}
+
+# ---------------------------------------------------------------------------
 # Signal handler — graceful shutdown on SIGTERM/SIGINT
 # ---------------------------------------------------------------------------
 cleanup() {
@@ -357,11 +494,14 @@ fi
 mkdir -p "$(dirname "$PID_FILE")"
 echo "$$" > "$PID_FILE"
 
-if [[ "$DRY_RUN" == "true" ]]; then
-  log "Opus Daemon started in DRY-RUN mode (PID $$, interval=${INTERVAL}s, max_iterations=${MAX_ITERATIONS:-unlimited})"
-else
-  log "Opus Daemon started (PID $$, interval=${INTERVAL}s, max_iterations=${MAX_ITERATIONS:-unlimited})"
-fi
+show_banner
+
+MODE_DESC="serial"
+if [[ "$PARALLEL" -gt 0 ]]; then MODE_DESC="parallel ($PARALLEL workers)"; fi
+if [[ "$DRY_RUN" == "true" ]]; then MODE_DESC="$MODE_DESC (dry-run)"; fi
+
+log "Opus Daemon started (PID $$, mode=${MODE_DESC}, interval=${INTERVAL}s, max_iterations=${MAX_ITERATIONS:-unlimited})"
+send_notification "session_resume" "Opus Daemon started (${MODE_DESC})"
 
 # ---------------------------------------------------------------------------
 # Main loop
@@ -442,14 +582,22 @@ while true; do
   START_TS="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
   START_EPOCH="$(date +%s)"
 
-  # -- Invoke Claude CLI (or dry-run) --
+  # -- Execute: parallel or serial --
   EXIT_CODE=0
-  if [[ "$DRY_RUN" == "true" ]]; then
+  if [[ "$PARALLEL" -gt 0 ]]; then
+    # Parallel mode: spawn N workers for independent stories
+    if [[ "$DRY_RUN" == "true" ]]; then
+      log "[dry-run] Would spawn $PARALLEL parallel workers"
+    else
+      run_parallel_workers "$PARALLEL"
+    fi
+  elif [[ "$DRY_RUN" == "true" ]]; then
     log "[dry-run] Would call: claude --continue <prompt> --yes --model opus"
     debug "Prompt:"
     debug "$PROMPT"
   else
-    claude --continue "$PROMPT" --yes --model opus || EXIT_CODE=$?
+    # Serial mode with retry
+    run_with_retry "$PROMPT" || EXIT_CODE=$?
   fi
 
   # -- Record end time and duration --
@@ -489,6 +637,11 @@ while true; do
     "$EXIT_CODE" \
     "$STATE_CHANGED"
 
+  # -- Notify on milestone change --
+  if [[ "$STATE_CHANGED" == "true" ]] && [[ "$PRE_MILESTONE" != "$POST_MILESTONE" ]]; then
+    send_notification "milestone_complete" "Milestone M${PRE_MILESTONE} complete. Now on M${POST_MILESTONE}."
+  fi
+
   # -- Brief pause between iterations --
   sleep "$INTERVAL"
 done
@@ -498,3 +651,4 @@ done
 # ---------------------------------------------------------------------------
 rm -f "$PID_FILE"
 log "Opus Daemon stopped (ran $ITERATION iterations)."
+send_notification "session_paused" "Opus Daemon stopped after $ITERATION iterations."
