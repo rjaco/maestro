@@ -1,7 +1,7 @@
 ---
 name: status
 description: "View Maestro session progress and manage lifecycle — resume, pause, or abort a session"
-argument-hint: "[resume|abort|pause]"
+argument-hint: "[resume|abort|pause|--detail|--verbose|--tokens|--qa|--cost]"
 allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
 ---
 
@@ -10,14 +10,18 @@ allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
 ## Usage
 
 ```
-/maestro status [resume|abort|pause]
+/maestro status [resume|abort|pause|--detail|--verbose|--tokens|--qa|--cost]
 ```
 
 ## Flags
 
-| Subcommand | Description |
-|------------|-------------|
-| _(none)_ | Show session status with interactive action menu |
+| Subcommand / Flag | Description |
+|-------------------|-------------|
+| _(none)_ | Show compact 6-line status view with interactive action menu |
+| `--detail` / `--verbose` | Show full 11-section status (current behavior before this change) |
+| `--tokens` | Show token breakdown per model |
+| `--qa` | Show QA iteration history per story |
+| `--cost` | Show cost breakdown per story |
 | `resume` | Resume a paused session from its last saved position |
 | `abort` | End the session (committed work is preserved) |
 | `pause` | Pause a running session for later resumption |
@@ -26,6 +30,10 @@ allowed-tools: Read Write Edit Bash Glob Grep AskUserQuestion
 
 ```
 /maestro status
+/maestro status --detail
+/maestro status --tokens
+/maestro status --qa
+/maestro status --cost
 /maestro status resume
 /maestro status pause
 /maestro status abort
@@ -65,17 +73,18 @@ Extract all fields from the YAML frontmatter of `.maestro/state.local.md`:
 - `mode` — yolo, checkpoint, or careful
 - `layer` — execution or opus
 - `current_story` / `total_stories` — progress
+- `current_milestone` / `total_milestones` — opus milestone progress
 - `phase` — current phase (validate, delegate, implement, self_heal, qa_review, git_craft, checkpoint, paused, completed, aborted, decompose, research)
 - `qa_iteration` / `max_qa_iterations`
 - `self_heal_iteration` / `max_self_heal`
 - `started_at` / `last_updated` — timestamps
 - `token_spend` / `estimated_remaining`
+- `cost_actual` / `cost_projected` — dollar cost figures
 - `session_id`
 - `model_override`
 
 If `layer` is `opus`, also extract:
 - `opus_mode` — full_auto, milestone_pause, budget_cap, time_cap, until_pause
-- `current_milestone` / `total_milestones`
 - `milestones` — status map of all milestones
 - `token_budget` / `time_budget_hours`
 - `fix_cycle` / `max_fix_cycles`
@@ -83,17 +92,94 @@ If `layer` is `opus`, also extract:
 
 ## Step 3: Handle Subcommands
 
-Check `$ARGUMENTS` for a subcommand.
+Check `$ARGUMENTS` for a subcommand or flag.
 
-### No arguments — show status
+---
+
+### No arguments — show COMPACT status (default)
 
 Read `.maestro/trust.yaml` for trust metrics.
 
+Calculate time elapsed from `started_at` to now (format as `Xh Ym Zs` or `Xm Zs` if under 1 hour).
+
+Build the phase line: map current `phase` to its display name using the output-format phase mapping, show it in `[CAPS]`, all others lowercase.
+
+Phase sequence to display:
+```
+validate > delegate > [IMPLEMENT] > self-heal > qa > git > checkpoint
+```
+
+For Magnum Opus sessions, also show:
+```
+milestone > executing > self-heal > qa > git > checkpoint
+```
+
+Calculate progress bar:
+- Compute percentage: `(current_story - 1) / total_stories * 100` (or use story completion ratio)
+- Build a 12-character bar: filled `█` for completed, `░` for remaining
+- Example at 65%: `████████░░░░`
+
+Display compact view (6 lines of content):
+
+```
++---------------------------------------------+
+| Maestro Status                              |
++---------------------------------------------+
+  Feature:   [feature name, truncated to 35 chars if needed]
+  Phase:     validate > delegate > [IMPLEMENT] > self-heal > qa > git > checkpoint
+  Progress:  M[current_milestone]/[total_milestones]  S[current_story]/[total_stories]  ████████░░░░  [pct]%
+  Elapsed:   [Xm Ys]
+  Cost:      ~$[cost_actual] (~$[cost_projected] projected)
+  Trust:     [trust_level] ([qa_first_pass_rate]% QA first-pass)
+```
+
+Notes:
+- If `layer` is not `opus`, omit the `M[x]/[y]` milestone count from Progress
+- If `cost_actual` or `cost_projected` is not available, show token count instead: `~[token_spend] tokens`
+- If `trust.yaml` does not exist, show `Trust: unknown`
+- Phase line wraps are acceptable — keep content accurate over fitting in one line
+
+After the box, show quick-action options based on state:
+
+If session is active (not paused, not completed, not aborted):
+
+Use AskUserQuestion:
+- Question: "Session is active. What would you like to do?"
+- Header: "Action"
+- Options:
+  1. label: "Pause", description: "Save state and pause for later resumption"
+  2. label: "Abort", description: "End the session. Committed work is preserved."
+  3. label: "View details", description: "Show full 11-section status (--detail)"
+
+If session is paused:
+
+Use AskUserQuestion:
+- Question: "Session is paused. What would you like to do?"
+- Header: "Action"
+- Options:
+  1. label: "Resume (Recommended)", description: "Continue from story [current]/[total]"
+  2. label: "Abort", description: "End the session. Committed work is preserved."
+  3. label: "View details", description: "Show full 11-section status (--detail)"
+
+If session is completed:
+
+Use AskUserQuestion:
+- Question: "Session completed. What's next?"
+- Header: "Next"
+- Options:
+  1. label: "Start new session", description: "Begin a new feature with /maestro"
+  2. label: "View history", description: "See past sessions and cost analysis"
+
+---
+
+### `--detail` or `--verbose` — show FULL status
+
+Read `.maestro/trust.yaml` for trust metrics.
+Read `.maestro/config.yaml` and check for an `integrations` section.
+
 Calculate time elapsed from `started_at` to now.
 
-Display comprehensive status:
-
-Read `.maestro/config.yaml` and check for an `integrations` section (e.g., `github`, `linear`, `slack`). Note which integrations are configured and their status.
+Display comprehensive 11-section status:
 
 ```
 +---------------------------------------------+
@@ -142,35 +228,6 @@ Read `.maestro/config.yaml` and check for an `integrations` section (e.g., `gith
 +---------------------------------------------+
 ```
 
-After the box, show quick-action options based on state:
-
-If session is active (not paused, not completed, not aborted):
-
-Use AskUserQuestion:
-- Question: "Session is active. What would you like to do?"
-- Header: "Action"
-- Options:
-  1. label: "Pause", description: "Save state and pause for later resumption"
-  2. label: "Abort", description: "End the session. Committed work is preserved."
-
-If session is paused:
-
-Use AskUserQuestion:
-- Question: "Session is paused. What would you like to do?"
-- Header: "Action"
-- Options:
-  1. label: "Resume (Recommended)", description: "Continue from story [current]/[total]"
-  2. label: "Abort", description: "End the session. Committed work is preserved."
-
-If session is completed:
-
-Use AskUserQuestion:
-- Question: "Session completed. What's next?"
-- Header: "Next"
-- Options:
-  1. label: "Start new session", description: "Begin a new feature with /maestro"
-  2. label: "View history", description: "See past sessions and cost analysis"
-
 If `layer` is `opus`, add Magnum Opus section:
 
 ```
@@ -187,7 +244,7 @@ If `layer` is `opus`, add Magnum Opus section:
     Consecutive fails:  [consecutive_failures] / [max_consecutive_failures]
 ```
 
-If the session is paused, show:
+If the session is paused, also show:
 
 ```
   Session is PAUSED.
@@ -195,12 +252,92 @@ If the session is paused, show:
   Abort with:  /maestro status abort
 ```
 
-If the session is completed, show:
+If the session is completed, also show:
 
 ```
   Session COMPLETED.
   Start a new session with: /maestro "next feature"
 ```
+
+After the box, use AskUserQuestion for actions (same options as compact view).
+
+---
+
+### `--tokens` — token breakdown per model
+
+Read `.maestro/state.local.md` for token data. If the state tracks per-model token spend, display:
+
+```
++---------------------------------------------+
+| Token Breakdown                             |
++---------------------------------------------+
+  Model         Tokens     % of total
+  ----------    --------   ----------
+  sonnet        145,230    78%
+  opus          34,500     18%
+  haiku          7,200      4%
+  ----------    --------   ----------
+  Total         186,930    100%
+
+  Stories:
+    S1: 24,100 tokens
+    S2: 31,400 tokens
+    S3: 28,700 tokens
+    ...
+```
+
+If per-model data is not available in state, show the total token spend and note that
+per-model breakdown requires `layer: opus` or detailed logging.
+
+---
+
+### `--qa` — QA iteration history
+
+Read `.maestro/state.local.md` for QA iteration data. Display:
+
+```
++---------------------------------------------+
+| QA Iteration History                        |
++---------------------------------------------+
+  Story     Iterations    Result
+  -------   ----------    ------
+  S1        1             (ok) first-pass
+  S2        2             (ok) passed on retry
+  S3        3             (!) at limit, accepted
+  S4        1             (ok) first-pass
+
+  Overall QA first-pass rate: [qa_first_pass_rate]%
+  Average iterations: [average_qa_iterations]
+```
+
+If no QA history is available, note that QA history accumulates as stories complete.
+
+---
+
+### `--cost` — cost breakdown per story
+
+Read `.maestro/state.local.md` for cost data. Display:
+
+```
++---------------------------------------------+
+| Cost Breakdown                              |
++---------------------------------------------+
+  Story     Tokens     Cost
+  -------   --------   ------
+  S1        24,100     ~$0.18
+  S2        31,400     ~$0.24
+  S3        28,700     ~$0.22
+  ...
+  -------   --------   ------
+  Total     186,930    ~$1.24
+
+  Projected remaining: ~$2.56
+  Projected total:     ~$3.80
+```
+
+If cost data is not broken down per story, show the totals available.
+
+---
 
 ### `resume` — Resume paused session
 
@@ -251,6 +388,8 @@ If the session is completed, show:
 
 8. The stop hook will pick up the updated state and continue the dev loop.
 
+---
+
 ### `abort` — Abort session
 
 1. Ask for confirmation using AskUserQuestion:
@@ -285,6 +424,8 @@ If the session is completed, show:
 
    To start fresh: /maestro "new feature description"
    ```
+
+---
 
 ### `pause` — Pause running session
 
@@ -327,6 +468,8 @@ If the session is completed, show:
    Abort with:  /maestro status abort
    ```
 
+---
+
 ## Important Notes
 
 - The state file `.maestro/state.local.md` is the single source of truth for session state. Never rely on in-memory state across sessions.
@@ -335,3 +478,5 @@ If the session is completed, show:
 - When displaying token spend, format large numbers with commas (e.g., 145,230 tokens).
 - Time elapsed should be calculated from `started_at` to the current time, not `last_updated`.
 - If the state file exists but has corrupted or missing frontmatter fields, report the issue clearly and suggest running `/maestro init` to reset.
+- Default view is COMPACT (6 lines). Use `--detail` or `--verbose` for the full view.
+- Progress bar uses `████░░░░` style (█ for done, ░ for remaining). Never use `[===>  ]`.

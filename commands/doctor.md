@@ -32,15 +32,17 @@ _(Doctor runs automatically and produces a structured report. No flags or subcom
 |-------|-------------|
 | Core files | `.maestro/` directory, `dna.md`, `config.yaml`, `trust.yaml` |
 | Config validation | Mode, quality gates, and provider names are valid |
+| Hooks | All hook scripts present and executable |
+| Skills | All SKILL.md files have valid frontmatter |
+| Mirror | `skills/` and `plugins/maestro/skills/` are in sync |
+| JSON | All JSON files in `hooks/` parse correctly |
+| Plugin | `claude plugin validate` — manifest, skill frontmatter, command definitions |
+| Agents | Command files have valid YAML frontmatter |
+| Session state | Warns on stale sessions (>1h heartbeat) |
+| Dependencies | Required CLI tools (`jq`, `git`) are installed |
 | Trust metrics | `trust_level` and rates are within expected ranges |
-| Session state | Warns on stale sessions older than 24 hours |
 | Git status | Branch, uncommitted changes, session branch alignment |
-| Hook installation | Stop hook is installed and executable |
-| Plugin manifest | `claude plugin validate` — manifest, skill frontmatter, command definitions |
-| Hook script validation | `scripts/validate-hooks.sh` — all hook entries point to executable scripts |
-| Integration detection | MCP servers and CLI tools vs. configured providers |
-| Knowledge base | Vault path exists (Obsidian) or MCP available (Notion) |
-| Kanban connectivity | Provider authentication and reachability |
+| Integrations | MCP servers and CLI tools vs. configured providers |
 
 ## See Also
 
@@ -52,7 +54,7 @@ Runs a comprehensive diagnostic on the Maestro installation and reports health s
 
 ## Diagnostic Checks
 
-Run all checks in order. Track pass/warn/fail counts.
+Run all checks in order. Assign each result to one of three buckets: PASSED, WARNINGS (with `(!)`), or FAILED (with `(x)`).
 
 ### 1. Core Files
 
@@ -68,6 +70,8 @@ Check that `.maestro/` directory exists and contains required files:
 | `.maestro/logs/` | No | Directory exists |
 | `.maestro/research/` | No | Directory exists |
 
+Report as a single check: `(ok) Core files  .maestro/ directory present` if all required files pass, or `(x) Core files  [missing file]` listing which are missing.
+
 ### 2. Config Validation
 
 Read `.maestro/config.yaml` and validate:
@@ -76,42 +80,93 @@ Read `.maestro/config.yaml` and validate:
 - `quality.max_self_heal` is a positive integer
 - If `integrations` section exists, validate provider names
 
-### 3. Trust Metrics
+Report as: `(ok) Config  valid YAML` or `(x) Config  [specific error]`.
+
+### 3. Hooks
+
+Check hook installation:
+- Read `hooks/hooks.json` (relative to plugin root)
+- Verify each defined hook script exists and is executable
+- Count total hooks defined and how many are executable
+
+Report as: `(ok) Hooks  N/N scripts executable` or `(x) Hooks validation  [script] not executable`.
+
+### 4. Skills
+
+Check all SKILL.md files:
+- Count SKILL.md files under `skills/`
+- Verify each has valid YAML frontmatter (name, description fields)
+
+Report as: `(ok) Skills  N/N valid SKILL.md`.
+
+### 5. Mirror Sync
+
+Check that `skills/` and `plugins/maestro/skills/` are in sync:
+- Count SKILL.md files in each location
+- Warn if counts differ
+
+Report as: `(ok) Mirror  N/N synced` or `(!) Mirror  X skills out of sync`.
+
+### 6. JSON Validation
+
+Check that all JSON files in `hooks/` parse correctly:
+- `hooks/hooks.json`
+- Any other `.json` files in `hooks/`
+
+Report as: `(ok) JSON  N/N files parse`.
+
+### 7. Plugin Validation
+
+If `claude` CLI is available, run `claude plugin validate` (or equivalent check).
+Otherwise, verify `.claude-plugin/plugin.json` parses as valid JSON with required fields.
+
+Report as: `(ok) Plugin  claude plugin validate passed` or `(!) Plugin  [issue]`.
+
+### 8. Agent Frontmatter
+
+Check that agent-facing command files have valid YAML frontmatter:
+- Scan `commands/*.md` for frontmatter
+- Verify `description` field is present in each
+
+Report as: `(ok) Agents  N/N valid frontmatter`.
+
+### 9. Session State
+
+Check `.maestro/state.local.md`:
+- If it exists and `active: true`, check `last_updated`. If older than 1 hour, warn about stale heartbeat.
+- If it does not exist, report as clean (no active session).
+
+Report as: `(ok) Session  no active session`, `(ok) Session  active (fresh)`, or `(!) Session  stale heartbeat (>1h ago)`.
+
+### 10. Dependencies
+
+Check for required and optional CLI tools:
+- `git` — required
+- `jq` — required for JSON processing
+- `gh` — optional, needed for GitHub integration
+
+Report warnings for missing tools: `(!) Dependencies  jq not installed`.
+Report failures for missing required tools: `(x) Dependencies  git not installed`.
+
+### 11. Trust Metrics
 
 Read `.maestro/trust.yaml` and check:
 - `trust_level` is one of: novice, apprentice, journeyman, expert
 - `total_stories` is a non-negative integer
 - `qa_first_pass_rate` is between 0.0 and 1.0
 
-### 4. Session State
+Report as: `(ok) Trust metrics  [trust_level] ([total_stories] stories)` or `(x) Trust metrics  [issue]`.
 
-Check `.maestro/state.local.md`:
-- If it exists and `active: true`, check age. If older than 24h, warn about stale session.
-- If it does not exist, report as clean (no active session).
-
-### 5. Git Status
+### 12. Git Status
 
 Run `git status --porcelain` and `git branch --show-current`:
 - Report current branch
 - Warn if there are uncommitted changes
 - Warn if not on the expected branch for an active session
 
-### 6. Hook Installation
+Report as: `(ok) Git  branch [name], clean` or `(!) Git  uncommitted changes`.
 
-Check if the stop hook is properly installed:
-- Read `hooks/hooks.json` (relative to plugin root)
-- Verify the `Stop` hook is defined
-- Check that `stop-hook.sh` exists and is executable
-
-### 7. Plugin Manifest Validation
-
-Run `claude plugin validate` to check plugin manifest, skill frontmatter, and command definitions. Report any validation errors.
-
-### 8. Hook Script Validation
-
-Run `scripts/validate-hooks.sh` to verify all hook entries in `hooks/hooks.json` point to valid executable scripts. Report any FAIL (missing file) or WARN (not executable) results.
-
-### 9. Integration Detection
+### 13. Integration Detection
 
 Invoke the `mcp-detect` skill logic:
 - Check for each MCP server (Asana, Jira, Linear, Notion, Playwright)
@@ -119,81 +174,101 @@ Invoke the `mcp-detect` skill logic:
 - Compare detected integrations against configured integrations in `config.yaml`
 - Warn if a provider is configured but not detected
 
-### 10. Knowledge Base Connectivity
-
-If `integrations.knowledge_base.provider` is set:
-- Obsidian: check that `vault_path` exists and is a directory
-- Notion: check that Notion MCP tools are available
-
-### 11. Kanban Connectivity
-
-If `integrations.kanban.provider` is set:
-- GitHub: check that `gh` is authenticated (`gh auth status`)
-- Asana: check that Asana MCP tools respond
-- Linear: check that Linear MCP tools respond
-- Jira: check that Atlassian MCP tools respond
+Report as: `(ok) Integrations  [list]` or `(!) Integrations  [provider] configured but not detected`.
 
 ## Output Format
 
-Follow the output-format standard:
+Group all check results into three severity sections: PASSED, WARNINGS, FAILED.
+List PASSED first, then WARNINGS, then FAILED.
+Omit a section header entirely if it has zero checks in that bucket.
 
 ```
 +---------------------------------------------+
 | Maestro Doctor                              |
 +---------------------------------------------+
 
-  Core:
-    (ok) Directory        .maestro/ present
-    (ok) Project DNA      dna.md valid
-    (ok) Config           config.yaml valid
-    (ok) Trust metrics    novice (0 stories)
-    (ok) State            no active session
+  PASSED (8 checks)
+    (ok) Core files        .maestro/ directory present
+    (ok) Config            valid YAML
+    (ok) Hooks             13/13 scripts executable
+    (ok) Skills            138/138 valid SKILL.md
+    (ok) Mirror            138/138 synced
+    (ok) JSON              3/3 files parse
+    (ok) Plugin            claude plugin validate passed
+    (ok) Agents            6/6 valid frontmatter
 
-  Git:
-    (ok) Branch           main
-    (ok) Working tree     clean
+  WARNINGS (2 checks)
+    (!) Session            stale heartbeat (>1h ago)
+    (!) Dependencies       jq not installed
 
-  Hooks:
-    (ok) Stop hook        installed
+  FAILED (1 check)
+    (x) Hooks validation   permission-request-hook.sh not executable
 
-  Integrations:
-    (ok) Playwright       available
-    (ok) GitHub CLI       v2.45.0
-    (x)  Asana MCP        not detected
-    (x)  Linear MCP       not detected
-    (ok) Obsidian CLI     v1.12.3
-    (x)  Notion MCP       not detected
+  Recommendations (by priority):
+    1. (x) Fix: chmod +x hooks/permission-request-hook.sh
+    2. (!) Install: sudo apt install jq
+    3. (i) Optional: Connect a kanban provider
+```
 
-  Knowledge Base:
-    (x)  Not configured
+### Formatting rules
 
-  Kanban:
-    (x)  Not configured
+- List PASSED checks first, then WARNINGS, then FAILED.
+- Omit a section header entirely if it has zero checks (e.g., no "FAILED (0 checks)" line).
+- If all checks pass, show only the PASSED section and a clean summary line.
+- Align check names and descriptions using spaces so descriptions start at a consistent column.
+- Use 2-space indent for content within each severity section.
+- No blank lines within a severity block; one blank line between blocks.
 
-  ---- Summary: 8 passed, 0 warnings, 5 not configured ----
+### Clean output (no warnings or failures)
 
-  Recommendations:
-    [1] Connect a kanban provider:
-        /maestro config set integrations.kanban.provider github
-    [2] Connect a knowledge base:
-        /maestro brain connect
-    [3] Install Asana MCP for richer kanban:
-        See /maestro help integrations
+```
++---------------------------------------------+
+| Maestro Doctor                              |
++---------------------------------------------+
+
+  PASSED (11 checks)
+    (ok) Core files        .maestro/ directory present
+    (ok) Config            valid YAML
+    (ok) Hooks             13/13 scripts executable
+    (ok) Skills            138/138 valid SKILL.md
+    (ok) Mirror            138/138 synced
+    (ok) JSON              3/3 files parse
+    (ok) Plugin            claude plugin validate passed
+    (ok) Agents            6/6 valid frontmatter
+    (ok) Session           no active session
+    (ok) Trust metrics     journeyman (82 stories)
+    (ok) Git               branch main, clean
+
+  All checks passed. Maestro is healthy.
 ```
 
 ## Recommendations Engine
 
-Based on the diagnostic results, generate actionable recommendations:
+Based on the diagnostic results, generate actionable recommendations grouped by priority.
+Each recommendation must be labeled with its severity indicator.
+List (x) failures first, then (!) warnings, then (i) optional improvements.
+Maximum 5 recommendations total.
+
+Format:
+```
+  Recommendations (by priority):
+    N. (x) Fix: [specific action with exact command]
+    N. (!) Install: [tool with install command]
+    N. (i) Optional: [suggestion]
+```
 
 | Condition | Recommendation |
 |-----------|----------------|
-| No kanban configured | Suggest connecting one (start with GitHub as simplest) |
-| No knowledge base configured | Suggest connecting Obsidian or Notion |
-| Stale session (>24h) | Suggest aborting: `/maestro status abort` |
-| Uncommitted changes | Suggest committing or stashing before starting Maestro |
-| Config validation errors | Suggest resetting: `/maestro config reset` |
-| Hook not installed | Warn that the stop hook prevents accidental session exit |
-| Configured provider not detected | Suggest checking MCP server setup |
-| Trust level novice with >5 stories | Suggest checking trust.yaml for corruption |
-
-Number each recommendation for easy reference. Maximum 5 recommendations (most important first).
+| Hook not executable | `(x) Fix: chmod +x hooks/[script-name]` |
+| Core files missing | `(x) Fix: /maestro init` |
+| Config validation errors | `(x) Fix: /maestro config reset` |
+| Mirror out of sync | `(x) Fix: re-run plugin install or sync script` |
+| `jq` not installed | `(!) Install: sudo apt install jq` |
+| `git` not installed | `(!) Install: sudo apt install git` |
+| Stale session (>1h heartbeat) | `(!) Check: /maestro status` |
+| Stale session (>24h heartbeat) | `(!) Abort: /maestro status abort` |
+| Uncommitted changes | `(!) Stash or commit changes before starting Maestro` |
+| Configured provider not detected | `(!) Check MCP server setup for [provider]` |
+| Trust level novice with >5 stories | `(!) Check trust.yaml for corruption` |
+| No kanban configured | `(i) Optional: Connect a kanban provider` |
+| No knowledge base configured | `(i) Optional: /maestro brain connect` |
