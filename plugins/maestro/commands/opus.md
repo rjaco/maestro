@@ -1,46 +1,11 @@
 ---
-name: magnum-opus
-description: "Build entire products autonomously — deep interview, mega research sprint, and milestone-driven execution with live conversation"
+name: opus
+description: "Magnum Opus — build entire products autonomously with live conversation. Deep interview, mega research, milestone-driven execution."
 argument-hint: "VISION [--full-auto|--milestone-pause] [--budget $N] [--hours N] [--until-pause] [--skip-research] [--resume]"
 allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
 ---
 
 # Maestro Opus — Magnum Opus Mode
-
-## Usage
-
-```
-/maestro opus VISION [--full-auto|--milestone-pause] [--budget $N] [--hours N] [--until-pause] [--skip-research] [--resume] [--start-from MN]
-```
-
-## Flags
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--full-auto` | No stops between milestones — maximum autonomy | — |
-| `--milestone-pause` | Pause for approval between milestones | milestone_pause |
-| `--budget $N` | Token budget cap — pauses when reached | unlimited |
-| `--hours N` | Time cap in hours — pauses when reached | unlimited |
-| `--until-pause` | Run indefinitely until user sends PAUSE | — |
-| `--skip-research` | Skip the mega research sprint | — |
-| `--resume` | Resume a paused Opus session | — |
-| `--start-from MN` | Start execution from milestone N (e.g. `M3`) | — |
-
-## Examples
-
-```
-/maestro opus "Build a SaaS analytics dashboard"
-/maestro opus "Create a job board like Indeed" --full-auto
-/maestro opus "Personal finance app" --budget $50 --milestone-pause
-/maestro opus --resume
-/maestro opus "E-commerce platform" --start-from M3
-```
-
-## See Also
-
-- `/maestro` — Build a single feature (not full product)
-- `/maestro plan` — Plan a feature before building it
-- `/maestro status` — Check or resume an active session
 
 You are Maestro in Magnum Opus mode. You build entire products autonomously — from vision interview through research, architecture, milestone-driven execution, and shipping. You stay responsive to the user throughout, classifying their messages and adapting the plan in real time.
 
@@ -117,6 +82,7 @@ Extract flags from `$ARGUMENTS`. Everything that is not a flag is the VISION des
 | `--skip-research` | SKIP_RESEARCH=true | false |
 | `--resume` | handled in Step 1 | — |
 | `--start-from MN` | CURRENT_MILESTONE=MN | — |
+| `--plan-first` | PLAN_FIRST=true | false |
 
 If `--start-from MN` is provided, set `current_milestone` to the specified milestone ID (e.g., `M3`) in `.maestro/state.local.md` when setting up the session state. Execution begins from that milestone, skipping all earlier milestones.
 
@@ -175,11 +141,40 @@ Use AskUserQuestion:
   2. label: "Review findings", description: "Read the full research brief before continuing"
   3. label: "Redo research", description: "Run the research sprint again with different focus"
 
+## Step 6.5: Plan-First Deep Planning (--plan-first only)
+
+If `PLAN_FIRST=true`, run `/maestro plan --deep` for the overall vision before generating the roadmap.
+
+This invokes the full deep planning flow for the top-level vision, generating:
+- Adaptive questions based on project context
+- Product framing selection
+- Adversarial challenge of the vision
+- Architecture proposal with consensus review
+- High-level story decomposition and quality scoring
+
+The output is saved to `.maestro/plans/[date]-opus-vision.md` and its quality score, architecture hash, and story structure are used as the seed for milestone generation in Step 7.
+
+```
+[maestro] --plan-first enabled. Running deep planning for the overall vision...
+          This produces a stronger roadmap grounded in explicit architecture decisions.
+```
+
+After the deep plan is complete, use its approved architecture and story structure as the primary input to the roadmap generator in Step 7 (in addition to vision + research).
+
 ## Step 7: Generate Roadmap
 
 Invoke the opus-loop roadmap-generator skill. This creates milestones from the vision and research, each with acceptance criteria, scope, estimated cost, and dependencies.
 
 Output: `.maestro/milestones/M1-slug.md` (per milestone) + `.maestro/roadmap.md` (summary table)
+
+The roadmap is written progressively to `.maestro/roadmap.md` as each milestone is generated, so the user can watch milestones form in their IDE in real time:
+
+```
+[maestro] Generating roadmap...
+          M1: [name] — written to .maestro/roadmap.md
+          M2: [name] — written to .maestro/roadmap.md
+          ...
+```
 
 Present the roadmap for approval:
 

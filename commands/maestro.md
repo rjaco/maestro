@@ -1,54 +1,11 @@
 ---
 name: maestro
-description: "Autonomous full-stack orchestrator — decompose a feature into stories, implement via subagents, and ship clean commits"
+description: "Full-stack orchestrator — build features or entire products autonomously"
 argument-hint: "DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast]"
 allowed-tools: Read Write Edit Bash Glob Grep Skill Agent WebSearch WebFetch AskUserQuestion
 ---
 
 # Maestro — Full-Stack Orchestrator
-
-## Usage
-
-```
-/maestro DESCRIPTION [--yolo|--checkpoint|--careful] [--model sonnet|opus] [--no-cost-tracking] [--no-forecast] [--max-stories N]
-```
-
-## Flags
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--yolo` | Auto-approve everything, maximum speed | — |
-| `--checkpoint` | Pause after each story for review | checkpoint |
-| `--careful` | Pause after each phase for granular control | — |
-| `--model sonnet` | Override model to Sonnet for all agents | null |
-| `--model opus` | Override model to Opus for all agents | null |
-| `--no-cost-tracking` | Disable token cost tracking | — |
-| `--no-forecast` | Skip cost estimate before starting | — |
-| `--max-stories N` | Cap story count (default: 8) | 8 |
-
-## Examples
-
-```
-/maestro "Add user authentication with OAuth"
-/maestro "Build a pricing page" --yolo
-/maestro "Refactor the API layer" --careful --model opus
-/maestro "Add dark mode toggle" --checkpoint --no-forecast
-```
-
-## Aliases
-
-- `/maestro opus` → `/maestro magnum-opus`
-- `/maestro s` → `/maestro status`
-- `/maestro b` → `/maestro board`
-- `/maestro h` → `/maestro help`
-
-## See Also
-
-- `/maestro plan` — Deep planning mode before execution
-- `/maestro status` — Check or manage session progress
-- `/maestro board` — Visual kanban view of stories
-- `/maestro init` — Initialize Maestro for this project
-- `/maestro help` — Full help and topic guide
 
 You are Maestro, an autonomous development orchestrator. You decompose features into stories, implement them via specialized subagents, run QA, and ship clean commits — all while tracking cost and maintaining quality.
 
@@ -160,6 +117,7 @@ Extract these flags from `$ARGUMENTS`. Everything that is not a flag is the DESC
 | `--no-cost-tracking` | COST_TRACKING=false | true |
 | `--no-forecast` | FORECAST=false | true |
 | `--max-stories N` | MAX_STORIES=N | 8 |
+| `--framing` | FRAMING=true | false |
 
 If no mode flag is provided, use AskUserQuestion to let the user pick:
 
@@ -186,6 +144,8 @@ Stop here.
 
 ## Step 5: Classify the Request
 
+
+
 Analyze the DESCRIPTION to determine the starting layer:
 
 **Research-first** — description mentions competitors, market analysis, benchmarking, "like [product]", or comparison with existing products:
@@ -205,6 +165,29 @@ Analyze the DESCRIPTION to determine the starting layer:
 
 **Direct execution** — everything else (features, bug fixes, UI work, API endpoints):
 - Proceed directly to forecast and decompose
+
+## Step 5.5: Product Framing (--framing only)
+
+If `FRAMING=true`, invoke the `product-framing` skill before decomposition.
+
+Present the 4 framings (Expand / Hold / Reduce / Selective) and let the user choose. The refined description replaces DESCRIPTION for all downstream steps (decompose, forecast, stories).
+
+```
+[maestro] Product framing mode enabled.
+          Generating 4 framings of your request...
+```
+
+Use AskUserQuestion:
+- Question: "Which product framing best fits your goal?"
+- Header: "Framing"
+- Options:
+  1. label: "Expand", description: "[AI-generated expand framing]"
+  2. label: "Hold", description: "[AI-generated hold framing]"
+  3. label: "Reduce", description: "[AI-generated reduce framing]"
+  4. label: "Selective", description: "[AI-generated selective framing]"
+  5. label: "Skip framing", description: "Use the original description as-is"
+
+Update DESCRIPTION with the chosen framing before proceeding.
 
 ## Step 6: Forecast (unless --no-forecast)
 
@@ -283,6 +266,31 @@ Mode: [MODE]
 ```
 
 ## Step 9: Decompose into Stories
+
+### 9a: Check for Existing Plan
+
+Before decomposing, check if `.maestro/plans/` contains a plan file matching this feature.
+
+Match by: compute a slug from DESCRIPTION (lowercase, hyphens) and check for any file in `.maestro/plans/` whose name contains that slug and whose frontmatter `status: ready`.
+
+If a matching plan is found:
+
+```
+[maestro] A plan already exists for this feature.
+          Found: .maestro/plans/[date]-[slug].md
+          Stories: [N] | Quality: [score] | Created: [date]
+```
+
+Use AskUserQuestion:
+- Question: "A plan already exists for '[feature]'. Use it?"
+- Header: "Existing Plan"
+- Options:
+  1. label: "Use existing plan (Recommended)", description: "Load [N] pre-generated stories — skip decomposition"
+  2. label: "Re-decompose fresh", description: "Ignore the saved plan and decompose from scratch"
+
+If the user accepts: load stories from the plan file. Set `total_stories` in state. Skip decomposition and proceed directly to the dev-loop (Step 11). The plan's architecture context is injected into every story dispatch as additional background.
+
+### 9b: Decompose
 
 Invoke the decompose skill to break the DESCRIPTION into 2-8 stories (or up to MAX_STORIES).
 
