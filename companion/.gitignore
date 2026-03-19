@@ -1,0 +1,8 @@
+node_modules/
+dist/
+store/*.db
+store/*.log
+store/*.pid
+store/*.jsonl
+workspace/uploads/
+.env

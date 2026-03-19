@@ -1,0 +1,45 @@
+{
+  "name": "maestro-companion",
+  "version": "0.1.0",
+  "description": "Autonomous AI companion — talk to Maestro via Telegram, Slack, or Discord with voice support and persistent personality",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "maestro-companion": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "setup": "bun run scripts/setup.ts",
+    "status": "bun run scripts/status.ts",
+    "test": "bun test"
+  },
+  "keywords": [
+    "claude-code",
+    "companion",
+    "telegram",
+    "voice",
+    "autonomous",
+    "maestro",
+    "anthropic",
+    "agent-sdk"
+  ],
+  "author": "Rodrigo Deepneuron",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "grammy": "^1.31.0",
+    "better-sqlite3": "^11.7.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
