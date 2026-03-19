@@ -1,7 +1,9 @@
-// @ts-ignore — vitest is invoked via npx, not a local dep
-export default {
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
+    exclude: ['**/node_modules/**', '**/.claude/**'],
     environment: 'node',
   },
-}
+})

@@ -14,7 +14,7 @@ export async function transcribeAudio(audioBuffer: Buffer, filename: string): Pr
 
 async function transcribeWithGroq(audioBuffer: Buffer, filename: string): Promise<string> {
   const formData = new FormData()
-  formData.append('file', new Blob([audioBuffer]), filename)
+  formData.append('file', new Blob([new Uint8Array(audioBuffer)]), filename)
   formData.append('model', 'whisper-large-v3')
 
   const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
