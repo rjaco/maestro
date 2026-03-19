@@ -1,70 +1,80 @@
 #!/usr/bin/env bash
-# Maestro StopFailure Hook
-# Fires when a Claude session stops due to an API or runtime error.
-# Reads JSON from stdin: { "error": "...", "error_type": "...", "session_id": "..." }
-# Logs the failure and backs up state.
+# StopFailure hook — Doom-loop fallback handler
+# Fires when API errors occur during an active Maestro session.
+# Increments doom_loop.count and logs the failure for analysis.
 
 set -euo pipefail
 
-LOG_DIR=".maestro/logs"
 STATE_FILE=".maestro/state.local.md"
-NOTIFY_SCRIPT="scripts/notify.sh"
+LOG_DIR=".maestro/logs"
+LOG_FILE="${LOG_DIR}/doom-loop.md"
+
+# Only act if we have an active Maestro session
+if [ ! -f "$STATE_FILE" ]; then
+  echo "[MAESTRO] StopFailure hook: state file not found at .maestro/state.local.md" >&2
+  echo "  → Cause: A stop failure occurred but no Maestro session state exists to record it" >&2
+  echo "  → Fix: If you expected a Maestro session to be active, check whether .maestro/state.local.md was accidentally deleted; run '/maestro init' to reinitialize" >&2
+  exit 0
+fi
+
+# Check if session is active
+ACTIVE=$(grep -m1 "^active:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "false")
+if [ "$ACTIVE" != "true" ]; then
+  exit 0
+fi
+
+# Read error info from stdin (JSON)
+INPUT=$(cat)
+# Parse error type without python3 — pure bash/grep
+ERROR_TYPE=$(printf '%s' "$INPUT" | grep -o '"error"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"error"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' 2>/dev/null || echo "unknown")
+
+# Get current doom_loop count
+CURRENT_COUNT=$(grep -m1 "doom_loop_count:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "0")
+NEW_COUNT=$((CURRENT_COUNT + 2))
+
+# Get current story info
+CURRENT_STORY=$(grep -m1 "current_story:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "unknown")
+CURRENT_PHASE=$(grep -m1 "phase:" "$STATE_FILE" 2>/dev/null | awk '{print $2}' || echo "unknown")
 
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"
 
-# Read JSON input from stdin (non-blocking: skip if none)
-hook_input=""
-if [[ ! -t 0 ]]; then
-  hook_input=$(cat 2>/dev/null || true)
-fi
-
-# Extract a JSON string field by key (simple grep/sed, handles common cases)
-json_get() {
-  local key="$1"
-  local json="$2"
-  printf '%s' "$json" \
-    | grep -o "\"${key}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" \
-    | head -1 \
-    | sed "s/\"${key}\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\"/\1/" \
-    || true
-}
-
-# Parse fields with jq if available, fallback to grep-based parsing
-if command -v jq &>/dev/null && [[ -n "$hook_input" ]]; then
-  error_msg=$(printf '%s' "$hook_input" | jq -r '.error // "unknown error"' 2>/dev/null || echo "unknown error")
-  error_type=$(printf '%s' "$hook_input" | jq -r '.error_type // "unknown"' 2>/dev/null || echo "unknown")
-  session_id=$(printf '%s' "$hook_input" | jq -r '.session_id // ""' 2>/dev/null || echo "")
-elif [[ -n "$hook_input" ]]; then
-  error_msg=$(json_get "error" "$hook_input")
-  error_type=$(json_get "error_type" "$hook_input")
-  session_id=$(json_get "session_id" "$hook_input")
-  : "${error_msg:=unknown error}"
-  : "${error_type:=unknown}"
-else
-  error_msg="unknown error"
-  error_type="unknown"
-  session_id=""
-fi
-
-TIMESTAMP=$(date +"%Y-%m-%dT%H:%M:%S")
-
 # Log the failure
-LOG_FILE="${LOG_DIR}/stop-failures.log"
-printf '[%s] error_type=%s session_id=%s error=%s\n' \
-  "$TIMESTAMP" "$error_type" "$session_id" "$error_msg" >> "$LOG_FILE"
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+cat >> "$LOG_FILE" << EOF
 
-# Send notification if notify script exists
-if [[ -x "$NOTIFY_SCRIPT" ]]; then
-  "$NOTIFY_SCRIPT" --event error --message "API error: ${error_type}" 2>/dev/null || true
+## StopFailure — ${TIMESTAMP}
+- Error: ${ERROR_TYPE}
+- Story: ${CURRENT_STORY}
+- Phase: ${CURRENT_PHASE}
+- doom_loop.count: ${CURRENT_COUNT} → ${NEW_COUNT}
+EOF
+
+# Determine intervention level
+LEVEL=0
+if [ "$NEW_COUNT" -ge 8 ]; then
+  LEVEL=3
+elif [ "$NEW_COUNT" -ge 5 ]; then
+  LEVEL=2
+elif [ "$NEW_COUNT" -ge 3 ]; then
+  LEVEL=1
 fi
 
-# Back up state file if it exists
-if [[ -f "$STATE_FILE" ]]; then
-  SAFE_TS=$(date +"%Y%m%dT%H%M%S")
-  BACKUP_FILE="${LOG_DIR}/state-backup-${SAFE_TS}.md"
-  cp "$STATE_FILE" "$BACKUP_FILE" 2>/dev/null || true
-fi
+# Output system message for Claude to see
+if [ "$LEVEL" -ge 1 ]; then
+  MSG="[MAESTRO] API failure detected during active session."
+  MSG="$MSG Error: ${ERROR_TYPE}. doom_loop.count=${NEW_COUNT} (intervention_level=${LEVEL})."
 
-# StopFailure hook is informational — no output required
-exit 0
+  if [ "$LEVEL" -ge 3 ]; then
+    MSG="$MSG Cause: repeated failures suggest a systemic problem (rate limiting, network issues, or an unrecoverable error state)."
+    MSG="$MSG Fix: pause the session with '/maestro pause', review .maestro/logs/doom-loop.md for the error history, resolve the underlying issue, then resume with '/maestro opus --resume'."
+  elif [ "$LEVEL" -ge 2 ]; then
+    MSG="$MSG Cause: multiple consecutive failures detected — the loop may be stuck."
+    MSG="$MSG Fix: consider pausing with '/maestro pause' and reviewing .maestro/logs/doom-loop.md before continuing."
+  else
+    MSG="$MSG Cause: an API error interrupted the session."
+    MSG="$MSG Fix: the loop will attempt to continue automatically; if failures persist, pause and check .maestro/logs/doom-loop.md."
+  fi
+
+  echo "{\"systemMessage\": \"${MSG}\"}"
+fi
