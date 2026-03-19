@@ -138,7 +138,22 @@ Check `.maestro/state.local.md`:
 
 Report as: `(ok) Session  no active session`, `(ok) Session  active (fresh)`, or `(!) Session  stale heartbeat (>1h ago)`.
 
-### 10. Dependencies
+### 10. State Integrity
+
+If `.maestro/state.local.md` exists:
+- Extract `state_checksum` from frontmatter
+- Compute SHA256 of file content (excluding `state_checksum` line)
+- Compare checksums
+- Check if `.maestro/state.local.md.bak` exists
+
+Report as:
+- `(ok) State integrity  checksum valid` — if checksums match
+- `(ok) State integrity  no state file` — if state file doesn't exist
+- `(!) State integrity  no checksum (legacy state file)` — if file exists but has no checksum
+- `(x) State integrity  checksum mismatch` — if checksums don't match
+- `(!) State integrity  no backup file` — if state exists but .bak doesn't
+
+### 11. Dependencies
 
 Check for required and optional CLI tools:
 - `git` — required
@@ -148,7 +163,7 @@ Check for required and optional CLI tools:
 Report warnings for missing tools: `(!) Dependencies  jq not installed`.
 Report failures for missing required tools: `(x) Dependencies  git not installed`.
 
-### 11. Trust Metrics
+### 12. Trust Metrics
 
 Read `.maestro/trust.yaml` and check:
 - `trust_level` is one of: novice, apprentice, journeyman, expert
@@ -157,7 +172,7 @@ Read `.maestro/trust.yaml` and check:
 
 Report as: `(ok) Trust metrics  [trust_level] ([total_stories] stories)` or `(x) Trust metrics  [issue]`.
 
-### 12. Git Status
+### 13. Git Status
 
 Run `git status --porcelain` and `git branch --show-current`:
 - Report current branch
@@ -166,7 +181,7 @@ Run `git status --porcelain` and `git branch --show-current`:
 
 Report as: `(ok) Git  branch [name], clean` or `(!) Git  uncommitted changes`.
 
-### 13. Integration Detection
+### 14. Integration Detection
 
 Invoke the `mcp-detect` skill logic:
 - Check for each MCP server (Asana, Jira, Linear, Notion, Playwright)
@@ -265,6 +280,8 @@ Format:
 | Mirror out of sync | `(x) Fix: re-run plugin install or sync script` |
 | `jq` not installed | `(!) Install: sudo apt install jq` |
 | `git` not installed | `(!) Install: sudo apt install git` |
+| State integrity checksum mismatch | `(x) Fix: restore from .maestro/state.local.md.bak or re-init` |
+| State integrity no backup | `(!) Run a Maestro operation to create initial backup` |
 | Stale session (>1h heartbeat) | `(!) Check: /maestro status` |
 | Stale session (>24h heartbeat) | `(!) Abort: /maestro status abort` |
 | Uncommitted changes | `(!) Stash or commit changes before starting Maestro` |

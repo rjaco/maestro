@@ -8,6 +8,21 @@
 # NOTE: Intentionally no set -euo pipefail — this hook must never crash.
 # Failing subcommands are handled via || true patterns.
 
+# Error handler — log but never block (fail-open: approve on error)
+_hook_error_handler() {
+  local exit_code=$?
+  local line_no=$1
+  local hook_name
+  hook_name="$(basename "${BASH_SOURCE[0]}")"
+  local log_dir="${MAESTRO_LOG_DIR:-.maestro/logs}"
+  mkdir -p "$log_dir" 2>/dev/null || true
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] ERROR: ${hook_name}:${line_no} exited with code ${exit_code}" >> "$log_dir/hooks.log" 2>/dev/null || true
+  # Fail-open: approve on error so broken hook doesn't block user
+  printf '{"decision":"approve","reason":"hook error fallback"}\n'
+  exit 0
+}
+trap '_hook_error_handler $LINENO' ERR
+
 # Read hook input from stdin
 HOOK_INPUT=""
 if [[ ! -t 0 ]]; then

@@ -200,6 +200,20 @@ the escalation message if known.
 
 Retry once. If it fails again, escalate via error-enhancer and surface to user.
 
+### Error Learning Integration
+
+During self-heal, before dispatching a fixer:
+1. Query error-enhancer for known patterns matching this error
+2. If a learned pattern exists (from `.maestro/patterns/learned-errors.yaml`):
+   - Include the pattern's `fix_strategy` in the fixer's context
+   - Log: "Using learned pattern (confidence: X) for error Y"
+3. If no pattern exists:
+   - Log the error to unknown-errors.jsonl
+   - Proceed with standard self-heal
+4. After fix attempt:
+   - If successful and a learned pattern was used: update confidence (+0.1)
+   - If failed and a learned pattern was used: update confidence (-0.2)
+
 ## Self-Heal Log
 
 All attempts are appended to `.maestro/logs/self-heal.yaml`:

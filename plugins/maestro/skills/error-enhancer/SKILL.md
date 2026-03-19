@@ -227,6 +227,48 @@ message so the user sees a clear fix path.
 When logging that a capability has degraded, optionally include the enhanced
 error for the root cause.
 
+## Auto-Learning New Patterns
+
+When the error-enhancer encounters an error that doesn't match any known pattern:
+
+### Detection
+1. Hash the error signature (error type + first line of message + file extension)
+2. Check `.maestro/logs/unknown-errors.jsonl` for previous occurrences of this hash
+3. If seen < 3 times: log the occurrence and proceed with generic handling
+4. If seen >= 3 times: trigger pattern creation
+
+### Pattern Creation
+1. Analyze all 3+ occurrences to extract the common pattern
+2. Generate a new pattern entry:
+   ```yaml
+   - pattern: "TypeError: Cannot read properties of undefined"
+     match_type: substring
+     fix_strategy: "Add null check before property access"
+     confidence: 0.7
+     auto_generated: true
+     created_at: "2026-03-19T10:30:00Z"
+     occurrences: 3
+   ```
+3. Append to `.maestro/patterns/learned-errors.yaml`
+4. Log to `.maestro/logs/pattern-learning.log`:
+   ```
+   [2026-03-19T10:30:00Z] NEW_PATTERN: "TypeError: Cannot read properties of undefined" (3 occurrences, confidence: 0.7)
+   ```
+
+### Unknown Error Log Format
+
+`.maestro/logs/unknown-errors.jsonl`:
+```json
+{"timestamp":"2026-03-19T10:30:00Z","hash":"abc123","error_type":"TypeError","message":"Cannot read properties of undefined","file":"src/api.ts","story":"03-frontend","count":1}
+```
+
+### Pattern Confidence
+
+Auto-generated patterns start at confidence 0.7. Adjust based on outcomes:
+- Pattern fix succeeds: confidence += 0.1 (max 1.0)
+- Pattern fix fails: confidence -= 0.2 (min 0.1)
+- If confidence drops below 0.3: mark pattern as `deprecated`
+
 ## Rules
 
 1. Never surface raw stderr to the user without enhancement.

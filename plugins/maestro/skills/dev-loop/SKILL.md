@@ -85,7 +85,7 @@ The implementer prompt (see `implementer-prompt.md`) is filled with:
 5. **Files to Reference** — From the story's Reference list, read and include key sections
 6. **QA History** — If this is a re-dispatch after QA rejection, include all previous QA feedback
 7. **Live Docs** — If the story involves a framework/library, invoke the `live-docs` skill to fetch current API docs and inject relevant signatures (max 2000 tokens)
-8. **Memory** — If `.maestro/memory/semantic.md` exists, inject relevant project memories (max 500 tokens)
+8. **Memory** — If `.maestro/memory/memories.md` exists, inject relevant project memories (max 500 tokens)
 
 **Exclude from context:**
 - Other stories (the implementer does not need the full backlog)
@@ -176,6 +176,59 @@ The implementer follows output contract discipline:
 3. Fill each section with substantive content
 4. Self-check against the contract before reporting DONE
 5. No TDD — validation happens in Phase 4 via content-validator
+
+### Agent Timeout & Watchdog
+
+Every agent dispatch MUST have a timeout and heartbeat monitoring to prevent infinite waits.
+
+#### Timeout Configuration
+
+| Story Type | Default Timeout | Max Timeout |
+|-----------|----------------|-------------|
+| Simple (haiku) | 3 minutes | 5 minutes |
+| Standard (sonnet) | 5 minutes | 10 minutes |
+| Complex (opus) | 10 minutes | 20 minutes |
+
+Override via `.maestro/config.yaml`:
+```yaml
+timeouts:
+  agent_default: 300  # 5 minutes in seconds
+  agent_max: 1200     # 20 minutes
+```
+
+#### Heartbeat Monitoring
+
+The orchestrator checks `.maestro/logs/heartbeat.json` during agent execution:
+1. Agent writes heartbeat every 30 seconds (timestamp + current action)
+2. If heartbeat is stale (>90 seconds old), the agent is considered hung
+3. On stale heartbeat:
+   a. Log warning to `.maestro/logs/agent-watchdog.log`
+   b. Wait one additional 30-second cycle
+   c. If still stale, terminate the agent and trigger retry
+
+#### Retry with Exponential Backoff
+
+When an agent times out or is terminated:
+1. First retry: wait 30 seconds, then re-dispatch
+2. Second retry: wait 60 seconds, then re-dispatch
+3. Third retry: wait 120 seconds, then re-dispatch with escalated model (sonnet → opus)
+4. After third retry failure: PAUSE and ask user
+
+Backoff formula: `delay = 30 * 2^(retry_count - 1)` seconds
+
+#### Circuit Breaker
+
+Track consecutive agent failures in `.maestro/state.local.md`:
+```yaml
+consecutive_agent_failures: 0
+circuit_breaker_threshold: 5
+circuit_breaker_state: closed  # closed | open | half-open
+```
+
+State machine:
+- **closed**: Normal operation. Increment counter on failure, reset on success.
+- **open**: After 5 consecutive failures, STOP dispatching agents. PAUSE execution. Alert user. Wait for manual intervention or 10-minute cooldown.
+- **half-open**: After cooldown, allow ONE dispatch. If it succeeds, reset to closed. If it fails, back to open.
 
 ## Phase 3.5: TEST GENERATION (optional)
 
@@ -493,3 +546,36 @@ started_at: "2026-03-17T10:30:00Z"
 ```
 
 This file is `.gitignore`d — it tracks local execution state only.
+
+## State Integrity Protocol
+
+Every write to `.maestro/state.local.md` MUST follow this safety sequence:
+
+### On Write
+1. **Backup**: Copy current `state.local.md` to `state.local.md.bak` before any modification
+2. **Write**: Update the state file with new values
+3. **Checksum**: Compute SHA256 of the written content and store as `state_checksum` in the frontmatter
+4. **Verify**: Re-read the file and confirm the checksum matches
+
+### On Read
+1. Read `state.local.md`
+2. Extract `state_checksum` from frontmatter
+3. Compute SHA256 of the file content (excluding the `state_checksum` line itself)
+4. If checksums match: proceed normally
+5. If checksums mismatch or file is corrupt:
+   a. Log warning to `.maestro/logs/state-recovery.log`
+   b. Check for `state.local.md.bak`
+   c. If backup exists and is valid, restore from backup
+   d. If no valid backup, PAUSE and alert user
+
+### Checksum Computation
+```bash
+# Compute checksum (exclude the state_checksum line to avoid circular dependency)
+grep -v '^state_checksum:' .maestro/state.local.md | sha256sum | cut -d' ' -f1
+```
+
+### Recovery Log Format
+```
+[2026-03-19T10:30:00Z] WARN: State file corruption detected (checksum mismatch)
+[2026-03-19T10:30:00Z] INFO: Restored from state.local.md.bak
+```

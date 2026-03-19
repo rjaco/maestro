@@ -202,3 +202,154 @@ When `$ARGUMENTS` is empty, after showing current preferences, use AskUserQuesti
 2. **Update a single value** — "Change one preference with set KEY VALUE"
 3. **Reset to template** — "Start fresh with a blank preferences file"
 4. **Done** — "Exit preferences"
+
+---
+
+## Argument Parsing
+
+| Invocation | Behavior |
+|-----------|----------|
+| `/maestro preferences` | Show current preferences + interactive menu |
+| `/maestro preferences show` | Show current preferences (no menu) |
+| `/maestro preferences set KEY VALUE` | Update a single preference |
+| `/maestro preferences edit` | Open full preferences for interactive editing |
+| `/maestro preferences reset` | Reset to blank template (with confirmation) |
+
+For `set`, the `KEY` is everything between `set ` and the first space that begins `VALUE`. `VALUE` is the rest of the argument string (may contain spaces). If `VALUE` is quoted, strip the outer quotes before saving.
+
+**Example parsing:**
+- `/maestro preferences set stack.framework "Next.js (App Router)"` → key=`stack.framework`, value=`Next.js (App Router)`
+- `/maestro preferences set anti_patterns.add "No CSS modules"` → operation=add, list=anti_patterns, value=`No CSS modules`
+
+## Preferences File Format Reference
+
+`~/.claude/maestro-preferences.md` follows this structure:
+
+```markdown
+---
+created: YYYY-MM-DD
+last_updated: YYYY-MM-DD
+---
+
+## Tech Stack
+Framework: Next.js (App Router)
+Language: TypeScript (strict mode)
+Styling: Tailwind CSS + shadcn/ui
+Database: Supabase (PostgreSQL)
+Testing: Vitest
+Package manager: npm
+
+## Coding Patterns
+- Named exports only (no default exports)
+- Server Components by default, 'use client' only when needed
+- Zod for all validation
+- Error handling: explicit try/catch, no silent failures
+
+## Anti-Patterns (Never Do)
+- No class components
+- No CSS modules
+- No any types
+- No console.log in production code
+
+## Conventions
+File naming: kebab-case
+Component naming: PascalCase
+Import aliases: @/ for src/
+Commit style: conventional commits
+```
+
+When applying `set KEY VALUE`:
+1. Locate the section heading that maps to the key's prefix (e.g., `stack.*` → `## Tech Stack`)
+2. Find the line containing the sub-key (e.g., `Framework:`)
+3. Replace the value on that line in-place
+4. Update `last_updated` in frontmatter to today's date
+
+For list operations (`anti_patterns.add` / `anti_patterns.remove`):
+- `add`: append `- <value>` to the `## Anti-Patterns (Never Do)` list
+- `remove`: find and delete the line `- <value>` (exact match); warn if not found
+
+## Error Handling
+
+| Condition | Action |
+|-----------|--------|
+| `~/.claude/maestro-preferences.md` missing | Show "No preferences found" with instructions |
+| `~/.claude/` directory missing | Create the directory before writing |
+| `templates/preferences.md` missing | Show `(x) Cannot find preferences template. Reinstall the Maestro plugin.` and stop |
+| Unknown key in `set` command | Show known keys list and stop |
+| `VALUE` is empty string | Show `[maestro] Value cannot be empty for key: <key>` and stop |
+| File frontmatter malformed | Warn `(!) Frontmatter is malformed — last_updated not updated` and proceed with body edit only |
+| `anti_patterns.remove` target not found | Show `[maestro] Pattern not found: "<value>"` and list current anti-patterns |
+
+## Examples
+
+### Example 1: Show preferences
+
+```
+/maestro preferences show
+```
+
+```
++---------------------------------------------+
+| Developer Preferences                       |
++---------------------------------------------+
+  Tech Stack
+    Framework          Next.js (App Router)
+    Language           TypeScript (strict mode)
+    Styling            Tailwind CSS + shadcn/ui
+    Database           Supabase (PostgreSQL)
+    Testing            Vitest
+    Package manager    npm
+
+  Coding Patterns
+    Named exports only (no default exports)
+    Server Components by default, 'use client' only when needed
+    Zod for all validation
+    Error handling: explicit try/catch, no silent failures
+
+  Anti-Patterns (Never Do)
+    No class components
+    No CSS modules
+    No any types
+    No console.log in production code
+
+  Conventions
+    File naming: kebab-case
+    Component naming: PascalCase
+    Import aliases: @/ for src/
+    Commit style: conventional commits
+
+  (i) Use /maestro preferences set KEY VALUE to update a preference.
+  (i) Use /maestro preferences edit to open the full preferences for editing.
+```
+
+### Example 2: Update a single value
+
+```
+/maestro preferences set stack.testing "Jest + Testing Library"
+```
+
+```
+[maestro] Updated: stack.testing = Jest + Testing Library
+
+  (i) This preference applies to all projects on this machine.
+  (i) Agents will respect it starting from the next invocation.
+```
+
+### Example 3: Add an anti-pattern
+
+```
+/maestro preferences set anti_patterns.add "No inline styles"
+```
+
+```
+[maestro] Added anti-pattern: "No inline styles"
+
+  Current anti-patterns:
+    - No class components
+    - No CSS modules
+    - No any types
+    - No console.log in production code
+    - No inline styles
+
+  (i) Agents will respect this starting from the next invocation.
+```

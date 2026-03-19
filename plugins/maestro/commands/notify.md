@@ -289,3 +289,135 @@ Every `notify` invocation emits output in this order:
 5. AskUserQuestion prompt (in `setup` and no-argument views)
 
 **Config writes:** All provider config is written to `.maestro/config.yaml` under `notifications.providers.<provider>`. Never write secrets to any other file. Never echo a webhook URL or bot token back in plaintext after it has been saved.
+
+---
+
+## Argument Parsing
+
+| Invocation | Behavior |
+|-----------|----------|
+| `/maestro notify` | Show provider status + interactive menu |
+| `/maestro notify setup` | Interactive provider setup wizard |
+| `/maestro notify test` | Send test message to all configured providers |
+| `/maestro notify send MESSAGE` | Send a custom message to all providers |
+| `/maestro notify status` | Show provider status (same as no args) |
+| `/maestro notify disable` | Disable all notifications |
+| `/maestro notify enable` | Enable all notifications |
+
+For `send`, `MESSAGE` is everything after `send ` in `$ARGUMENTS`. If it is empty after stripping whitespace, show:
+```
+[maestro] Usage: /maestro notify send "your message"
+```
+
+## Config File Structure
+
+The `notifications` block in `.maestro/config.yaml`:
+
+```yaml
+notifications:
+  enabled: true
+  providers:
+    slack:
+      enabled: true
+      webhook_url: "https://hooks.slack.com/services/..."
+    discord:
+      enabled: false
+      webhook_url: ""
+    telegram:
+      enabled: true
+      bot_token: "1234567890:ABCDefGhIjKlMnOpQrStUvWxYz"
+      chat_id: "-1001234567890"
+  triggers:
+    - story_complete
+    - feature_complete
+    - qa_rejection
+    - self_heal_failure
+    - test_regression
+  rate_limit:
+    per_provider_per_minute: 5
+```
+
+When reading the config for `status` display:
+- A provider is "configured" if its required credential fields are non-empty strings
+- A provider is "enabled" only if both `notifications.enabled: true` AND `providers.<name>.enabled: true`
+- Show `(ok)` for configured+enabled, `(-)` for configured-but-disabled, `(x)` for not-configured
+
+## Error Handling
+
+| Condition | Action |
+|-----------|--------|
+| `.maestro/config.yaml` missing | Show `[maestro] Not initialized. Run /maestro init first.` and stop |
+| `notifications` section absent from config | Treat as all providers unconfigured; offer to run `setup` |
+| curl not available | Show `(x) curl is required for notifications but is not installed.` and stop |
+| HTTP 4xx on validation | Show specific error; do NOT save the webhook URL |
+| HTTP 5xx on validation | Warn about provider issues; ask user whether to save anyway |
+| Network error (curl fails with exit 6/7) | Show `(x) Network error — cannot reach <provider>. Check your internet connection.` |
+| Webhook URL saved but send fails later | Update provider status to `error` in config; surface in `status` view |
+| Config write fails (disk full, permissions) | Show `(x) Cannot write config: <reason>`. Do not retry silently. |
+
+## Examples
+
+### Example 1: Show notification status
+
+```
+/maestro notify
+```
+
+```
++---------------------------------------------+
+| Notifications                               |
++---------------------------------------------+
+
+  Status    enabled
+
+  Providers:
+    (ok) Slack       configured (webhook set)
+    (x)  Discord     not configured
+    (ok) Telegram    configured (bot + chat_id)
+
+  Triggers:
+    (ok) Story complete
+    (ok) Feature complete
+    (ok) QA rejection
+    (ok) Self-heal failure
+    (ok) Test regression
+
+  Rate limiting:  5 notifications / minute (per provider)
+```
+
+### Example 2: Send a custom notification
+
+```
+/maestro notify send "Deployment to production completed successfully"
+```
+
+```
+[maestro] Message sent to 2 provider(s).
+  (ok) Slack       delivered
+  (ok) Telegram    delivered
+```
+
+### Example 3: Test notifications
+
+```
+/maestro notify test
+```
+
+```
+[maestro] Test notifications sent:
+
+  (ok) Slack       delivered  (HTTP 200)
+  (x)  Discord     not configured
+  (ok) Telegram    delivered  (HTTP 200)
+```
+
+### Example 4: Disable notifications
+
+```
+/maestro notify disable
+```
+
+```
+[maestro] Notifications disabled. Providers remain configured.
+(i) Re-enable with: /maestro notify enable
+```

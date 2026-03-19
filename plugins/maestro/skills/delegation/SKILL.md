@@ -238,3 +238,104 @@ token-ledger record:
 ```
 
 See `skills/token-ledger/SKILL.md` for the full ledger protocol.
+
+## Model Selection Audit Trail
+
+Every model selection decision is logged for retrospective analysis.
+
+### Log Format
+
+Append to `.maestro/logs/model-decisions.jsonl` (one JSON line per decision):
+```json
+{"timestamp":"2026-03-19T10:30:00Z","story":"03-frontend-ui","initial_model":"haiku","final_model":"sonnet","reason":"qa_rejection_escalation","qa_iteration":2,"context_tier":"T2","tokens_budget":15000}
+```
+
+### Decision Fields
+
+| Field | Description |
+|-------|-------------|
+| `timestamp` | ISO 8601 UTC |
+| `story` | Story ID |
+| `initial_model` | Model recommended by story spec |
+| `final_model` | Model actually dispatched |
+| `reason` | Why the model changed (or "initial_selection" if no change) |
+| `qa_iteration` | Current QA iteration (0 if first dispatch) |
+| `context_tier` | T1-T4 context tier used |
+| `tokens_budget` | Estimated token budget for this dispatch |
+
+### Reason Codes
+
+| Code | Trigger |
+|------|---------|
+| `initial_selection` | First dispatch, no change |
+| `qa_rejection_escalation` | QA rejected, escalating model |
+| `needs_context_escalation` | Agent returned NEEDS_CONTEXT |
+| `timeout_escalation` | Agent timed out, trying stronger model |
+| `circuit_breaker_escalation` | Circuit breaker half-open, using strongest model |
+| `cost_downgrade` | Budget constraints, using cheaper model |
+| `config_override` | User configured specific model in config.yaml |
+
+## Dispatch Safeguards
+
+### Pre-Dispatch Checks
+
+Before every agent dispatch:
+1. Check circuit breaker state — if `open`, do not dispatch. Log and return BLOCKED
+2. Check available context budget — if <10% remaining, log warning
+3. Verify the target model is responding (check recent heartbeat from any agent using that model)
+
+### Timeout Enforcement
+
+Set a maximum wall-clock time for each dispatch:
+- Read `timeouts.agent_default` from `.maestro/config.yaml` (default: 300s)
+- If the agent's `maxTurns` suggests a longer run, cap at `timeouts.agent_max` (default: 1200s)
+- Log timeout events to `.maestro/logs/agent-watchdog.log`
+
+### Failure Recording
+
+On every agent failure (timeout, BLOCKED, or error):
+1. Increment `consecutive_agent_failures` in state
+2. Log to `.maestro/logs/agent-watchdog.log`:
+   ```
+   [timestamp] FAIL: agent=[name] model=[model] story=[id] reason=[timeout|blocked|error] duration=[seconds]
+   ```
+3. If threshold reached, trigger circuit breaker
+
+On every agent success:
+1. Reset `consecutive_agent_failures` to 0
+2. If circuit breaker was `half-open`, set to `closed`
+
+## Provider Selection
+
+Maestro supports multiple LLM providers. The delegation skill selects the provider before selecting the model.
+
+### Provider Configuration
+
+In `.maestro/config.yaml`:
+```yaml
+providers:
+  default: anthropic
+  available:
+    - anthropic
+    - ollama
+  routing:
+    budget: ollama    # Use local for cheap tasks
+    standard: anthropic
+    premium: anthropic
+```
+
+### Selection Logic
+
+1. Read `providers.routing` from config
+2. Map the story's model tier to a provider
+3. If configured provider is unavailable (health check fails), fall back to `providers.default`
+4. Load provider definition from `providers/[name].md`
+5. Select model from provider's catalog based on tier
+
+### Provider Health Check
+
+Before dispatching to a non-default provider:
+1. Check if the provider binary/API is reachable
+2. For Ollama: `curl -s http://localhost:11434/api/tags | jq '.models | length'`
+3. For OpenRouter: verify API key is set and valid
+4. If unhealthy, fall back to default provider and log the fallback

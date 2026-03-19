@@ -138,9 +138,68 @@ Cap display at 100% even if overspent. If overspent, show `(!)` instead of perce
     Per-session:  ██████████  $520.00 / $500  (!) OVER LIMIT
 ```
 
+## Cost Anomaly Display
+
+After the Recent Actions table, read `anomalies` from `.maestro/logs/spending-log.yaml`. If any anomalies exist for the current session, render a Cost Anomalies block:
+
+```
+  Cost Anomalies (this session):
+    (!) Story 03: 3.2x over estimate (48K vs 15K tokens) — QA loops
+    (!) Story 07: 2.1x over estimate (21K vs 10K tokens) — model escalation
+```
+
+### Anomaly Rendering Rules
+
+- Only show anomalies where `ratio > 1.5` (Warning and above).
+- Sort by `ratio` descending (highest first).
+- Cap the list at 5 entries; if more exist, append `  ... and N more anomalies`.
+- Severity indicator prefix:
+  - Warning (1.5x–2.0x): `(~)`
+  - Anomaly (2.0x–3.0x): `(!)`
+  - Critical (>3.0x): `(!!)`
+- Format per line:
+  ```
+  <severity> Story <id>: <ratio>x over estimate (<actual>K vs <estimated>K tokens) — <reason>
+  ```
+- If no anomalies exist (or the file/key is absent), omit the block entirely.
+
+### Updated Standalone Output (with anomalies)
+
+```
++---------------------------------------------+
+| Spending Tracker                            |
++---------------------------------------------+
+  Mode: tiered (auto under $50, confirm above)
+
+  Limits:
+    Per-action:   $50.00
+    Per-session:  ████░░░░░░  $45.50 / $500  (9%)
+    Per-day:      █░░░░░░░░░  $120 / $1,000  (12%)
+
+  Today's Actions (14 total):
+    Auto-approved:   12  ██████████████████  (86%)
+    User-approved:    1  ██                  (7%)
+    Denied:           1  ██                  (7%)
+
+  Recent:
+    14:10  [AUTO]     Vercel deploy         $0
+    14:08  [AUTO]     DNS record update     $0
+    14:05  [APPROVED] Domain purchase       $12.99
+    14:02  [DENIED]   Email campaign        blocked
+    14:00  [AUTO]     AWS S3 list           $0
+
+  Cost Anomalies (this session):
+    (!!) Story 03: 3.2x over estimate (48K vs 15K tokens) — QA loops
+    (!)  Story 07: 2.1x over estimate (21K vs 10K tokens) — model escalation
+
+  (i) Change mode: /maestro autonomy <mode>
+  (i) Adjust limits: /maestro autonomy limits
+```
+
 ## Integration
 
 - Read by the `dashboard` skill for the Autonomy & Spending section
 - Invoked by `/maestro spending` command
 - Invoked by `/maestro autonomy status` command
 - Updated by the `autonomy-engine` skill after each action execution
+- Reads anomaly data written by `autonomy-engine` to `.maestro/logs/spending-log.yaml`

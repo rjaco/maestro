@@ -174,4 +174,144 @@ Read `squads/<name>/squad.md`. If not found:
   Run /maestro squad list to see available squads.
 ```
 
-Display full squad details including agents table, quality gates, shared context, and activation status. See `skills/squad/SKILL.md` for the exact output format.
+Parse the squad file frontmatter and body. Display in this format:
+
+```
++---------------------------------------------+
+| Squad: full-stack-dev                       |
++---------------------------------------------+
+
+  Description:  Full-stack web development team
+  File:         squads/full-stack-dev/squad.md
+  Active:       yes  (currently loaded)
+
+  Agents (4):
+    Role            Model    Responsibilities
+    ─────────────────────────────────────────────
+    orchestrator    opus     planning, decomposition, QA review
+    implementer     sonnet   story execution, code writing
+    reviewer        opus     code review, security checks
+    researcher      haiku    web lookup, documentation
+
+  Quality Gates:
+    min_test_coverage:  80%
+    require_types:      true
+    max_qa_iterations:  3
+
+  Shared Context:
+    [content of squad's shared_context section, if any]
+
+  Orchestration Mode:  standard
+```
+
+If a required field (e.g., `agents`) is missing from the squad file, show:
+```
+  (!) Squad file is missing the "agents" section — squad may not function correctly.
+```
+
+---
+
+## Argument Parsing
+
+| Invocation | Behavior |
+|-----------|----------|
+| `/maestro squad` | Show status overview + interactive menu |
+| `/maestro squad list` | List all available squads |
+| `/maestro squad activate <name>` | Activate the named squad |
+| `/maestro squad deactivate` | Deactivate the currently active squad |
+| `/maestro squad create <name>` | Create a new squad interactively |
+| `/maestro squad info <name>` | Show full details for a squad |
+
+`<name>` must be a single token matching a directory name under `squads/`. Names with spaces are not supported — use hyphens (e.g., `full-stack-dev`).
+
+## Squad File Format Reference
+
+A valid squad file lives at `squads/<name>/squad.md` and has this structure:
+
+```markdown
+---
+name: full-stack-dev
+description: Full-stack web development team
+orchestration_mode: standard
+agents:
+  - role: orchestrator
+    model: opus
+  - role: implementer
+    model: sonnet
+  - role: reviewer
+    model: opus
+  - role: researcher
+    model: haiku
+quality_gates:
+  min_test_coverage: 80
+  require_types: true
+  max_qa_iterations: 3
+---
+
+## Shared Context
+
+Any shared context injected into all agents in this squad.
+```
+
+When creating a new squad via `create`, use this template. The wizard (defined in `skills/squad/SKILL.md`) will prompt for each field interactively.
+
+## Error Handling
+
+| Condition | Action |
+|-----------|--------|
+| `squads/` directory does not exist | Treat as empty (no squads found) |
+| Squad file has invalid YAML frontmatter | Show `(x) squads/<name>/squad.md has invalid frontmatter — cannot parse` |
+| `active_squad` in state references a deleted squad | Warn `(!) Active squad "<name>" no longer exists. Run /maestro squad list.` and clear `active_squad` |
+| `create` name contains spaces | Reject: `[maestro] Squad names cannot contain spaces. Use hyphens, e.g. "full-stack-dev".` |
+| `create` name contains special characters | Reject: `[maestro] Squad name must be alphanumeric with hyphens only.` |
+
+## Examples
+
+### Example 1: List squads
+
+```
+/maestro squad list
+```
+
+```
++---------------------------------------------+
+| Available Squads                            |
++---------------------------------------------+
+
+  full-stack-dev     Full-stack web development team       (4 agents)
+  content-creator    Content creation and marketing team   (3 agents)
+  devops-sre         DevOps and reliability engineering     (3 agents)
+
+  Active: full-stack-dev
+```
+
+### Example 2: Activate a squad
+
+```
+/maestro squad activate devops-sre
+```
+
+```
++---------------------------------------------+
+| Squad Activated                             |
++---------------------------------------------+
+
+  Squad:    devops-sre
+  Agents:   3 (orchestrator, implementer, reviewer)
+  Mode:     standard
+
+  (i) Agent dispatch will now use this squad's role mapping.
+  (i) Deactivate with: /maestro squad deactivate
+```
+
+### Example 3: Squad not found
+
+```
+/maestro squad activate frontend-team
+```
+
+```
+[maestro] Squad "frontend-team" not found.
+
+  Run /maestro squad list to see available squads.
+```

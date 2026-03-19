@@ -83,9 +83,9 @@
 - Deploy: `claude plugin install maestro` (marketplace)
 
 ## Project Scale
-- Skills: 161 skill directories
+- Skills: 162 skill directories
 - Agents: 6 agent definitions
-- Commands: 51 slash commands
+- Commands: 52 slash commands
 - Profiles: 11 specialist profiles
 - Templates: 12 scaffolding templates
 - Hooks: 16 events (SessionStart, SessionEnd, PreToolUse, PostToolUse, Stop, StopFailure, PreCompact, PostCompact, PermissionRequest, Notification, TeammateIdle, TaskCompleted, WorktreeCreate, WorktreeRemove, UserPromptSubmit, SubagentStart)

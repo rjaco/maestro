@@ -274,8 +274,8 @@ PYEOF
 # safe_increment <varname>
 # Increment a counter variable without triggering set -e on zero-value arithmetic.
 safe_increment() {
-  local _var="$1"
-  eval "${_var}=\$(( \${${_var}} + 1 ))"
+  local -n _ref="$1"
+  _ref=$(( _ref + 1 ))
 }
 
 # max_of <a> <b> — prints the larger integer

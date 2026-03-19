@@ -249,3 +249,130 @@ If the log directory or file does not exist:
   (i) Logs appear after the first scheduled run.
   (i) Check that the worker is registered: /maestro workers list
 ```
+
+---
+
+## Worker Registration Details
+
+When registering a worker with `CronCreate`, use these exact parameters:
+
+| Worker | CronCreate `name` | `schedule` | `command` |
+|--------|-------------------|------------|-----------|
+| health-check | `maestro-health-check` | `*/30 * * * *` | `Skill("background-workers", "health-check")` |
+| dependency-audit | `maestro-dependency-audit` | `0 */6 * * *` | `Skill("background-workers", "dependency-audit")` |
+| convention-drift | `maestro-convention-drift` | `0 * * * *` | `Skill("background-workers", "convention-drift")` |
+| memory-decay | `maestro-memory-decay` | `0 0 * * *` | `Skill("background-workers", "memory-decay")` |
+| stale-worktree-cleanup | `maestro-stale-worktree-cleanup` | `0 * * * *` | `Skill("background-workers", "stale-worktree-cleanup")` |
+| cost-report | `maestro-cost-report` | `0 18 * * 1-5` | `Skill("background-workers", "cost-report")` |
+
+The cron `name` always has the `maestro-` prefix so Maestro workers can be distinguished from other registered crons. When calling `CronDelete`, pass the full prefixed name: `CronDelete name: "maestro-health-check"`.
+
+## Log File Format
+
+Workers write structured log files to `.maestro/logs/workers/`. Each run creates a new file:
+
+```
+.maestro/logs/workers/<worker-name>-<YYYY-MM-DD>.log
+```
+
+If a worker runs multiple times on the same day, new entries are appended to the same file with a run-separator line.
+
+Log file contents follow this pattern:
+
+```
+=== Run: 2026-03-19T14:00:00Z ===
+[health-check] Starting TypeScript check...
+[health-check] tsc: 0 errors
+[health-check] lint: 0 warnings
+[health-check] tests: 142 passed, 0 failed
+[health-check] Result: OK
+=== End Run ===
+```
+
+When reading logs, display from the most recent `=== Run:` marker to the next `=== End Run ===`.
+
+## Notes on CronList Matching
+
+When calling `CronList`, the result is a list of registered cron entries. Match against worker names using the `maestro-` prefix. A worker is considered "registered" if `CronList` returns an entry whose `name` field equals `maestro-<worker-name>`. An entry that exists but whose `schedule` differs from the expected schedule should be flagged with `(!)` in the list output.
+
+## Error Handling
+
+| Condition | Action |
+|-----------|--------|
+| `.maestro/dna.md` missing | Show "Not initialized" and stop |
+| `CronList` fails or returns an error | Show `(x) Cannot read cron registry — CronList returned an error` |
+| `CronCreate` fails for a worker | Show `(x) Failed to register <name>: <error>`, continue with remaining workers |
+| `CronDelete` fails | Show `(x) Failed to stop <name>: <error>` |
+| `.maestro/logs/workers/` does not exist | Create it before attempting to write or read log files; if it cannot be created, warn and skip |
+| Log file is empty | Show `(i) Log file exists but is empty — worker may have run but produced no output` |
+| Worker name not in known-workers list | Show "Unknown worker" error with the valid-names list |
+
+## Examples
+
+### Example 1: List workers — all registered
+
+```
+/maestro workers list
+```
+
+```
++---------------------------------------------+
+| Background Workers                          |
++---------------------------------------------+
+
+  NAME                     SCHEDULE          REGISTERED
+  health-check             */30 * * * *      yes
+  dependency-audit         0 */6 * * *       yes
+  convention-drift         0 * * * *         yes
+  memory-decay             0 0 * * *         yes
+  stale-worktree-cleanup   0 * * * *         yes
+  cost-report              0 18 * * 1-5      yes
+
+  All 6 workers registered.
+```
+
+### Example 2: Start all workers
+
+```
+/maestro workers start
+```
+
+```
++---------------------------------------------+
+| Workers Started                             |
++---------------------------------------------+
+
+  health-check             registered  (*/30 * * * *)
+  dependency-audit         registered  (0 */6 * * *)
+  convention-drift         registered  (0 * * * *)
+  memory-decay             registered  (0 0 * * *)
+  stale-worktree-cleanup   registered  (0 * * * *)
+  cost-report              registered  (0 18 * * 1-5)
+
+  (i) Workers will begin running on their next scheduled time.
+  (i) Logs will appear in .maestro/logs/workers/ after first run.
+```
+
+### Example 3: View logs for a specific worker
+
+```
+/maestro workers logs health-check
+```
+
+```
++---------------------------------------------+
+| Logs: health-check                          |
++---------------------------------------------+
+
+  File: .maestro/logs/workers/health-check-2026-03-19.log
+
+  === Run: 2026-03-19T14:00:00Z ===
+  [health-check] Starting TypeScript check...
+  [health-check] tsc: 0 errors
+  [health-check] lint: 2 warnings (non-blocking)
+  [health-check] tests: 142 passed, 0 failed
+  [health-check] Result: OK
+  === End Run ===
+
+  (i) Run /maestro workers status to see a summary across all workers.
+```

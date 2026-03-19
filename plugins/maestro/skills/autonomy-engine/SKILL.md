@@ -159,6 +159,62 @@ spending:
       approved_by: ""        # "auto" or "user"
 ```
 
+## Cost Anomaly Detection
+
+Monitor per-story costs against estimates and flag anomalies.
+
+### Detection Logic
+
+After each story completes (Phase 7 CHECKPOINT):
+1. Read story's `estimated_tokens` from the story spec
+2. Read actual tokens from `token_ledger` or state
+3. Compute ratio: `actual / estimated`
+4. If ratio > 2.0: FLAG as cost anomaly
+
+### Anomaly Response
+
+| Ratio | Severity | Action |
+|-------|----------|--------|
+| <= 1.5x | Normal | Log only |
+| 1.5x - 2.0x | Warning | Log + note in checkpoint summary |
+| 2.0x - 3.0x | Anomaly | Log + alert + add to spending-log.yaml |
+| > 3.0x | Critical | Log + alert + PAUSE if in checkpoint mode |
+
+### Anomaly Log Format
+
+Append to `.maestro/logs/spending-log.yaml`:
+```yaml
+anomalies:
+  - story: "03-frontend-ui"
+    timestamp: "2026-03-19T10:30:00Z"
+    estimated_tokens: 15000
+    actual_tokens: 48000
+    ratio: 3.2
+    severity: critical
+    model: opus
+    reason: "QA rejected 3 times, required model escalation"
+```
+
+### Root Cause Analysis
+
+When an anomaly is detected, identify likely causes:
+- **QA rejection loops**: Multiple QA iterations drive up cost
+- **Model escalation**: haiku→sonnet→opus cascades
+- **Context tier escalation**: T3→T2→T1 due to NEEDS_CONTEXT
+- **Large file reads**: Agent reading unnecessary files
+- **Self-heal loops**: Multiple fix attempts
+
+Log the identified cause with the anomaly.
+
+### Spending Dashboard Integration
+
+Show anomalies in `/maestro dashboard`:
+```
+Cost Anomalies (this session):
+  (!) Story 03: 3.2x over estimate (48K vs 15K tokens) — QA loops
+  (!) Story 07: 2.1x over estimate (21K vs 10K tokens) — model escalation
+```
+
 ## Integration with Other Skills
 
 - **dev-loop / opus-loop:** Call this skill before dispatching any action to an external service.

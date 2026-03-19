@@ -1,0 +1,28 @@
+[Unit]
+Description=Maestro Autonomous Daemon
+Documentation=https://github.com/rjaco/maestro-orchestrator
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env bash %h/dev/maestro/scripts/opus-daemon.sh
+WorkingDirectory=%h/dev/maestro
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=maestro-daemon
+
+# Health check
+ExecStartPost=/bin/sh -c 'sleep 5 && test -f .maestro/logs/daemon-health.json'
+
+# Graceful stop
+ExecStop=/usr/bin/env bash %h/dev/maestro/scripts/opus-daemon.sh --stop
+TimeoutStopSec=30
+
+# Resource limits
+MemoryMax=2G
+CPUQuota=50%
+
+[Install]
+WantedBy=default.target
