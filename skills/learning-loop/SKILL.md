@@ -335,6 +335,17 @@ All learning-loop runs are appended to `.maestro/logs/learning-loop.md`:
 | **trust.yaml** | CONSOLIDATE writes `learning_adjustments` and updates `model_stats` averages. model-router reads `model_stats` to adjust haiku tier boundary. |
 | **soul** | Universal rules from DISTILL are written to `.maestro/SOUL.md` `## Learned Patterns`. `.maestro/SOUL.md` governs base agent behavior — universal rules here propagate to all future sessions automatically. |
 
+### Error Pattern Signals
+
+During the RETRIEVE phase, also scan:
+- `.maestro/patterns/learned-errors.yaml` for auto-generated patterns
+- `.maestro/logs/pattern-learning.log` for recent pattern additions
+
+During CONSOLIDATE:
+- Review auto-generated patterns with confidence < 0.5
+- Either promote (boost confidence) or deprecate based on success rate
+- Merge similar patterns (same error type, similar fix strategy)
+
 ### Data Contract with self-correct
 
 - **Output location**: `.maestro/SOUL.md` — `## Learned Traits` section
