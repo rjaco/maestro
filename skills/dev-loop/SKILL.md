@@ -493,3 +493,36 @@ started_at: "2026-03-17T10:30:00Z"
 ```
 
 This file is `.gitignore`d — it tracks local execution state only.
+
+## State Integrity Protocol
+
+Every write to `.maestro/state.local.md` MUST follow this safety sequence:
+
+### On Write
+1. **Backup**: Copy current `state.local.md` to `state.local.md.bak` before any modification
+2. **Write**: Update the state file with new values
+3. **Checksum**: Compute SHA256 of the written content and store as `state_checksum` in the frontmatter
+4. **Verify**: Re-read the file and confirm the checksum matches
+
+### On Read
+1. Read `state.local.md`
+2. Extract `state_checksum` from frontmatter
+3. Compute SHA256 of the file content (excluding the `state_checksum` line itself)
+4. If checksums match: proceed normally
+5. If checksums mismatch or file is corrupt:
+   a. Log warning to `.maestro/logs/state-recovery.log`
+   b. Check for `state.local.md.bak`
+   c. If backup exists and is valid, restore from backup
+   d. If no valid backup, PAUSE and alert user
+
+### Checksum Computation
+```bash
+# Compute checksum (exclude the state_checksum line to avoid circular dependency)
+grep -v '^state_checksum:' .maestro/state.local.md | sha256sum | cut -d' ' -f1
+```
+
+### Recovery Log Format
+```
+[2026-03-19T10:30:00Z] WARN: State file corruption detected (checksum mismatch)
+[2026-03-19T10:30:00Z] INFO: Restored from state.local.md.bak
+```
