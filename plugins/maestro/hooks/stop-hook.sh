@@ -113,6 +113,18 @@ total_milestones=$(yaml_val "total_milestones")
 consecutive_failures=$(yaml_val "consecutive_failures")
 max_consecutive_failures=$(yaml_val "max_consecutive_failures")
 
+# --- Session cost summary ---
+
+TOKEN_SPEND=$(yaml_val "token_spend")
+if [[ -n "$TOKEN_SPEND" && "$TOKEN_SPEND" != "0" ]]; then
+  echo "[MAESTRO] Session spend: ~${TOKEN_SPEND} tokens" >&2
+fi
+
+EVENT_COUNT=$(wc -l < ".maestro/logs/progress.jsonl" 2>/dev/null || echo 0)
+if [[ "$EVENT_COUNT" -gt 0 ]]; then
+  echo "[MAESTRO] Session events: ${EVENT_COUNT}" >&2
+fi
+
 # --- Extract prompt text (everything after closing ---) ---
 
 prompt_text=$(printf '%s\n' "$state_content" | sed '1,/^---$/d' | sed '1,/^---$/d' | sed '/^[[:space:]]*$/d' | head -20)
