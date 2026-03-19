@@ -238,3 +238,33 @@ token-ledger record:
 ```
 
 See `skills/token-ledger/SKILL.md` for the full ledger protocol.
+
+## Dispatch Safeguards
+
+### Pre-Dispatch Checks
+
+Before every agent dispatch:
+1. Check circuit breaker state — if `open`, do not dispatch. Log and return BLOCKED
+2. Check available context budget — if <10% remaining, log warning
+3. Verify the target model is responding (check recent heartbeat from any agent using that model)
+
+### Timeout Enforcement
+
+Set a maximum wall-clock time for each dispatch:
+- Read `timeouts.agent_default` from `.maestro/config.yaml` (default: 300s)
+- If the agent's `maxTurns` suggests a longer run, cap at `timeouts.agent_max` (default: 1200s)
+- Log timeout events to `.maestro/logs/agent-watchdog.log`
+
+### Failure Recording
+
+On every agent failure (timeout, BLOCKED, or error):
+1. Increment `consecutive_agent_failures` in state
+2. Log to `.maestro/logs/agent-watchdog.log`:
+   ```
+   [timestamp] FAIL: agent=[name] model=[model] story=[id] reason=[timeout|blocked|error] duration=[seconds]
+   ```
+3. If threshold reached, trigger circuit breaker
+
+On every agent success:
+1. Reset `consecutive_agent_failures` to 0
+2. If circuit breaker was `half-open`, set to `closed`

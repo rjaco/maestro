@@ -177,6 +177,59 @@ The implementer follows output contract discipline:
 4. Self-check against the contract before reporting DONE
 5. No TDD — validation happens in Phase 4 via content-validator
 
+### Agent Timeout & Watchdog
+
+Every agent dispatch MUST have a timeout and heartbeat monitoring to prevent infinite waits.
+
+#### Timeout Configuration
+
+| Story Type | Default Timeout | Max Timeout |
+|-----------|----------------|-------------|
+| Simple (haiku) | 3 minutes | 5 minutes |
+| Standard (sonnet) | 5 minutes | 10 minutes |
+| Complex (opus) | 10 minutes | 20 minutes |
+
+Override via `.maestro/config.yaml`:
+```yaml
+timeouts:
+  agent_default: 300  # 5 minutes in seconds
+  agent_max: 1200     # 20 minutes
+```
+
+#### Heartbeat Monitoring
+
+The orchestrator checks `.maestro/logs/heartbeat.json` during agent execution:
+1. Agent writes heartbeat every 30 seconds (timestamp + current action)
+2. If heartbeat is stale (>90 seconds old), the agent is considered hung
+3. On stale heartbeat:
+   a. Log warning to `.maestro/logs/agent-watchdog.log`
+   b. Wait one additional 30-second cycle
+   c. If still stale, terminate the agent and trigger retry
+
+#### Retry with Exponential Backoff
+
+When an agent times out or is terminated:
+1. First retry: wait 30 seconds, then re-dispatch
+2. Second retry: wait 60 seconds, then re-dispatch
+3. Third retry: wait 120 seconds, then re-dispatch with escalated model (sonnet → opus)
+4. After third retry failure: PAUSE and ask user
+
+Backoff formula: `delay = 30 * 2^(retry_count - 1)` seconds
+
+#### Circuit Breaker
+
+Track consecutive agent failures in `.maestro/state.local.md`:
+```yaml
+consecutive_agent_failures: 0
+circuit_breaker_threshold: 5
+circuit_breaker_state: closed  # closed | open | half-open
+```
+
+State machine:
+- **closed**: Normal operation. Increment counter on failure, reset on success.
+- **open**: After 5 consecutive failures, STOP dispatching agents. PAUSE execution. Alert user. Wait for manual intervention or 10-minute cooldown.
+- **half-open**: After cooldown, allow ONE dispatch. If it succeeds, reset to closed. If it fails, back to open.
+
 ## Phase 3.5: TEST GENERATION (optional)
 
 If the `test-gen` skill is available and the story type is `code`:
