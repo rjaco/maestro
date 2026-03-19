@@ -160,7 +160,7 @@ Log each escalation:
 
 ## Cross-Session Intelligence
 
-Tracks which files were accessed, which context packages worked, and uses that history to improve context selection in future sessions. Inspired by Windsurf's Cascade memory model.
+Tracks which files were accessed, which context packages worked, and uses that history to improve context selection in future sessions. Uses a persistent file-access pattern log to pre-include high-hit-rate files in future packages without waiting for relevance scoring to catch them.
 
 ### File Access Pattern Tracking
 
@@ -308,7 +308,7 @@ The memory skill and context engine serve complementary roles. They do not dupli
 | Concern | Memory Skill | Context Engine |
 |---------|-------------|----------------|
 | Scope | Semantic facts about the project (decisions, constraints, patterns, why) | Tactical file-level context for a specific agent dispatch |
-| Storage | `.claude/agent-memory/` | `.maestro/memory/context-history.md` |
+| Storage | `.maestro/memory/memories.md` | `.maestro/memory/context-history.md` |
 | Lifetime | Persistent across all sessions, manually curated | Persistent across sessions, auto-updated by outcomes |
 | Input to agent | "What to do and why" — project knowledge, conventions, rationale | "Where to do it" — the exact files, line ranges, and interfaces needed |
 | Updated by | User edits, agent memory writes | Context engine itself, based on NEEDS_CONTEXT / QA_PASS / SELF_HEAL signals |

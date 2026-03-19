@@ -209,6 +209,23 @@ When `soul.inject()` is called, the Learned Traits section (populated by self-co
 
 After appending a trait, self-correct also calls `memory.save_semantic()` to keep the memory system in sync. The trait is saved under the `user_preference` category with the assigned confidence score.
 
+### In Learning Loop
+
+self-correct does not call learning-loop directly. Instead, it writes correction and confirmation entries to `.maestro/SOUL.md` `## Learned Traits`. The `learning-loop` skill reads those entries during its RETRIEVE phase at the start of each milestone run and ingests any entries dated within the current milestone as `user_correction` signals.
+
+### Data Contract with learning-loop
+
+- **Output location**: `.maestro/SOUL.md` — `## Learned Traits` section
+- **Format**: Markdown list entries (appended by `append_to_soul`)
+- **Written by**: `self-correct`
+- **Read by**: `learning-loop` RETRIEVE phase
+- **Correction entry format**: `- [YYYY-MM-DD] {trait_description} (source: "{raw_signal}")`
+- **Confirmation entry format**: `- [YYYY-MM-DD] CONFIRMED: {trait_description}`
+- **Confidence mapping** (used by learning-loop when ingesting):
+  - Entries starting with `CONFIRMED:` → confidence 0.85
+  - Entries containing `(source: "never …"` or `"always …"` → confidence 1.0
+  - All other correction entries → confidence 0.9
+
 ## What Self-Correct Does NOT Do
 
 - Does not modify Decision Principles without user confirmation (see promotion flow)

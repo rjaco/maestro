@@ -85,7 +85,7 @@ The implementer prompt (see `implementer-prompt.md`) is filled with:
 5. **Files to Reference** — From the story's Reference list, read and include key sections
 6. **QA History** — If this is a re-dispatch after QA rejection, include all previous QA feedback
 7. **Live Docs** — If the story involves a framework/library, invoke the `live-docs` skill to fetch current API docs and inject relevant signatures (max 2000 tokens)
-8. **Memory** — If `.maestro/memory/semantic.md` exists, inject relevant project memories (max 500 tokens)
+8. **Memory** — If `.maestro/memory/memories.md` exists, inject relevant project memories (max 500 tokens)
 
 **Exclude from context:**
 - Other stories (the implementer does not need the full backlog)

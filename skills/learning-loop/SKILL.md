@@ -104,7 +104,7 @@ Determine scope before DISTILL:
 
 | Scope | Criteria | Target |
 |-------|----------|--------|
-| **Universal** | Applies to any story type in any project | SOUL.md learned patterns |
+| **Universal** | Applies to any story type in any project | `.maestro/SOUL.md` learned patterns |
 | **Project-wide** | Applies to all stories in this project | `.maestro/memory/memories.md` (lesson tier) |
 | **Story-type** | Applies only to stories of a specific type (e.g., API endpoints) | `.maestro/memory/memories.md` (scoped) |
 | **One-off** | Unique to one story's circumstances | Log only — no lesson generated |
@@ -237,7 +237,7 @@ Persist approved rules to long-term memory and update downstream config.
 **Occurrences**: 3
 ```
 
-**`SOUL.md` learned patterns section** — Universal rules only. Edit the `## Learned Patterns` section. If no such section exists in SOUL.md, append it.
+**`.maestro/SOUL.md` learned patterns section** — Universal rules only. Edit the `## Learned Patterns` section. If no such section exists in `.maestro/SOUL.md`, append it.
 
 ```markdown
 ## Learned Patterns
@@ -296,7 +296,7 @@ Stale rules flagged: [N]
 
 Applied:
   (permanent) Guard optional relations — written to .maestro/memory/memories.md
-  (permanent) Run tsc after barrel exports — written to SOUL.md learned patterns
+  (permanent) Run tsc after barrel exports — written to .maestro/SOUL.md learned patterns
 Proposed:
   (pending) API endpoint model hint — update trust.yaml [apply? yes / no]
 ```
@@ -329,8 +329,21 @@ All learning-loop runs are appended to `.maestro/logs/learning-loop.md`:
 | Skill | Integration |
 |-------|-------------|
 | **dev-loop** | dev-loop triggers learning-loop after each milestone completes (all stories done, committed). Passes the milestone name and story list as context. |
-| **self-correct** | self-correct operates within a single session; learning-loop persists cross-session. User corrections captured by self-correct (confidence >= 0.7) are also fed into learning-loop RETRIEVE as `user_correction` signals so they survive across milestone boundaries. |
+| **self-correct** | self-correct operates within a single session; learning-loop persists cross-session. User corrections captured by self-correct (confidence >= 0.7) are appended to `.maestro/SOUL.md` `## Learned Traits`; learning-loop RETRIEVE reads that section at the start of each run and ingests any entries dated within the current milestone as `user_correction` signals so they survive across milestone boundaries. |
 | **retrospective** | retrospective runs at the feature level; learning-loop runs at the milestone level. retrospective produces improvement candidates; learning-loop produces lessons. Both write to `memories.md` — use distinct headings (`## Improvements` vs `## Lessons`) to avoid collisions. |
 | **token-ledger** | learning-loop reads per-story token actuals from token-ledger to produce token efficiency signals in RETRIEVE. |
 | **trust.yaml** | CONSOLIDATE writes `learning_adjustments` and updates `model_stats` averages. model-router reads `model_stats` to adjust haiku tier boundary. |
-| **soul** | Universal rules from DISTILL are written to SOUL.md `## Learned Patterns`. SOUL.md governs base agent behavior — universal rules here propagate to all future sessions automatically. |
+| **soul** | Universal rules from DISTILL are written to `.maestro/SOUL.md` `## Learned Patterns`. `.maestro/SOUL.md` governs base agent behavior — universal rules here propagate to all future sessions automatically. |
+
+### Data Contract with self-correct
+
+- **Output location**: `.maestro/SOUL.md` — `## Learned Traits` section
+- **Format**: Markdown list entries
+- **Written by**: `self-correct` (after each conversation turn that contains a correction or confirmation signal)
+- **Read by**: `learning-loop` RETRIEVE phase (at the start of each milestone run)
+- **Fields**:
+  - Correction entry: `- [YYYY-MM-DD] {trait_description} (source: "{raw_signal}")`
+  - Confirmation entry: `- [YYYY-MM-DD] CONFIRMED: {trait_description}`
+  - Confidence: inferred from signal type — explicit "never/always" → 1.0, direct correction → 0.9, confirmation → 0.85
+- **Selection rule**: learning-loop ingests only entries whose date falls within the current milestone's date range. Entries from prior milestones are considered already processed.
+- **Deduplication**: if a `## Learned Traits` entry matches an existing lesson in `.maestro/memory/memories.md` (by subject), learning-loop increments the lesson's occurrence count instead of creating a duplicate rule.
