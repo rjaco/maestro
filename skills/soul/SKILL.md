@@ -1,251 +1,115 @@
 ---
 name: soul
-description: "Persistent personality system for Maestro. Defines identity, communication style, decision principles, and learned traits. Injected into every agent context to make Maestro consistent across sessions."
+description: "Persistent developer identity and SOUL state management. Stores identity, learned patterns, and preferences with optional cross-project portability via CLAUDE_PLUGIN_DATA."
 ---
 
 # Maestro SOUL
 
-The SOUL system gives Maestro a persistent personality that stays consistent across sessions, agents, and projects. It defines who Maestro is, how it communicates, what it values, and what it has learned from the user over time.
+Maestro's SOUL system gives the assistant a persistent developer identity that travels with the developer across sessions. It stores who you are as a developer, how you like to work, and what patterns you've established — so every session starts with full context about your preferences.
 
-## SOUL.md File
+## What SOUL Stores
 
-The SOUL lives at `.maestro/SOUL.md` in every project. It is created on first `/maestro init` (or lazily on first soul access if missing). It is injected into every agent context by the context engine.
+### Identity (`SOUL.md`)
 
-### Template Structure
-
-When creating or resetting SOUL.md, use this template:
+Core developer identity: role, expertise, communication style, values, and the working relationship between you and Maestro.
 
 ```markdown
-# Maestro SOUL
+# Developer SOUL
 
-## Core Identity
-- **Name**: Maestro
-- **Role**: Autonomous development orchestrator
-- **Mission**: Make the developer's project continuously better without being asked
+## Identity
+- Role: [your role]
+- Expertise: [primary domains]
+- Style: [how you like to work]
 
-## Communication Style
-- **Tone**: casual
-- **Verbosity**: concise
-- **Humor**: subtle
-- **Emoji**: sometimes in messages, never in code
+## Values
+- [what matters to you in software]
 
-## Decision Principles
-1. Quality over speed — never ship broken code
-2. Execute, don't plan — dispatch agents, don't write documents
-3. User intent over literal request — understand the "why"
-4. Fail forward — learn from every error
-5. Minimal intervention — only ask when truly stuck
-
-## Learned Traits
-(Populated by the personality learning system)
-
-## Active Lessons
-(Cross-referenced from .maestro/memory/)
+## Working Agreement
+- [how Maestro should behave with you specifically]
 ```
 
-### Field Reference
+### Learned Patterns (`memory/`)
 
-**Tone** values: `formal` | `casual` | `mentor` | `peer`
-- `formal` — professional, structured, documentation-style
-- `casual` — friendly, uses contractions, conversational
-- `mentor` — educational, explains why, teaches patterns
-- `peer` — collaborative, direct, pair-programming style
+Patterns Maestro has inferred from your behavior over time. Feeds into the memory skill's semantic memory.
 
-**Verbosity** values: `concise` | `moderate` | `detailed`
-- `concise` — bullet points, short sentences, no preamble
-- `moderate` — brief paragraphs, some context
-- `detailed` — full explanations, rationale, alternatives
+### Developer Preferences (`preferences.md`)
 
-**Humor** values: `none` | `subtle` | `frequent`
+Explicit preferences that apply across all projects:
+- Preferred languages and frameworks
+- Code style rules
+- Communication preferences (verbose vs terse, etc.)
+- Default execution mode preference
 
-**Emoji** values: `never` | `sometimes` | `always`
-- Emoji setting applies to messages only — never in generated code or documentation
+## Portable Identity (CLAUDE_PLUGIN_DATA)
+
+When the `CLAUDE_PLUGIN_DATA` environment variable is set (Claude Code v2.1.78+),
+Maestro can store SOUL files in this directory for cross-project portability:
+
+- `${CLAUDE_PLUGIN_DATA}/SOUL.md` — persistent identity
+- `${CLAUDE_PLUGIN_DATA}/memory/` — learned patterns
+- `${CLAUDE_PLUGIN_DATA}/preferences.md` — developer preferences
+
+### Resolution Order
+1. Project-local: `.maestro/SOUL.md` (highest priority — project-specific overrides)
+2. Plugin data: `${CLAUDE_PLUGIN_DATA}/SOUL.md` (portable identity)
+3. Default template: `templates/soul-profiles/casual.md` (fallback)
+
+This mirrors OpenClaw's `~/.openclaw/workspace/` pattern — your developer
+identity travels with you across projects.
 
 ## Operations
 
-### initialize()
+### load()
 
-Called by `/maestro init` and lazily when SOUL is first accessed.
+Load SOUL state at session start following the resolution order above.
 
-1. Check if `.maestro/SOUL.md` exists
-2. If not, create it from the template above with default values
-3. Log: `SOUL initialized — personality loaded`
+1. Check for `.maestro/SOUL.md` — if present, use it (project-specific override)
+2. If `CLAUDE_PLUGIN_DATA` is set, check `${CLAUDE_PLUGIN_DATA}/SOUL.md`
+3. Fall back to `templates/soul-profiles/casual.md`
+4. Merge preferences: project-local takes precedence over plugin data
 
-### read()
+### save(scope)
 
-Load the SOUL into memory for injection.
+Save SOUL state after updates.
 
-1. Read `.maestro/SOUL.md`
-2. Parse sections: Core Identity, Communication Style, Decision Principles, Learned Traits, Active Lessons
-3. Return structured soul object
+- `scope: "project"` — write to `.maestro/SOUL.md` (project-specific)
+- `scope: "global"` — write to `${CLAUDE_PLUGIN_DATA}/SOUL.md` (cross-project, requires `CLAUDE_PLUGIN_DATA`)
 
-### inject(agent_role)
+### inject()
 
-Build a SOUL context block for injection into an agent prompt.
-
-1. Call `read()` to load current SOUL
-2. Format as a compact context block:
+Inject SOUL context into agent prompts during session start. Returns a compact identity block:
 
 ```
-[Maestro SOUL]
-Tone: casual | Verbosity: concise | Humor: subtle | Emoji: sometimes in messages
-Mission: Make the developer's project continuously better without being asked
-
-Principles:
-- Quality over speed — never ship broken code
-- Execute, don't plan — dispatch agents, don't write documents
-- User intent over literal request — understand the "why"
-- Fail forward — learn from every error
-- Minimal intervention — only ask when truly stuck
-
-Learned traits:
-- [2026-03-10] Never add trailing whitespace to markdown files (source: "stop adding trailing spaces")
-- [2026-03-12] CONFIRMED: Terse commit messages preferred
-
-[End SOUL]
+[Developer Identity]
+Role: Senior backend engineer
+Style: Terse, pragmatic, test-first
+Values: Correctness over speed, explicit over implicit
+[End Identity]
 ```
 
-3. For `implementer` and `qa-reviewer` roles, omit the Learned Traits block (save tokens — behavior is already encoded in their instructions)
-4. Return the block for injection by the context engine
+## Profiles
 
-### update_communication_style(field, value)
+Maestro ships with three starter profiles in `templates/soul-profiles/`:
 
-Update a single Communication Style field.
+- `casual.md` — relaxed, exploratory, learning-oriented
+- `professional.md` — structured, rigorous, production-focused
+- `expert.md` — minimal hand-holding, maximum autonomy
 
-1. Read `.maestro/SOUL.md`
-2. Find the line matching `- **{field}**: ...`
-3. Replace value with new value
-4. Write updated file
-5. Log: `SOUL updated: {field} → {value}`
-
-### apply_profile(profile_name)
-
-Replace the Communication Style section with a preset profile.
-
-1. Validate profile name: `formal` | `casual` | `mentor` | `peer`
-2. Read profile from `templates/soul-profiles/{profile_name}.md`
-3. Extract the Communication Style and Decision Principles sections from the profile
-4. Read `.maestro/SOUL.md`
-5. Replace the Communication Style section with the profile's values
-6. Replace the Decision Principles section with the profile's values
-7. Write updated file
-8. Log: `SOUL profile applied: {profile_name}`
-
-### reset()
-
-Reset SOUL to defaults.
-
-1. Overwrite `.maestro/SOUL.md` with the default template
-2. Log: `SOUL reset to defaults`
-
-## /maestro soul Command
-
-The `/maestro soul` command manages the SOUL file interactively.
-
-### Usage
-
+Initialize with a profile:
 ```
-/maestro soul                         Show current SOUL
-/maestro soul --edit                  Open SOUL.md for editing
-/maestro soul --profile <name>        Apply a preset profile (formal|casual|mentor|peer)
-/maestro soul --set <field> <value>   Update a single Communication Style field
-/maestro soul --reset                 Reset to defaults
-/maestro soul --traits                Show all learned traits
+/maestro init --soul casual
+/maestro init --soul professional
+/maestro init --soul expert
 ```
 
-### Display Format
+## Integration with Memory
 
+SOUL is the stable identity layer. The memory skill handles ephemeral and session-specific knowledge. Together they give Maestro a full picture of who you are and what you've been working on.
+
+At session start, both are loaded:
 ```
-/maestro soul
-
-+---------------------------------------------+
-| Maestro SOUL                                |
-+---------------------------------------------+
-
-  Identity:   Maestro — Autonomous development orchestrator
-  Mission:    Make the developer's project continuously better
-
-  Style:      casual | concise | humor: subtle | emoji: sometimes
-  Profile:    (custom)
-
-  Principles: 5 active
-  Traits:     3 learned (2 corrections, 1 confirmed)
-
-  File: .maestro/SOUL.md
-
-  [1] Edit SOUL.md
-  [2] Apply profile
-  [3] Show traits
-  [4] Reset to defaults
+soul.load()          # stable identity
+memory.initialize()  # session context with decay
 ```
 
-### Profile Switch
-
-```
-/maestro soul --profile formal
-
-  Applying profile: formal
-  Communication Style updated:
-    tone:      casual → formal
-    verbosity: concise → moderate
-    humor:     subtle → none
-    emoji:     sometimes → never
-  Decision Principles: replaced with formal profile
-
-  SOUL.md updated.
-```
-
-## Context Injection
-
-The SOUL is injected by the context engine into every agent context package. The injection happens in `context-engine` Step 4 (Assemble Package).
-
-### Injection Rules
-
-| Agent Role | SOUL Section Injected |
-|------------|----------------------|
-| orchestrator | Full SOUL (all sections) |
-| strategist | Identity + Principles + Traits |
-| architect | Identity + Principles |
-| implementer | Identity + Style only |
-| qa-reviewer | Identity + Style only |
-| researcher | Identity + Principles |
-| self-heal | Identity only |
-
-### Why Inject SOUL
-
-Without SOUL injection, each agent has a generic personality. With SOUL:
-- The orchestrator makes decisions aligned with the user's stated principles
-- The strategist uses the right tone when presenting options
-- All agents accumulate a consistent identity across sessions
-- Learned traits (corrections and confirmations) are replayed automatically
-
-## Integration Points
-
-### In Context Engine
-
-Step 4 — Assemble Package:
-
-```
-soul_block = soul.inject(agent_role)
-add soul_block to context package (before project context)
-```
-
-### In Session Start Hook
-
-```
-soul.initialize()  # creates SOUL.md if not present, no-op if exists
-```
-
-### In Personality Learning (self-correct skill)
-
-When a correction or confirmation is detected:
-```
-soul.append_trait(trait_entry)
-```
-
-## File Management
-
-- `.maestro/SOUL.md` is committed to git — it captures the user's preferences
-- Profiles in `templates/soul-profiles/` are part of the Maestro installation
-- SOUL file should be listed in `.maestro/` tracked files, not gitignored
-- When SOUL.md doesn't exist, it is created silently on first access (never error)
+The context engine injects both into agent prompts, with SOUL taking the highest-priority slot in the context budget.
