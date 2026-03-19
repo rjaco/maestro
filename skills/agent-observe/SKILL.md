@@ -202,6 +202,27 @@ Output with `--format json`. Intended for CI pipelines, cost assertions, and ext
 }
 ```
 
+## Model Decision History
+
+Display model selection audit trail in `/maestro observe`:
+
+```
+Model Decisions (last 10):
+  Story 01: haiku → haiku (initial)     4.2K tokens
+  Story 02: haiku → sonnet (QA fail)    12.1K tokens
+  Story 03: sonnet → sonnet (initial)   8.4K tokens
+  Story 04: haiku → opus (timeout)      28.3K tokens
+
+Model Distribution:
+  haiku:  40% (4 dispatches)
+  sonnet: 40% (4 dispatches)
+  opus:   20% (2 dispatches)
+
+Escalation Rate: 30% (3/10 dispatches escalated)
+```
+
+Data source: `.maestro/logs/model-decisions.jsonl`
+
 ## Filtering
 
 Agent observe supports filters to narrow the view:
@@ -238,6 +259,7 @@ output_contract:
   reads:
     - .maestro/logs/costs.jsonl
     - .maestro/logs/telemetry.jsonl
+    - .maestro/logs/model-decisions.jsonl
     - .maestro/state.local.md
   side_effects: terminal output or stdout (JSON/Mermaid)
 ```

@@ -239,6 +239,42 @@ token-ledger record:
 
 See `skills/token-ledger/SKILL.md` for the full ledger protocol.
 
+## Model Selection Audit Trail
+
+Every model selection decision is logged for retrospective analysis.
+
+### Log Format
+
+Append to `.maestro/logs/model-decisions.jsonl` (one JSON line per decision):
+```json
+{"timestamp":"2026-03-19T10:30:00Z","story":"03-frontend-ui","initial_model":"haiku","final_model":"sonnet","reason":"qa_rejection_escalation","qa_iteration":2,"context_tier":"T2","tokens_budget":15000}
+```
+
+### Decision Fields
+
+| Field | Description |
+|-------|-------------|
+| `timestamp` | ISO 8601 UTC |
+| `story` | Story ID |
+| `initial_model` | Model recommended by story spec |
+| `final_model` | Model actually dispatched |
+| `reason` | Why the model changed (or "initial_selection" if no change) |
+| `qa_iteration` | Current QA iteration (0 if first dispatch) |
+| `context_tier` | T1-T4 context tier used |
+| `tokens_budget` | Estimated token budget for this dispatch |
+
+### Reason Codes
+
+| Code | Trigger |
+|------|---------|
+| `initial_selection` | First dispatch, no change |
+| `qa_rejection_escalation` | QA rejected, escalating model |
+| `needs_context_escalation` | Agent returned NEEDS_CONTEXT |
+| `timeout_escalation` | Agent timed out, trying stronger model |
+| `circuit_breaker_escalation` | Circuit breaker half-open, using strongest model |
+| `cost_downgrade` | Budget constraints, using cheaper model |
+| `config_override` | User configured specific model in config.yaml |
+
 ## Dispatch Safeguards
 
 ### Pre-Dispatch Checks
