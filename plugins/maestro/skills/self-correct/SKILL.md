@@ -1,164 +1,227 @@
 ---
 name: self-correct
-description: "Self-correction loop that captures correction signals from user feedback, QA rejections, and self-heal failures, then permanently writes learnings to skill files, CLAUDE.md, and project memory."
+description: "Personality learning system. Detects correction and confirmation signals from user messages, extracts learned traits, and persists them to SOUL.md. Promotes high-frequency corrections to Decision Principles."
 ---
 
-# Self-Correct
+# Self-Correct (Personality Learning)
 
-Captures correction signals as they occur and permanently encodes learnings into project files. Inspired by claude-reflect (Feb 2026). Each correction is irreversible — written into CLAUDE.md, skill files, DNA, and memory — so the same mistake cannot recur across sessions.
+Monitors conversation turns for signals that indicate user preferences, corrections, and confirmations. Extracts traits from those signals and persists them to `.maestro/SOUL.md` under "## Learned Traits". This makes Maestro smarter over time without requiring explicit configuration.
 
-## Correction Signal Sources
+## Signal Detection
 
-### 1. User Corrections
+### Correction Signals
 
-Explicit feedback during any dev-loop phase.
+Patterns in user messages that indicate something Maestro did was wrong or unwanted:
 
-**Trigger phrases:** "No, use X instead of Y", "Don't do that", "Always use...", "Never use...", "I already told you..."
+| Pattern | Example |
+|---------|---------|
+| `don't do X` | "don't add trailing whitespace" |
+| `stop doing X` | "stop summarizing what you just did" |
+| `never X` | "never use default exports" |
+| `no, X` | "no, use single quotes not double quotes" |
+| `not X — Y` | "not camelCase — use snake_case for DB columns" |
+| `I said X not Y` | implied correction of a prior action |
+| `that's wrong` / `that's not right` | non-specific rejection |
+| `undo that` / `revert that` | implicit correction of last action |
 
-**Default confidence:** 1.0. **Detection:** Scan user messages at each checkpoint and `.maestro/notes.md` for intent `feedback` or `redirect`.
+### Confirmation Signals
 
-### 2. QA Rejections
+Patterns in user messages that validate something Maestro did:
 
-Patterns in QA feedback indicating recurring mistakes across stories.
+| Pattern | Example |
+|---------|---------|
+| `perfect` | "perfect, that's exactly right" |
+| `yes exactly` | "yes exactly, do it like that" |
+| `keep doing that` | "keep doing that for all new components" |
+| `that's right` | "that's right, always check null first" |
+| `good call` | "good call on extracting that" |
+| `exactly what I wanted` | |
+| `that's the pattern` | "that's the pattern — remember it" |
 
-**Trigger conditions:** Same violation in 2+ separate QA reviews; a finding referencing a convention not in CLAUDE.md; a re-implementation that applies the identical fix.
+### Signal Strength
 
-**Default confidence:** 0.6 (single rejection) / 0.8 (3+ identical rejections). **Detection:** After each QA verdict, compare against `.maestro/corrections.md` and increment occurrence count if matched.
+Not all signals carry the same weight. Assign confidence when saving to semantic memory:
 
-### 3. Self-Heal Failures
+| Signal | Confidence |
+|--------|-----------|
+| Explicit "never X" / "always X" | 1.0 |
+| Direct correction "don't do X" | 0.9 |
+| Confirmation "yes exactly" / "keep doing that" | 0.85 |
+| Implicit correction (user redoes work) | 0.7 |
+| Vague rejection "that's wrong" | 0.5 |
 
-Error patterns requiring 3+ fix attempts before resolution.
+## Learned Trait Format
 
-**Trigger condition:** Fix agent loop runs 3 times on the same error class without success.
+Traits are appended to the `## Learned Traits` section of `.maestro/SOUL.md`.
 
-**Default confidence:** 0.4. **Detection:** Track fix attempt counts per error class in `.maestro/state.local.md`.
+### Correction Entry
 
-### 4. Manual Overrides
-
-User explicitly overrides agent behavior mid-execution.
-
-**Trigger conditions:** User edits a file the implementer just wrote; user changes `model_override` mid-session; user rolls back a git-craft commit; user replaces QA-approved output.
-
-**Default confidence:** 0.9. **Detection:** Compare file mtimes before/after user interaction windows; check state diffs between checkpoints.
-
-## Correction Log Format
-
-All corrections are appended to `.maestro/corrections.md` (audit trail and deduplication index).
-
-```markdown
-## Correction Log (.maestro/corrections.md)
-
-### [date] [confidence: 0.9] From: user_correction
-**Pattern**: Agent used default exports in components
-**Correction**: Never use default exports — always named exports
-**Applied to**: CLAUDE.md (project conventions)
-**Status**: permanent
-
-### [date] [confidence: 0.8] From: qa_rejection (3 occurrences)
-**Pattern**: Missing null check before nested property access
-**Correction**: Always guard optional chaining before accessing nested relations
-**Applied to**: skills/dev-loop/implementer-prompt.md, memory/semantic.md
-**Status**: permanent
-
-### [date] [confidence: 0.4] From: self_heal_failure
-**Pattern**: npm run build fails after adding a new barrel export
-**Correction**: After editing index.ts, run tsc --noEmit before committing
-**Applied to**: .maestro/dna.md (known error patterns)
-**Status**: logged (below auto-apply threshold)
+```
+- [YYYY-MM-DD] {trait_description} (source: "{correction_signal}")
 ```
 
-**Status values:** `permanent` (written to target), `proposed` (awaiting approval), `logged` (below threshold).
-
-## Learning Application Targets
-
-| Target | When to Write | What Gets Added |
-|--------|--------------|-----------------|
-| **CLAUDE.md** | Project-wide coding convention, naming rule, or anti-pattern | Short imperative rule under the relevant section |
-| **Skill files** | Missing or incorrect instruction in a specific skill | New bullet in the relevant checklist; audit comment appended to file bottom |
-| **Memory** | Confidence >= 0.7 and fact is project-specific | `memory.save_semantic(text, "quality_rule", confidence)` |
-| **DNA** | New command pattern, known error class, or build behavior | Entry under `Known Errors` or `Commands` in `.maestro/dna.md` |
-
-Skill file audit comment format:
+Examples:
 ```
-<!-- self-correct: [date] added "always guard null relations" — source: qa_rejection x3 -->
+- [2026-03-10] Never add trailing whitespace to markdown files (source: "stop adding trailing spaces")
+- [2026-03-14] Use snake_case for database column names, not camelCase (source: "not camelCase — use snake_case for DB columns")
+- [2026-03-15] Do not summarize completed actions at end of response (source: "stop summarizing what you just did")
 ```
 
-## Auto-Apply Workflow
+### Confirmation Entry
 
-**Step 1 — Score confidence:**
-
-| Source | Base | Adjustment |
-|--------|------|------------|
-| Explicit user statement | 1.0 | — |
-| Manual override | 0.9 | -0.1 if ambiguous cause |
-| QA rejection (3+ times) | 0.8 | +0.1 if cross-story pattern |
-| QA rejection (single) | 0.6 | — |
-| Self-heal failure | 0.4 | +0.1 if same error class seen before |
-
-**Step 2 — Apply threshold:**
-
-| Confidence | Action |
-|------------|--------|
-| >= 0.7 | Auto-apply to matched targets. Log as `permanent`. Notify user at next checkpoint. |
-| 0.4–0.69 | Propose to user at next checkpoint. Apply only on approval. |
-| < 0.4 | Log to `.maestro/corrections.md` as `logged`. No write. |
-
-**Step 3 — Write to targets (auto-applied):**
-1. Match targets by scope (project-wide → CLAUDE.md; phase-specific → skill file; build behavior → DNA).
-2. Write the correction to each matched target.
-3. Append audit comment to skill files.
-4. Call `memory.save_semantic()` for confidence >= 0.7.
-5. Update `.maestro/corrections.md` status to `permanent`.
-
-**Proposal format (confidence 0.4–0.69):**
 ```
-Self-Correct: 1 correction proposal
-Pattern:    [description]
-Evidence:   [source and occurrence count]
-Confidence: [score]
-Target:     [file]
-Apply?      [yes / no / modify]
+- [YYYY-MM-DD] CONFIRMED: {what_was_confirmed}
 ```
 
-## Pattern Detection
-
-**Occurrence counting:** On each new signal, fuzzy-match the `Pattern` field against existing entries in `.maestro/corrections.md`. If matched, increment occurrence count and re-evaluate confidence (count >= 3 elevates confidence by one tier).
-
-**Escalation:** When the same correction appears 3+ times across sessions, auto-escalate to `permanent` regardless of original confidence. Write to all applicable targets.
-
-**Conflict detection:** Before writing, search the target file for contradicting rules. If found, do not auto-apply — flag to user:
+Examples:
 ```
-Conflict detected:
-  New:      "Always use named exports"
-  Existing: "Use default exports for page components" (CLAUDE.md)
-  Which rule applies?
+- [2026-03-12] CONFIRMED: Terse commit messages preferred — inferred from prior corrections
+- [2026-03-16] CONFIRMED: Extract shared logic into utils before implementing feature stories
+- [2026-03-17] CONFIRMED: Always run tests before committing, even for trivial changes
 ```
-User resolution required before either rule is applied or retained.
 
-**Per-agent mistake tracking** in `.maestro/state.local.md`:
-```yaml
-correction_stats:
-  implementer:
-    sonnet: { corrections: 4, patterns: ["null guard", "default exports"] }
-    haiku:  { corrections: 7, patterns: ["null guard", "barrel exports"] }
+## Operations
+
+### detect_signals(user_message, assistant_response)
+
+Scan a conversation turn for personality signals.
+
+1. Check `user_message` against correction signal patterns
+2. Check `user_message` against confirmation signal patterns
+3. For each match:
+   - Extract the trait description (what behavior is being corrected or confirmed)
+   - Determine signal type: `correction` | `confirmation`
+   - Assign confidence based on signal strength
+4. Return list of detected signals: `[{type, trait, confidence, raw_signal}]`
+
+### extract_trait(signal)
+
+Convert a raw signal into a clean, actionable trait description.
+
+1. Remove filler words ("like", "um", "you know")
+2. Normalize to imperative form for corrections: "don't add X" → "Never add X"
+3. Normalize to present-tense statement for confirmations: "that's the right way" → "Use [pattern] — confirmed by user"
+4. Trim to one sentence maximum
+5. Return the normalized trait string
+
+### append_to_soul(trait_entry, signal_type)
+
+Write a learned trait to SOUL.md.
+
+1. Read `.maestro/SOUL.md`
+2. Find the `## Learned Traits` section
+3. Check for a duplicate or near-duplicate trait (same subject):
+   - If exact match: skip (already recorded)
+   - If near-match (same subject, different wording): replace with newer entry
+4. Append the new entry in the correct format:
+   - Correction: `- [date] {trait} (source: "{raw_signal}")`
+   - Confirmation: `- [date] CONFIRMED: {trait}`
+5. Write updated file
+
+### check_promotion_threshold()
+
+Check if any correction has appeared enough times to be promoted to Decision Principles.
+
+1. Read all correction entries from `## Learned Traits`
+2. Group by subject (semantic similarity, not exact match)
+3. For any subject with 3 or more correction entries:
+   - Extract the core principle (the most recent, clearest statement)
+   - Format as a Decision Principle: `{N+1}. {principle}`
+   - Prompt user: `This correction has appeared 3 times. Promote to Decision Principle?`
+   - If confirmed:
+     - Add to `## Decision Principles` in SOUL.md
+     - Remove the individual correction entries from Learned Traits (consolidated)
+     - Log: `Promoted to principle: "{principle}"`
+
+### process_turn(user_message, assistant_response)
+
+Main entry point. Called after every conversation turn.
+
+1. Call `detect_signals(user_message, assistant_response)`
+2. If no signals detected, return (no-op — most turns have no signals)
+3. For each detected signal:
+   - Call `extract_trait(signal)`
+   - Call `append_to_soul(trait_entry, signal.type)`
+   - Also call `memory.save_semantic(trait, "user_preference", signal.confidence)` to sync with memory system
+4. After appending all new traits, call `check_promotion_threshold()`
+5. Return summary of changes (for logging, not for display):
+   ```
+   Learned: 1 correction, 0 confirmations
+   Traits total: 7
+   Promotions pending: 0
+   ```
+
+## SOUL.md Update Flow
+
 ```
-If a model accumulates 3+ corrections of the same pattern, delegation biases away from that model for stories likely to trigger it.
+User: "stop summarizing what you just did at the end of every response"
 
-## Skill Evolution
+detect_signals() → correction signal detected
+extract_trait()  → "Do not summarize completed actions at end of response"
+append_to_soul() → appends to ## Learned Traits
 
-When a correction identifies a missing instruction in a skill file:
+SOUL.md after update:
+  ## Learned Traits
+  - [2026-03-15] Do not summarize completed actions at end of response (source: "stop summarizing what you just did at the end of every response")
+```
 
-1. Match the correction to the relevant skill by phase and content area.
-2. Draft the addition as an imperative ("Always X", "Never Y", "When Z, do W").
-3. Propose to user if confidence < 0.8. Auto-apply if confidence >= 0.8.
-4. Append the instruction to the relevant checklist block.
-5. Append audit comment to the skill file and log to `.maestro/corrections.md` under `## Skill Modifications`.
+```
+User: "yes exactly, always check null before accessing nested properties"
+
+detect_signals() → confirmation signal detected
+extract_trait()  → "Always check for null before accessing nested properties"
+append_to_soul() → appends confirmed trait
+
+SOUL.md after update:
+  ## Learned Traits
+  - [2026-03-15] CONFIRMED: Always check for null before accessing nested properties
+```
+
+## Promotion Flow
+
+```
+Session 1: "don't use default exports"
+Session 3: "stop using default exports, I've said this before"
+Session 5: "no default exports, ever"
+
+check_promotion_threshold() detects 3 corrections on same subject
+
+→ Prompt: This correction appeared 3 times: "no default exports". Promote to Decision Principle?
+→ User confirms
+
+SOUL.md Decision Principles after promotion:
+  6. No default exports — always use named exports
+```
 
 ## Integration Points
 
-| Skill | Integration |
-|-------|-------------|
-| **dev-loop** | After Phase 5 QA verdict: `capture(verdict, source="qa_rejection")`. After Phase 4 self-heal fails 3x: `capture(error, source="self_heal_failure")`. |
-| **retrospective** | Each approved improvement candidate passes through `capture()` with `source="retrospective"` and the candidate's confidence score. Ensures retrospective learnings are written, not just noted. |
-| **memory** | `self-correct` calls `memory.save_semantic()` for confidence >= 0.7. Memory handles decay and retrieval weighting. Self-correct only writes. |
-| **delegation** | At dispatch time, reads `correction_stats` to bias model selection. A model with 3+ pattern corrections incurs one simplicity-signal penalty for relevant stories. |
+### In Dev-Loop (after every user message)
+
+```
+self_correct.process_turn(user_message, assistant_response)
+```
+
+### In SOUL Skill
+
+When `soul.inject()` is called, the Learned Traits section (populated by self-correct) is included in the SOUL context block automatically. No explicit coupling needed.
+
+### In Memory Skill
+
+After appending a trait, self-correct also calls `memory.save_semantic()` to keep the memory system in sync. The trait is saved under the `user_preference` category with the assigned confidence score.
+
+## What Self-Correct Does NOT Do
+
+- Does not modify Decision Principles without user confirmation (see promotion flow)
+- Does not delete traits (only replaces near-duplicates on the same subject)
+- Does not process signals from agent-to-agent messages — only from the user
+- Does not run on every token — only processes complete conversation turns
+- Does not retroactively scan conversation history — only processes turns as they happen
+
+## Error Handling
+
+| Error | Action |
+|-------|--------|
+| SOUL.md not found | Call `soul.initialize()` first, then retry |
+| Trait extraction returns empty string | Skip — do not append empty traits |
+| SOUL.md write fails | Log warning, continue (non-blocking) |
+| Promotion prompt times out | Skip promotion, re-check next session |
