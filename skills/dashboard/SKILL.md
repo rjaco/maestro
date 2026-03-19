@@ -144,3 +144,67 @@ Rules:
 - If `.maestro/services.yaml` is missing, skip the Services section with a `(i) services.yaml not found` note.
 - If `.maestro/spending-log.yaml` is missing, show `Spending: no data` in the Autonomy section.
 - If `.maestro/task-queue.yaml` is missing, show `No active task chains.` in the Task Chains section.
+
+## Context Budget Widget
+
+Display current context window usage prominently in the dashboard:
+
+```
+Context: 45K/200K tokens (22%) ████░░░░░░░░░░░░░░░░ 155K remaining
+```
+
+**Data source:** Run `scripts/context-check.sh --json` or parse the current session's JSONL file.
+
+**Display rules:**
+- Show a 20-char progress bar using █ (filled) and ░ (empty)
+- Color coding:
+  - Green (0-59%): Healthy
+  - Yellow (60-79%): Getting full
+  - Red (80-100%): Critical
+- At 80%+ usage, add warning: `(!) Consider /compact or /maestro checkpoint`
+- At 90%+ usage, add critical: `(!!) Compaction needed — context nearly full`
+
+**Format in dashboard:**
+```
+┌─ Context Budget ──────────────────────────────────┐
+│ Used: 45,200 / 200,000 tokens (22.6%)             │
+│ ████░░░░░░░░░░░░░░░░ 154,800 remaining            │
+│ Status: Healthy                                    │
+└───────────────────────────────────────────────────┘
+```
+
+**Integration in Combined Dashboard Display:**
+
+Include the Context Budget Widget between the header block and the Stories section:
+
+```
++---------------------------------------------+
+| Maestro Dashboard                           |
++---------------------------------------------+
+
+  Session: opus-aa-20260319
+  Phase:   validate > delegate > [IMPLEMENT 2m 14s]
+  Heartbeat: 45s ago (ok)
+
+┌─ Context Budget ──────────────────────────────────┐
+│ Used: 45,200 / 200,000 tokens (22.6%)             │
+│ ████░░░░░░░░░░░░░░░░ 154,800 remaining            │
+│ Status: Healthy                                    │
+└───────────────────────────────────────────────────┘
+
+  Stories:
+    ...
+```
+
+**Progress bar calculation:** `filled = floor(pct / 100 * 20)`, `empty = 20 - filled`. Concatenate `filled` copies of `█` and `empty` copies of `░`.
+
+**Status label mapping:**
+
+| Usage % | Status label | Display |
+|---------|-------------|---------|
+| 0–59% | Healthy | plain |
+| 60–79% | Getting full | plain |
+| 80–89% | Warning | `(!) Consider /compact or /maestro checkpoint` |
+| 90–100% | Critical | `(!!) Compaction needed — context nearly full` |
+
+**If context data is unavailable** (script not found, JSONL unreadable): show `Context: data unavailable` and skip the widget box.

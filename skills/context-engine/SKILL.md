@@ -414,6 +414,41 @@ Predicted (bypassing threshold): src/auth/session.ts (hit-rate: 0.92, relevance:
 
 **Threshold tuning:** After 10+ sessions, the orchestrator may adjust per-tier thresholds based on observed NEEDS_CONTEXT rates. If T3 packages frequently trigger NEEDS_CONTEXT, lower the T3 threshold toward 0.4. If T3 packages are frequently over budget, raise it toward 0.6. Log any threshold adjustments in `.maestro/memory/context-history.md` under a `## Threshold History` section.
 
+## Budget Awareness
+
+The Context Engine tracks token usage and adjusts context packaging to stay within budget.
+
+### Token Accounting
+
+Before each agent dispatch, estimate context cost:
+1. Read current session usage from `.maestro/logs/heartbeat.json` or session JSONL
+2. Estimate dispatch cost: story spec + context package + agent overhead
+3. If dispatch would push usage above 80%, warn orchestrator
+4. If dispatch would push usage above 90%, force context tier downgrade (T2→T3, T3→T4)
+
+### Budget Alerts
+
+| Usage Level | Action |
+|-------------|--------|
+| 0–59% | Normal operation |
+| 60–79% | Log: "Context budget getting full" |
+| 80–89% | Warn: force T3 context tier max, suggest /compact |
+| 90–100% | Critical: force T4, recommend checkpoint + new session |
+
+### Per-Story Budget Tracking
+
+Track per-story context consumption in state:
+```yaml
+story_context:
+  story_01: { dispatch: 4200, qa: 2100, total: 6300 }
+  story_02: { dispatch: 8400, qa: 3200, total: 11600 }
+```
+
+Show in checkpoint summaries:
+```
+Story 3/7: Frontend UI — Context: 6.3K tokens (this story) | 45.2K total (22%)
+```
+
 ## Integration Points
 
 - **Invoked by:** `delegation` skill (every agent dispatch)
