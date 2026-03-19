@@ -11,8 +11,8 @@
     "version": "1.4.0"
   },
   "stats": {
-    "skills": 138,
-    "commands": 43,
+    "skills": 161,
+    "commands": 51,
     "hooks": 16
   },
   "plugins": [
