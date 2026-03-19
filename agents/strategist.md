@@ -2,6 +2,7 @@
 name: maestro-strategist
 description: "Strategy agent for marketing, growth, and product positioning. Analyzes research findings and produces actionable strategy documents."
 model: opus
+effort: high
 ---
 
 # Strategist Agent

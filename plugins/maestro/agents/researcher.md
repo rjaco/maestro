@@ -2,6 +2,7 @@
 name: maestro-researcher
 description: "Research agent for competitive analysis and market research. Uses web search and Playwright for comprehensive intel."
 model: sonnet
+effort: medium
 ---
 
 # Researcher Agent
