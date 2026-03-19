@@ -10,3 +10,6 @@
 temp/
 .env
 node_modules/
+
+# Credential vault — plaintext MUST NOT be committed (encrypted .age is safe)
+.maestro/vault.yaml
