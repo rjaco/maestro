@@ -3,12 +3,21 @@ id: [milestone]-[number]
 slug: [kebab-case-title]
 title: "[Human-Readable Story Title]"
 type: [frontend|backend|integration|data|infrastructure|test]
+status: created
+execution_mode: interactive
 depends_on: []
 parallel_safe: [true|false]
 complexity: [simple|medium|complex]
 model_recommendation: [haiku|sonnet|opus]
 estimated_tokens: [number]
 ---
+
+## User Story
+
+As a [role], I want [action], so that [benefit].
+
+Example:
+> As a frontend developer, I want a paginated vehicle list endpoint, so that I can render the vehicle catalogue without loading all records at once.
 
 ## Task Description
 
@@ -19,16 +28,47 @@ Example:
 
 ## Acceptance Criteria
 
-[Each criterion must be specific and independently testable. Use BDD format. Include at least one error/edge-case scenario.]
+[Each criterion must be specific and independently testable. Use Gherkin format. Include at least one error/edge-case scenario.]
 
-1. Given [system precondition], when [action], then [verifiable outcome].
-2. Given [precondition 2], when [action 2], then [outcome 2].
-3. Given [error or edge case], when [action 3], then [expected error handling or boundary behavior].
+```gherkin
+Scenario: [Happy path]
+  GIVEN [system precondition]
+  WHEN [action]
+  THEN [verifiable outcome]
+
+Scenario: [Error or edge case]
+  GIVEN [error precondition]
+  WHEN [action]
+  THEN [expected error handling or boundary behavior]
+```
 
 Example:
-1. Given the database contains vehicle records, when `GET /api/v1/vehicles` is called, then it returns a 200 response with a JSON array of vehicle objects and a `total` count.
-2. Given an invalid `page` query parameter, when the endpoint is called, then it returns a 400 response with a descriptive error message.
-3. Given no records exist, when the endpoint is called, then it returns a 200 response with an empty array and `total: 0`.
+
+```gherkin
+Scenario: Paginated vehicle list
+  GIVEN the database contains vehicle records
+  WHEN GET /api/v1/vehicles is called with page=1&limit=10
+  THEN it returns 200 with a JSON array of up to 10 vehicle objects and a total count
+
+Scenario: Invalid pagination parameter
+  GIVEN a caller passes page=-1
+  WHEN GET /api/v1/vehicles is called
+  THEN it returns 400 with a descriptive error message
+
+Scenario: Empty dataset
+  GIVEN no vehicle records exist
+  WHEN GET /api/v1/vehicles is called
+  THEN it returns 200 with an empty array and total: 0
+```
+
+## Execution Mode
+
+<!-- Choose one and delete the others. Controls orchestrator behavior at CHECKPOINT phase. -->
+
+**interactive** (default) — Orchestrator pauses after each story for user review and direction.
+
+<!-- **yolo** — Auto-continue without interruption (0-1 prompts). Use for low-risk, high-confidence stories. -->
+<!-- **preflight** — Full static analysis + multi-reviewer QA before implementation begins. Use for complex or risky stories. -->
 
 ## Architecture Context
 
@@ -143,3 +183,40 @@ Example:
 - The endpoint must respond in under 200ms at p95 for up to 10,000 records.
 - Do not add new npm dependencies. Use only what is already in `package.json`.
 - This story scope ends at the API layer. Do NOT build the UI component — that is M2-S4.
+
+---
+
+## Dev Agent Record
+
+<!-- Filled in by the implementer agent during Phase 3: IMPLEMENT. Do not edit manually. -->
+
+```yaml
+agent: ~
+model: ~
+started_at: ~
+completed_at: ~
+status: ~           # DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED
+tests_passing: ~
+files_created: []
+files_modified: []
+concerns: []        # populated only when status is DONE_WITH_CONCERNS
+```
+
+---
+
+## QA Results
+
+<!-- Filled in by the QA reviewer agent during Phase 5: QA REVIEW. Do not edit manually. -->
+
+```yaml
+reviewer: ~
+model: ~
+verdict: ~          # APPROVED | REJECTED
+iteration: ~        # 1 = first review attempt
+findings: []        # each entry: { criterion, confidence, issue, suggestion }
+reviewed_at: ~
+```
+
+---
+
+<!-- Story lifecycle: created → validated → implementing → reviewing → done -->
