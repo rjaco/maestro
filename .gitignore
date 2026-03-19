@@ -6,5 +6,5 @@
 .maestro/recon/
 .maestro/sparc/
 .maestro/*.lock
-.claude/worktrees/
+.claude/
 temp/
