@@ -228,6 +228,37 @@ Note: Remaining stories include 3 QA-heavy reviews (opus). Forecast adjusted upw
 2. When any single story costs more than 2× the current average (cost spike detected).
 3. When the model assignment for a story changes from the default (e.g., escalated to opus due to complexity).
 
+## Real-Time Cost Display
+
+Show cost information at three levels:
+
+### Inline (in status)
+```
+  Cost: ~$1.24 spent | ~$3.80 projected | budget: $10.00
+```
+
+### Dashboard Panel
+```
+  +---------------------------------------------+
+  | Cost Tracker                                |
+  +---------------------------------------------+
+    Session:    $1.24 / $10.00 budget
+    Story avg:  $0.31 (3 complete)
+    Burn rate:  $0.09/min
+    Projected:  $3.80 total (38% of budget)
+    By model:
+      sonnet    $0.92  (74%)  ████████████░░░░
+      opus      $0.28  (23%)  ███░░░░░░░░░░░░░
+      haiku     $0.04   (3%)  ░░░░░░░░░░░░░░░░
+  +---------------------------------------------+
+```
+
+### Budget Warning Thresholds
+- 50%: `(i) Halfway through budget`
+- 75%: `(!) 75% of budget used`
+- 90%: `(x) 90% of budget used — consider pausing`
+- 100%: Auto-pause with notification
+
 ## Integration
 
 - Updated by dev-loop at CHECKPOINT phase
