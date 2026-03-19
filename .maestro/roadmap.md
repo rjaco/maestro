@@ -1,4 +1,16 @@
-# Opus Roadmap — Wave 6: The Grand Ultimate Tool
+# Opus Roadmap — Wave 7: Hook Coverage, Testing, DX Polish
+
+## Wave 7
+
+| Milestone | Stories | Status | Focus |
+|-----------|---------|--------|-------|
+| W7-M1 | 6 | executing | Hook coverage & zero-code wins |
+| W7-M2 | 4 | pending | Quality & testing |
+| W7-M3 | 4 | pending | Developer experience polish |
+
+**Total: 14 stories across 3 milestones**
+
+## Wave 6 (complete)
 
 | Milestone | Stories | Status | Focus |
 |-----------|---------|--------|-------|
@@ -8,9 +20,6 @@
 | M4 | 3 | ✓ complete | Enhanced SOUL & personality |
 | M5 | 4 | ✓ complete | Ruflo feature adoption (S17 deferred) |
 | M6 | 3 | ✓ complete | OpenClaw-inspired enhancements |
-
-**Total: 20 stories across 6 milestones — ALL COMPLETE**
-**Wave 6 completed: All 6 milestones (19 stories implemented, 1 deferred)**
 
 ---
 

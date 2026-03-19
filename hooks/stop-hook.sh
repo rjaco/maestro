@@ -120,9 +120,11 @@ if [[ -n "$TOKEN_SPEND" && "$TOKEN_SPEND" != "0" ]]; then
   echo "[MAESTRO] Session spend: ~${TOKEN_SPEND} tokens" >&2
 fi
 
-EVENT_COUNT=$(wc -l < ".maestro/logs/progress.jsonl" 2>/dev/null || echo 0)
-if [[ "$EVENT_COUNT" -gt 0 ]]; then
-  echo "[MAESTRO] Session events: ${EVENT_COUNT}" >&2
+if [[ -f ".maestro/logs/progress.jsonl" ]]; then
+  EVENT_COUNT=$(wc -l < ".maestro/logs/progress.jsonl" 2>/dev/null || echo 0)
+  if [[ "$EVENT_COUNT" -gt 0 ]]; then
+    echo "[MAESTRO] Session events: ${EVENT_COUNT}" >&2
+  fi
 fi
 
 # --- Extract prompt text (everything after closing ---) ---

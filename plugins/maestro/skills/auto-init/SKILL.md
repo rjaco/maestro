@@ -170,144 +170,6 @@ The DNA file will contain a scaffold with placeholders so the user knows what to
 
 ---
 
-## Project Type Detection
-
-Detection runs on init and auto-init. Check for marker files at the project root (root-level only — do not recurse for these markers):
-
-### Detection Priority
-
-Check in this order. Stop at the first match for the primary stack (unless monorepo rules apply):
-
-| Priority | Marker File(s) | Primary Stack |
-|----------|---------------|---------------|
-| 1 | `package.json` | Node.js / TypeScript |
-| 2 | `pyproject.toml` or `setup.py` | Python |
-| 3 | `Cargo.toml` | Rust |
-| 4 | `go.mod` | Go |
-| 5 | `Gemfile` | Ruby |
-| 6 | `pom.xml` or `build.gradle` | Java |
-| 7 | `composer.json` | PHP |
-| 8 | `Package.swift` | Swift |
-
-`requirements.txt` alone is a fallback Python signal when neither `pyproject.toml` nor `setup.py` is present.
-
-### Monorepo Detection
-
-If **multiple** marker files exist at the root, count source files per stack:
-
-- Count `.ts`/`.js` files for Node.js, `.py` for Python, `.rs` for Rust, `.go` for Go, `.rb` for Ruby, `.java`/`.kt` for Java, `.php` for PHP, `.swift` for Swift.
-- The stack with the **most source files** is the primary stack.
-- All other detected stacks are listed as secondary stacks in the DNA under `## Secondary Stacks`.
-
-### Smart Defaults per Type
-
-Each detected type populates the DNA template with pre-filled build, test, and lint commands, common directory patterns, and framework detection where applicable.
-
-#### Node.js / TypeScript
-
-Read `package.json` `scripts` block and use the values directly if present:
-
-| Field | Source | Fallback |
-|-------|--------|---------- |
-| Build | `scripts.build` | `npm run build` |
-| Test | `scripts.test` | `npm test` |
-| Lint | `scripts.lint` | `npm run lint` |
-
-Common patterns: source in `src/` or `app/`, tests in `__tests__/` or alongside source as `*.test.ts`.
-
-Framework detection: scan `dependencies` and `devDependencies` per the table in Step 2.
-
-#### Python
-
-Detect tooling from `pyproject.toml` `[tool.*]` sections or `requirements.txt` / `setup.py` contents:
-
-| Field | Detection | Default |
-|-------|-----------|---------|
-| Test | `pytest` in deps or `[tool.pytest*]` in pyproject | `pytest` |
-| Lint | `ruff` in deps or `[tool.ruff]` in pyproject | `ruff check .` |
-| Format | `black` in deps or `[tool.black]` in pyproject | `black .` |
-| Build | `[build-system]` in pyproject | `python -m build` |
-
-Common patterns: source package in a directory matching the project name or `src/`, tests in `tests/` or `test/`.
-
-Framework detection: scan deps for `django`, `fastapi`, `flask`, `starlette`.
-
-#### Rust
-
-| Field | Command |
-|-------|---------|
-| Build | `cargo build` |
-| Test | `cargo test` |
-| Lint | `cargo clippy` |
-
-Common patterns: source in `src/`, integration tests in `tests/`, benchmarks in `benches/`.
-
-Framework detection: scan `[dependencies]` in `Cargo.toml` for `axum`, `actix-web`, `rocket`, `warp`.
-
-#### Go
-
-| Field | Command |
-|-------|---------|
-| Build | `go build ./...` |
-| Test | `go test ./...` |
-| Lint | `golangci-lint run` |
-
-Common patterns: packages in root or `internal/`, `cmd/` for entry points, test files as `*_test.go` alongside source.
-
-Framework detection: scan `go.mod` `require` block for `github.com/gin-gonic/gin`, `github.com/labstack/echo`, `github.com/gofiber/fiber`.
-
-#### Ruby
-
-| Field | Command |
-|-------|---------|
-| Build | N/A |
-| Test | `bundle exec rspec` |
-| Lint | `rubocop` |
-
-Common patterns: source in `lib/`, tests in `spec/`, app code in `app/` (Rails).
-
-Framework detection: scan `Gemfile` for `gem 'rails'` (Rails), `gem 'sinatra'` (Sinatra), `gem 'hanami'` (Hanami).
-
-#### Java
-
-Distinguish Maven vs Gradle by which marker file is present (`pom.xml` → Maven, `build.gradle` or `build.gradle.kts` → Gradle):
-
-| Field | Maven | Gradle |
-|-------|-------|--------|
-| Build | `mvn package` | `gradle build` |
-| Test | `mvn test` | `gradle test` |
-| Lint | N/A | N/A |
-
-Common patterns: source in `src/main/java/`, tests in `src/test/java/`.
-
-Framework detection: scan `pom.xml` dependencies or `build.gradle` for `spring-boot`, `quarkus`, `micronaut`.
-
-#### PHP
-
-| Field | Command |
-|-------|---------|
-| Build | N/A |
-| Test | `./vendor/bin/phpunit` |
-| Lint | `./vendor/bin/phpstan analyse` |
-
-Common patterns: source in `src/`, tests in `tests/`, config in `config/`.
-
-Framework detection: scan `composer.json` `require` for `laravel/framework` (Laravel), `symfony/symfony` or `symfony/framework-bundle` (Symfony), `slim/slim` (Slim).
-
-#### Swift
-
-| Field | Command |
-|-------|---------|
-| Build | `swift build` |
-| Test | `swift test` |
-| Lint | `swiftlint` |
-
-Common patterns: source in `Sources/`, tests in `Tests/`, package manifest at `Package.swift`.
-
-Framework detection: scan `Package.swift` dependencies for `vapor` (Vapor), `hummingbird` (Hummingbird).
-
----
-
 ## Output: Minimal DNA File
 
 Write `.maestro/dna.md`. Create `.maestro/` directory first if it does not exist.
@@ -335,20 +197,10 @@ Write `.maestro/dna.md`. Create `.maestro/` directory first if it does not exist
 
 [list of top-level directories with their classified layer]
 
-## Build & Tooling
-
-- **Build command:** [detected build command, or N/A]
-- **Test command:** [detected test command, or N/A]
-- **Lint command:** [detected lint command, or N/A]
-
 ## Testing
 
 - **Framework:** [detected test runner]
-- **Run command:** [same as test command above]
-
-## Common Patterns
-
-- [detected source layout, e.g. "source in src/, tests in __tests__/"]
+- **Run command:** [test script from package.json, or standard command for the language]
 
 ## Conventions
 
@@ -445,6 +297,12 @@ Check if `.maestro/dna.md` exists. If not, invoke the auto-init skill to
 generate a minimal DNA file from the current project structure. This is
 silent and fast. Continue immediately after — do not pause or prompt.
 ```
+
+---
+
+## Step: Generate agents.md After State Initialization
+
+After writing `.maestro/state.md`, invoke the agents-md skill to generate an `agents.md` file at the project root. This makes Maestro's agents visible to Cursor, Windsurf, Copilot, and Codex.
 
 ---
 
