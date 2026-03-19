@@ -44,9 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - HTTP hooks + MCP elicitation + plugin data persistence
 
 ### Changed
-- Skills: 109 → 128+ (19+ new skills)
-- Hook scripts: 8 → 11 (TeammateIdle, TaskCompleted, prompt injection)
-- Templates: 11 → 12
+- Skills: 109 → 138 (29 new skills)
+- Commands: 25 → 43 (18 new commands)
+- Hook scripts: 11 → 19 (8 new hooks)
+- Hook events: 8 → 16 (8 new events)
+- Templates: 12 → 13
 - Self-test: 12/12 passing
 - Mirror: perfectly synced
 
@@ -246,7 +248,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Marketing automation with A/B testing framework
 - Scenario planning with sensitivity analysis
 
-[Unreleased]: https://github.com/anthropics/maestro-orchestrator/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/anthropics/maestro-orchestrator/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/anthropics/maestro-orchestrator/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/anthropics/maestro-orchestrator/releases/tag/v1.0.0
+[Unreleased]: https://github.com/rjaco/maestro-orchestrator/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/rjaco/maestro-orchestrator/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/rjaco/maestro-orchestrator/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/rjaco/maestro-orchestrator/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/rjaco/maestro-orchestrator/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/rjaco/maestro-orchestrator/releases/tag/v1.0.0

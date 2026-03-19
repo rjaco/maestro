@@ -15,7 +15,7 @@
 
 ---
 
-## Commands (42)
+## Commands (43)
 
 | Command | Usage | What It Does |
 |---------|-------|-------------|
@@ -62,7 +62,7 @@
 
 ---
 
-## Orchestration Skills (128)
+## Orchestration Skills (138)
 
 ### Core Orchestration
 
@@ -376,4 +376,4 @@ Auto-downgrade saves ~70% on token costs by routing simple tasks to cheaper mode
 
 ---
 
-*Last updated: 2026-03-18 | 101 skills, 26 commands, 11 scripts, 6 agents, 11 profiles*
+*Last updated: 2026-03-19 | 138 skills, 43 commands, 22 scripts, 6 agents, 11 profiles, 7 squads*
