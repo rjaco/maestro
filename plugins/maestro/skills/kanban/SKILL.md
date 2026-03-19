@@ -179,6 +179,84 @@ if config.integrations.kanban.sync_enabled:
 
 All kanban operations are non-blocking — if they fail, the dev-loop continues. Kanban is an enhancement, not a dependency.
 
+## Graceful Degradation
+
+Kanban operations require an MCP server for Asana, Jira, and Linear. GitHub provider uses the `gh` CLI, which is always available. This section documents detection, fallback behavior, and user guidance for each provider.
+
+### Detection
+
+Before invoking provider-specific operations, probe for the required tool using a ToolSearch call:
+
+| Provider | Probe Query | Required Tool Pattern |
+|----------|-------------|----------------------|
+| `asana` | `"asana"` | `mcp__asana__*` |
+| `jira` | `"jira atlassian"` | `mcp__atlassian__*` or `mcp__jira__*` |
+| `linear` | `"linear"` | `mcp__linear__*` |
+| `github` | *(always available)* | `gh` CLI |
+
+If the ToolSearch probe returns no matching tools for the configured provider, fall back immediately — do not attempt to call MCP tools that are not present.
+
+### Fallback Behavior
+
+When the required MCP server is not detected:
+
+1. **Warn once** at the start of the session (not on every operation).
+2. **Fall back to GitHub Issues** using `gh` CLI for story tracking, if `provider: github` is a viable substitute.
+3. **Skip silently** if GitHub Issues is also not appropriate (e.g., user is on a non-GitHub repo). All kanban operations become no-ops for the session.
+4. **Never block the dev-loop.** The Kanban skill is an enhancement — missing MCP access must not prevent story implementation from proceeding.
+
+### User Guidance Messages
+
+Display these messages when the MCP server is not detected (once per session, in the pre-story sync phase):
+
+**Asana MCP not detected:**
+```
+(!) Asana MCP not detected. Kanban sync is disabled for this session.
+    Install with: npx @modelcontextprotocol/create-server asana
+    Or configure a different provider in .maestro/config.yaml
+    Falling back to: no kanban sync (stories tracked in .maestro/stories/ only)
+```
+
+**Jira MCP not detected:**
+```
+(!) Jira (Atlassian) MCP not detected. Kanban sync is disabled for this session.
+    Install with: npx @modelcontextprotocol/create-server atlassian
+    Or configure a different provider in .maestro/config.yaml
+    Falling back to: no kanban sync (stories tracked in .maestro/stories/ only)
+```
+
+**Linear MCP not detected:**
+```
+(!) Linear MCP not detected. Kanban sync is disabled for this session.
+    Install with: npx @modelcontextprotocol/create-server linear
+    Or configure a different provider in .maestro/config.yaml
+    Falling back to: no kanban sync (stories tracked in .maestro/stories/ only)
+```
+
+**GitHub CLI not available (fallback also unavailable):**
+```
+(!) gh CLI not found. GitHub Issues fallback is also unavailable.
+    Install GitHub CLI: https://cli.github.com
+    Kanban sync is disabled for this session.
+```
+
+### Degraded Mode Behavior Summary
+
+| Provider Configured | MCP Available | gh Available | Result |
+|--------------------|---------------|--------------|--------|
+| `github` | — | Yes | Full sync via gh CLI |
+| `github` | — | No | Warn once, no-op |
+| `asana` | Yes | — | Full sync via Asana MCP |
+| `asana` | No | Yes | Warn once, no-op (no auto-fallback to GitHub) |
+| `asana` | No | No | Warn once, no-op |
+| `jira` | Yes | — | Full sync via Atlassian MCP |
+| `jira` | No | — | Warn once, no-op |
+| `linear` | Yes | — | Full sync via Linear MCP |
+| `linear` | No | — | Warn once, no-op |
+| `null` / unset | — | — | Silent no-op (no warning) |
+
+The provider is never auto-switched. If the user configured `asana` and the MCP is missing, Maestro warns and degrades — it does not silently change their provider setting.
+
 ## Configuration
 
 In `.maestro/config.yaml`:

@@ -283,3 +283,69 @@ if config.integrations.knowledge_base.sync_enabled:
 | Save fails | Log warning, continue (non-blocking) |
 
 All brain operations are non-blocking — the dev-loop never stops because of a knowledge base issue.
+
+## Graceful Degradation
+
+Brain operations require an MCP server for Notion and direct file access for Obsidian. This section documents detection, fallback behavior, and user guidance when providers are unavailable.
+
+### Detection
+
+Before invoking provider-specific operations, probe for the required tool or binary:
+
+| Provider | Detection Method | Required |
+|----------|-----------------|----------|
+| `obsidian` | Check vault path exists and is readable (file I/O — no MCP required) | Vault directory accessible |
+| `notion` | ToolSearch probe with query `"notion"`, look for `mcp__notion__*` tools | Notion MCP server |
+
+For Notion, run the ToolSearch probe once at session start. If no `mcp__notion__*` tools are found, fall back immediately.
+
+For Obsidian, check that `integrations.knowledge_base.vault_path` exists on disk. If the path is missing or unreadable, fall back.
+
+### Fallback Behavior
+
+When a provider is unavailable:
+
+1. **Warn once** at session start — not on every operation.
+2. **Skip all brain operations** for the session: no `save`, no `search`, no `inject_context`, no `session_summary`.
+3. **Never block the dev-loop.** The brain skill is a knowledge enhancement — missing access must not interrupt story implementation.
+4. **Context injection** (`inject_context`) silently returns empty — agents receive no knowledge base context but proceed normally.
+
+### User Guidance Messages
+
+Display these messages at session start when the provider is not detected (once per session):
+
+**Notion MCP not detected:**
+```
+(!) Notion MCP not detected. Second brain sync is disabled for this session.
+    Install with: npx @modelcontextprotocol/create-server notion
+    Or switch to Obsidian: set integrations.knowledge_base.provider: obsidian in .maestro/config.yaml
+    Falling back to: no knowledge base sync (context injection and saves are disabled)
+```
+
+**Obsidian vault path not accessible:**
+```
+(!) Obsidian vault not found at: [vault_path]
+    Second brain sync is disabled for this session.
+    To fix: update integrations.knowledge_base.vault_path in .maestro/config.yaml
+    Or run: /maestro brain connect obsidian
+    Falling back to: no knowledge base sync (context injection and saves are disabled)
+```
+
+**No provider configured (first-time setup hint):**
+```
+(i) No second brain configured. Knowledge base sync is disabled.
+    To enable: run /maestro brain connect
+    Supported providers: obsidian (file-based), notion (MCP)
+```
+
+### Degraded Mode Behavior Summary
+
+| Provider Configured | Available | Result |
+|--------------------|-----------|--------|
+| `notion` | Yes (MCP detected) | Full brain sync |
+| `notion` | No (MCP missing) | Warn once, all operations no-op |
+| `obsidian` | Yes (vault path readable) | Full brain sync |
+| `obsidian` | No (path missing/unreadable) | Warn once, all operations no-op |
+| `null` / unset | — | Silent no-op (no warning) |
+
+The provider is never auto-switched. If the user configured `notion` and the MCP is missing, Maestro warns and degrades — it does not redirect saves to Obsidian without explicit user reconfiguration.
