@@ -1,0 +1,13 @@
+name: "backend"
+description: "Backend focus — API tests, security review, skip preview"
+mode: checkpoint
+default_model: sonnet
+qa_model: opus
+enable_multi_review: true
+enable_preview: false
+enable_lighthouse: false
+enable_explain_mode: false
+quality_gates:
+  tsc: true
+  lint: true
+  tests: true

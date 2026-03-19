@@ -1,0 +1,13 @@
+name: "speed"
+description: "Maximum speed — yolo mode, cheaper models, skip optional checks"
+mode: yolo
+default_model: haiku
+qa_model: sonnet
+enable_multi_review: false
+enable_preview: false
+enable_lighthouse: false
+enable_explain_mode: false
+quality_gates:
+  tsc: true
+  lint: true
+  tests: true

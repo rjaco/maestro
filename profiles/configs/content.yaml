@@ -1,0 +1,13 @@
+name: "content"
+description: "Content focus — output contracts, SEO validation, readability checks"
+mode: checkpoint
+default_model: sonnet
+qa_model: sonnet
+enable_multi_review: false
+enable_preview: true
+enable_lighthouse: true
+enable_explain_mode: false
+quality_gates:
+  tsc: false
+  lint: true
+  tests: false

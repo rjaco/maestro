@@ -452,10 +452,10 @@ The DNA template:
 
 Delegate to the `steering` skill to create the four persistent steering files in `.maestro/steering/`:
 
-- **product.md** — Seed the vision section from the user's free-text description (Step 1). Leave personas, success metrics, and non-goals as `[TODO: fill in]` placeholders.
-- **structure.md** — Auto-populate directory layout from the DNA scan. Leave module boundaries and data flow as `[TODO: fill in]`.
-- **tech.md** — Auto-populate the stack table and key dependencies from `package.json` and detected files. Leave rationale, performance constraints, security requirements, and API conventions as `[TODO: fill in]`.
-- **standards.md** — Auto-populate linting rules from `.eslintrc` or `eslint.config.*` if present. Leave coverage target, review process, and deployment constraints as `[TODO: fill in]`.
+- **product.md** — Seed the vision section from the user's free-text description (Step 1). For personas, success metrics, and non-goals that cannot be inferred, use "Not configured — run /maestro preferences to set".
+- **structure.md** — Auto-populate directory layout from the DNA scan. For module boundaries and data flow that cannot be inferred, use "Not configured — run /maestro preferences to set".
+- **tech.md** — Auto-populate the stack table and key dependencies from `package.json` and detected files. For rationale, performance constraints, security requirements, and API conventions that cannot be inferred, use "Not configured — run /maestro preferences to set".
+- **standards.md** — Auto-populate linting rules from `.eslintrc` or `eslint.config.*` if present. For coverage target, review process, and deployment constraints that cannot be inferred, use "Not configured — run /maestro preferences to set".
 
 After creating the files, note which sections need user input (displayed in Step 5).
 
@@ -681,7 +681,7 @@ Use AskUserQuestion:
   1. label: "Yes, create CLAUDE.md", description: "Start from inferred conventions — edit afterward"
   2. label: "Skip", description: "I'll create it manually"
 
-If they choose yes, create a minimal `CLAUDE.md` pre-filled with the conventions and patterns detected during the scan, with clear `[TODO]` markers for anything that could not be inferred.
+If they choose yes, create a minimal `CLAUDE.md` pre-filled with the conventions and patterns detected during the scan. For anything that could not be inferred, use "Not configured — run /maestro preferences to set" rather than leaving a placeholder.
 
 ### Post-Init: Development Branch
 

@@ -1,0 +1,13 @@
+name: "default"
+description: "Balanced settings — checkpoint mode, sonnet default, multi-review enabled"
+mode: checkpoint
+default_model: sonnet
+qa_model: opus
+enable_multi_review: true
+enable_preview: false
+enable_lighthouse: false
+enable_explain_mode: auto
+quality_gates:
+  tsc: true
+  lint: true
+  tests: true
