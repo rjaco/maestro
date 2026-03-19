@@ -7,6 +7,7 @@
 
 | File | Subject | Coverage |
 |------|---------|----------|
+| `research/wave8-intel.md` | **Wave 8 planning** | Claude Code v2.1.x gaps, OpenClaw vs Maestro post-Wave7, parallel spawning patterns, multi-repo coordination, functional hook testing, prioritized feature list |
 | `research/ruflo.md` | Ruflo v3.5 full profile | Architecture, 60+ agents, MCP tools, SPARC, workers, consensus, memory, stream chaining, SWE-bench |
 | `research/ruflo-gaps.md` | Ruflo features Maestro lacks | 20 patterns with gap analysis and priority ranking |
 | `research/ruflo-sparc-workers-knowledge-graph.md` | Ruflo deep-dives | SPARC phases, scout agents, production validators, TDD, consensus protocols, Agent Booster, knowledge graph, claims, anti-drift, 12 workers reconciliation |

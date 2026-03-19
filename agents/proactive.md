@@ -3,7 +3,12 @@ name: maestro-proactive
 description: "Background agent for scheduled monitoring tasks. Runs health checks, processes notes, generates briefings. Dispatched by the scheduler skill."
 model: haiku
 memory: project
+<<<<<<< HEAD
 effort: low
+=======
+maxTurns: 5
+disallowedTools: [Write, Edit]
+>>>>>>> worktree-agent-ae55d890
 ---
 
 # Proactive Agent

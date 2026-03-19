@@ -3,7 +3,12 @@ name: maestro-implementer
 description: "Senior developer agent that implements stories using TDD. Dispatched by dev-loop for each story. Reports status: DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, or BLOCKED."
 model: sonnet
 memory: project
+<<<<<<< HEAD
 effort: medium
+=======
+maxTurns: 50
+disallowedTools: []
+>>>>>>> worktree-agent-ae55d890
 ---
 
 # Implementer Agent
