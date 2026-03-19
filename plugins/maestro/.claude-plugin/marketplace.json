@@ -3,17 +3,36 @@
   "name": "maestro-orchestrator",
   "description": "Full-stack autonomous development orchestrator for Claude Code",
   "owner": {
+<<<<<<< HEAD
     "name": "Maestro Contributors"
   },
   "metadata": {
     "description": "Build features with /maestro, entire products with /maestro magnum-opus. Kanban integration, second brain, session memory, notifications, and visual dashboards.",
     "version": "1.2.0"
+=======
+    "name": "Maestro Contributors",
+    "url": "https://github.com/rjaco/maestro-orchestrator"
+  },
+  "metadata": {
+    "description": "Build features with /maestro, entire products with /maestro opus. Kanban integration, second brain, session memory, notifications, and visual dashboards.",
+    "version": "1.1.0"
+  },
+  "stats": {
+    "skills": 138,
+    "commands": 44,
+    "hooks": 12
+>>>>>>> 88681eb (docs: add companion section to README + fix marketplace.json)
   },
   "plugins": [
     {
       "name": "maestro",
+<<<<<<< HEAD
       "description": "Full-stack autonomous development orchestrator with kanban (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), session memory, notifications, and visual dashboards. Build features with /maestro, entire products with /maestro magnum-opus.",
       "version": "1.2.0",
+=======
+      "description": "Full-stack autonomous development orchestrator with kanban (Asana, Jira, Linear, GitHub), second brain (Obsidian, Notion), session memory, notifications, and visual dashboards. Build features with /maestro, entire products with /maestro opus.",
+      "version": "1.1.0",
+>>>>>>> 88681eb (docs: add companion section to README + fix marketplace.json)
       "author": {
         "name": "Maestro Contributors"
       },
