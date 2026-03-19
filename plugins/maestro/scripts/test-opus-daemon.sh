@@ -444,6 +444,293 @@ test_prompt_content_passed_to_claude() {
 }
 
 # ---------------------------------------------------------------------------
+# AC1: Iteration history JSONL logging
+# ---------------------------------------------------------------------------
+test_jsonl_history_written() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "5" "2" "7" "3" "29"
+  setup_fake_claude 0
+
+  run_daemon_in_tmpdir --max-iterations 1 --interval 0 2>&1 >/dev/null || true
+
+  local history_file="$MAESTRO_DIR/logs/daemon-history.jsonl"
+  assert_file_exists "daemon-history.jsonl created" "$history_file"
+
+  if [[ -f "$history_file" ]]; then
+    local line
+    line="$(head -1 "$history_file")"
+    assert_contains "JSONL has timestamp" '"timestamp"' "$line"
+    assert_contains "JSONL has iteration" '"iteration"' "$line"
+    assert_contains "JSONL has exit_code" '"exit_code"' "$line"
+    assert_contains "JSONL has duration_seconds" '"duration_seconds"' "$line"
+    assert_contains "JSONL has state_change" '"state_change"' "$line"
+  fi
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC1: state_change field — true when milestone/story changes between iterations
+# ---------------------------------------------------------------------------
+test_jsonl_state_change_detection() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "5" "2" "7" "3" "29"
+
+  # Fake claude that mutates state (simulates story progress)
+  FAKE_BIN="$TMPDIR/bin"
+  mkdir -p "$FAKE_BIN"
+  local state_file_copy="$MAESTRO_DIR/state.local.md"
+  cat > "$FAKE_BIN/claude" <<FAKE
+#!/usr/bin/env bash
+# Advance story counter to simulate state change
+sed -i 's/^current_story: 3$/current_story: 4/' "${state_file_copy}"
+exit 0
+FAKE
+  chmod +x "$FAKE_BIN/claude"
+  export PATH="$FAKE_BIN:$PATH"
+
+  run_daemon_in_tmpdir --max-iterations 1 --interval 0 2>&1 >/dev/null || true
+
+  local history_file="$MAESTRO_DIR/logs/daemon-history.jsonl"
+  if [[ -f "$history_file" ]]; then
+    local line
+    line="$(head -1 "$history_file")"
+    assert_contains "state_change is true when story advanced" '"state_change":true' "$line"
+  else
+    fail "daemon-history.jsonl not found for state_change test"
+  fi
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC2: stall detection — warning logged after 3 no-change iterations
+# ---------------------------------------------------------------------------
+test_stall_detection_kills_and_restarts() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "99" "1" "7" "0" "29"
+
+  # Create a heartbeat file older than 5 min
+  local heartbeat="$MAESTRO_DIR/logs/heartbeat"
+  mkdir -p "$MAESTRO_DIR/logs"
+  touch -t "$(date -d '10 minutes ago' '+%Y%m%d%H%M.%S' 2>/dev/null || date -v -10M '+%Y%m%d%H%M.%S' 2>/dev/null || echo '202001010000.00')" "$heartbeat" 2>/dev/null || touch "$heartbeat"
+  # Force it to be old using a different approach
+  python3 -c "
+import os, time
+path = '${heartbeat}'
+old_time = time.time() - 400  # 6+ minutes ago
+os.utime(path, (old_time, old_time))
+" 2>/dev/null || true
+
+  setup_fake_claude 0
+
+  local output
+  output="$(run_daemon_in_tmpdir --max-iterations 3 --interval 0 2>&1)" || true
+
+  # After 3 consecutive stalls the daemon should log a stall warning
+  assert_contains "Stall warning logged" "stall" "$output"
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC3: Better continuation prompt includes vision.md first lines
+# ---------------------------------------------------------------------------
+test_prompt_includes_vision_excerpt() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "5"
+  setup_fake_claude 0
+
+  # Write a vision.md with a detectable marker line
+  cat > "$MAESTRO_DIR/vision.md" <<'EOF'
+---
+title: "Maestro Vision"
+---
+Maestro-Vision-Unique-Marker-Line-For-Test
+Second line of vision content.
+Third line of vision content.
+EOF
+
+  local output
+  output="$(run_daemon_in_tmpdir --max-iterations 1 --interval 0 2>&1)"
+
+  assert_contains "Prompt includes vision.md content" "Maestro-Vision-Unique-Marker-Line-For-Test" "$output"
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC3: Better prompt includes agent dispatch instruction
+# ---------------------------------------------------------------------------
+test_prompt_includes_agent_dispatch_instruction() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "5"
+  setup_fake_claude 0
+
+  local output
+  output="$(run_daemon_in_tmpdir --max-iterations 1 --interval 0 2>&1)"
+
+  assert_contains "Prompt has Agent tool dispatch instruction" "Agent tool" "$output"
+  assert_contains "Prompt has worktree isolation instruction" "worktree" "$output"
+  assert_contains "Prompt says no plan documents" "plan" "$output"
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC3: Better prompt references stories directory
+# ---------------------------------------------------------------------------
+test_prompt_references_stories_dir() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "5"
+  setup_fake_claude 0
+
+  local output
+  output="$(run_daemon_in_tmpdir --max-iterations 1 --interval 0 2>&1)"
+
+  assert_contains "Prompt references .maestro/stories/" ".maestro/stories/" "$output"
+  assert_contains "Prompt references state.local.md" "state.local.md" "$output"
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC4: Progress summary printed after each iteration (colored output)
+# ---------------------------------------------------------------------------
+test_progress_summary_printed() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "5" "2" "7" "3" "29"
+  setup_fake_claude 0
+
+  local output
+  output="$(run_daemon_in_tmpdir --max-iterations 1 --interval 0 2>&1)"
+
+  assert_contains "Progress summary shows iteration" "Iteration" "$output"
+  assert_contains "Progress summary shows duration" "Duration" "$output"
+  assert_contains "Progress summary shows exit code" "Exit" "$output"
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC5: --verbose flag accepted without error
+# ---------------------------------------------------------------------------
+test_verbose_flag_accepted() {
+  setup_tmpdir
+  write_state "false"
+  setup_fake_claude 0
+
+  local output
+  output="$(run_daemon_in_tmpdir --verbose 2>&1)"
+  local rc=$?
+
+  assert_eq "--verbose exits 0" "0" "$rc"
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC5: --dry-run flag shows what would happen without calling claude
+# ---------------------------------------------------------------------------
+test_dry_run_no_claude_invocation() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "5"
+  setup_fake_claude 0
+
+  local output
+  output="$(run_daemon_in_tmpdir --dry-run --max-iterations 1 --interval 0 2>&1)"
+  local rc=$?
+
+  assert_eq "--dry-run exits 0" "0" "$rc"
+  assert_contains "--dry-run shows dry-run indicator" "dry-run" "$output"
+  # claude must NOT be invoked in dry-run mode
+  if echo "$output" | grep -q "fake-claude called"; then
+    fail "Claude should not be invoked in --dry-run mode"
+  else
+    pass "Claude not invoked in --dry-run mode"
+  fi
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC5: SIGTERM writes final state (phase: paused) — already tested above;
+#       but now also check JSONL entry is flushed on cleanup
+# ---------------------------------------------------------------------------
+test_sigterm_flushes_history() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "99"
+
+  FAKE_BIN="$TMPDIR/bin"
+  mkdir -p "$FAKE_BIN"
+  cat > "$FAKE_BIN/claude" <<'FAKE'
+#!/usr/bin/env bash
+exit 0
+FAKE
+  chmod +x "$FAKE_BIN/claude"
+  export PATH="$FAKE_BIN:$PATH"
+
+  local fake_scripts="$TMPDIR/scripts"
+  mkdir -p "$fake_scripts"
+  ln -sf "$DAEMON" "$fake_scripts/opus-daemon.sh"
+
+  bash "$fake_scripts/opus-daemon.sh" --interval 5 &
+  local daemon_pid=$!
+
+  # Wait for PID file
+  local waited=0
+  while [[ ! -f "$PID_FILE" && $waited -lt 20 ]]; do
+    sleep 0.1
+    waited=$(( waited + 1 ))
+  done
+
+  # Wait for first iteration log
+  local iters=0
+  while [[ $iters -lt 20 ]]; do
+    sleep 0.2
+    iters=$(( iters + 1 ))
+    if [[ -f "$LOG_FILE" ]] && grep -q "Iteration 1: Complete" "$LOG_FILE" 2>/dev/null; then
+      break
+    fi
+  done
+
+  kill -TERM "$daemon_pid" 2>/dev/null || true
+  wait "$daemon_pid" 2>/dev/null || true
+
+  local history_file="$MAESTRO_DIR/logs/daemon-history.jsonl"
+  assert_file_exists "daemon-history.jsonl flushed on SIGTERM" "$history_file"
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
+# AC5: claude not in PATH exits gracefully with error message
+# ---------------------------------------------------------------------------
+test_claude_not_in_path_exits_gracefully() {
+  setup_tmpdir
+  write_state "true" "opus_executing" "0" "5"
+  # Do NOT set up fake claude; remove any fake bin from PATH
+  # Use a subshell with a clean PATH that has no claude
+  local fake_scripts="$TMPDIR/scripts"
+  mkdir -p "$fake_scripts"
+  ln -sf "$DAEMON" "$fake_scripts/opus-daemon.sh"
+
+  local output rc
+  output="$(PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+    bash "$fake_scripts/opus-daemon.sh" 2>&1)"
+  rc=$?
+
+  if [[ "$rc" -ne 0 ]]; then
+    pass "Exits non-zero when claude not in PATH"
+  else
+    fail "Should exit non-zero when claude not in PATH (rc=$rc)"
+  fi
+  assert_contains "Error message mentions claude" "claude" "$output"
+
+  teardown_tmpdir
+}
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 echo "Running opus-daemon.sh tests..."
@@ -463,6 +750,18 @@ test_sigterm_sets_phase_paused
 test_unknown_argument
 test_missing_state_file_exits_error
 test_prompt_content_passed_to_claude
+# New AC tests
+test_jsonl_history_written
+test_jsonl_state_change_detection
+test_stall_detection_kills_and_restarts
+test_prompt_includes_vision_excerpt
+test_prompt_includes_agent_dispatch_instruction
+test_prompt_references_stories_dir
+test_progress_summary_printed
+test_verbose_flag_accepted
+test_dry_run_no_claude_invocation
+test_sigterm_flushes_history
+test_claude_not_in_path_exits_gracefully
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

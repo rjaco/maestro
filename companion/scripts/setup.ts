@@ -16,7 +16,36 @@ const ENV_PATH = resolve(ROOT, '.env')
 
 const rl = createInterface({ input: process.stdin, output: process.stdout })
 const ask = (q: string): Promise<string> => new Promise(r => rl.question(q, r))
-const askSecret = (q: string): Promise<string> => ask(q) // TODO: mask input
+const askSecret = (q: string): Promise<string> => new Promise(r => {
+  const rl2 = createInterface({ input: process.stdin, output: process.stdout })
+  process.stdout.write(q)
+  const stdin = process.stdin
+  if (typeof stdin.setRawMode === 'function') {
+    stdin.setRawMode(true)
+    stdin.resume()
+    let buf = ''
+    const onData = (ch: Buffer) => {
+      const c = ch.toString()
+      if (c === '\n' || c === '\r') {
+        stdin.setRawMode(false)
+        stdin.removeListener('data', onData)
+        process.stdout.write('\n')
+        rl2.close()
+        r(buf)
+      } else if (c === '\u007F' || c === '\b') {
+        buf = buf.slice(0, -1)
+        process.stdout.write('\b \b')
+      } else {
+        buf += c
+        process.stdout.write('*')
+      }
+    }
+    stdin.on('data', onData)
+  } else {
+    // Fallback for non-TTY environments
+    rl2.question('', (answer) => { rl2.close(); r(answer) })
+  }
+})
 
 console.log(`
   ╔══════════════════════════════════════╗

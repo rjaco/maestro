@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Wave 5: Ultimate Development Tool (Ruflo + AioX-Inspired)
+- Consensus mechanisms skill — weighted voting, quorum checks, conflict resolution for multi-agent decisions
+- Anti-drift verification skill — post-task goal alignment at story, milestone, and vision levels
+- Knowledge graph skill — PageRank-based codebase analysis for smarter context composition
+- Claims system skill — human-agent override protocol with learning from corrections
+- Token optimization enhancements — per-story cost tracking, cost-per-LOC, cache-friendly context ordering
+- Enhanced health dashboard — box-drawing, color coding, sparklines, responsive terminal UI
+- StatusLine integration — real-time Maestro progress in Claude Code status bar
+- Opus progress display — live milestone/story/phase tracking with ETA and cost
+- Error UX improvements — actionable error messages across all 11 hook scripts
+- Enhanced auto-init — detect 8 project types (Node, Python, Rust, Go, Ruby, Java, PHP, Swift)
+- Interactive help improvements — contextual help, examples, search, quick reference card
+- Command UX audit — consistent flags, aliases, usage examples across 39 commands
+- Quick-start expansion — 12 templates covering web, CLI, mobile, data, ML project types
+- Agent Teams native support — TeammateIdle + TaskCompleted hook handlers
+- Cowork adaptive output — environment detection, collaborative formatting
+- Dispatch integration — mobile-friendly status, remote commands, webhook JSON protocol
+- Enhanced MCP server — 5 expanded tools (status, stories, metrics, control, health)
+- 6 new background workers — security scan, perf regression, API drift, coverage, docs staleness, complexity
+- Worker scheduling improvements — context-triggered workers, priority queue, worker health tracking
+- Daemon hardening — retry with exponential backoff, health monitoring, crash recovery, log rotation
+- Cross-session state persistence — atomic writes, corruption detection, backup/restore
+- Enhanced learning loop — 5th SHARE phase, cross-project knowledge transfer, confidence scoring
+- Adaptive model routing — historical performance tracking per task type, auto-adjustment
+- Runtime skill evolution — automatic refinement from QA feedback patterns with versioning
+- Agent observability dashboard + intelligent error recovery
+- Spec-first enforcement + pipeline visualizer
+- Story v2 format (Gherkin AC, execution modes)
+- Prompt injection defense hook
+- IDE fan-out sync + squad registry
+- AGENTS.md cross-tool discovery
+- Async telemetry (JSONL format)
+- Skill budget controls (effort/maxTurns)
+- Context injection (Context7 pattern)
+- HTTP hooks + MCP elicitation + plugin data persistence
+
+### Changed
+- Skills: 109 → 128+ (19+ new skills)
+- Hook scripts: 8 → 11 (TeammateIdle, TaskCompleted, prompt injection)
+- Templates: 11 → 12
+- Self-test: 12/12 passing
+- Mirror: perfectly synced
+
 ## [1.4.0] — 2026-03-18
 
 ### Added — OpenClaw-Inspired Intelligence

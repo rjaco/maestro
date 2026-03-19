@@ -1,16 +1,8 @@
 # Maestro
 
-![Version](https://img.shields.io/badge/version-1.4.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Skills](https://img.shields.io/badge/skills-128-purple)
-![Commands](https://img.shields.io/badge/commands-39-orange)
-![Agents](https://img.shields.io/badge/agents-6-cyan)
-![Squads](https://img.shields.io/badge/squads-7-red)
-![Hooks](https://img.shields.io/badge/hooks-6_events-yellow)
-
 **Full-Stack Autonomous Development Orchestrator for Claude Code**
 
-Build features with `/maestro`. Build entire products with `/maestro magnum-opus`. Track progress on your kanban board. Persist knowledge in your second brain.
+Build features with `/maestro`. Build entire products with `/maestro opus`. Track progress on your kanban board. Persist knowledge in your second brain.
 
 ---
 
@@ -35,7 +27,7 @@ claude plugin install maestro
 /maestro "Add user authentication with email/password"
 
 # Build an entire product
-/maestro magnum-opus "Personal finance dashboard with budget tracking"
+/maestro opus "Personal finance dashboard with budget tracking"
 ```
 
 ---
@@ -45,7 +37,7 @@ claude plugin install maestro
 | Command | Description |
 |---------|-------------|
 | `/maestro "task"` | Build a feature autonomously |
-| `/maestro magnum-opus "vision"` | Build an entire product (Magnum Opus) |
+| `/maestro opus "vision"` | Build an entire product (Magnum Opus) |
 | `/maestro init` | Initialize for this project |
 | `/maestro status` | View progress, resume, pause, abort |
 | `/maestro model` | View/change model assignments |
@@ -60,12 +52,49 @@ claude plugin install maestro
 | `/maestro viz` | Visual dashboards and Mermaid diagrams |
 | `/maestro demo` | Interactive demo — learn how Maestro works |
 | `/maestro quick-start` | Pick from pre-built task templates |
-| `/maestro spec "desc"` | Create structured feature specifications |
-| `/maestro deps` | Visualize story dependency graph |
-| `/maestro cost-estimate` | Estimate token cost before building |
-| `/maestro rollback` | Revert changes with git + kanban sync |
-| `/maestro retro` | Weekly retrospective — stats, streaks, improvements |
-| `/maestro profile` | Switch configuration profiles |
+
+---
+
+## Companion Mode — Talk to Maestro from Your Phone
+
+Maestro includes a standalone TypeScript companion daemon that runs above Claude Code. Send messages via Telegram, get responses with your configured personality, and trigger builds from your phone.
+
+### Setup
+```bash
+cd companion
+npm run setup    # 4-question wizard: Telegram token, API key, voice, personality
+npm start        # companion is live
+```
+
+### What You Can Do
+
+| Command | What It Does |
+|---------|-------------|
+| Send text | Chat with Claude using your SOUL personality |
+| Send voice | Transcribed via Groq Whisper, Claude responds + voice reply |
+| "Build X" | Spawns Claude Code worker in background |
+| `/status` | Shows milestone/story progress |
+| `/cost` | Cumulative session spend |
+| `/stories` | List current milestone stories |
+| `/voice` | Toggle voice replies on/off |
+| `/newchat` | Fresh conversation |
+| `/help` | List all commands |
+
+### Architecture
+```
+Telegram → Companion Daemon → Agent SDK → Claude Code (with Maestro plugin)
+                ↓
+         SQLite (sessions, memory)
+         SOUL.md (personality)
+         Voice (Groq STT + ElevenLabs TTS)
+```
+
+### Features
+- **Voice Mode**: Send voice notes, get voice replies (Groq Whisper + ElevenLabs/edge-tts)
+- **Memory**: Semantic + episodic with salience decay (FTS5 search)
+- **Worker Pool**: Parallel Claude Code instances for build tasks
+- **Personality**: 4 SOUL profiles (casual, formal, mentor, peer)
+- **Security**: Zero inbound ports, chat_id allowlist, safe .env parser
 
 ---
 
@@ -115,7 +144,7 @@ VALIDATE > DELEGATE > IMPLEMENT > SELF-HEAL > QA > GIT > CHECKPOINT
 
 ## Magnum Opus
 
-Build entire products with `/maestro magnum-opus "vision"`.
+Build entire products with `/maestro opus "vision"`.
 
 1. **Deep Interview** — 10-dimension adaptive vision interview
 2. **Research Sprint** — 8 parallel research agents (competitors, tech, architecture)

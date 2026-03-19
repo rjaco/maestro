@@ -1,6 +1,6 @@
 # Maestro — Complete Feature Guide
 
-> The most comprehensive Claude Code orchestration plugin. 101 skills, 26 commands, 6 agents, 3 squads, 11 specialist profiles, 10 templates.
+> The most comprehensive Claude Code orchestration plugin. 138 skills, 43 commands, 7 squads, 6 agents, 11 specialist profiles, 19 hooks across 16 events.
 
 ---
 
@@ -15,7 +15,7 @@
 
 ---
 
-## Commands (21)
+## Commands (42)
 
 | Command | Usage | What It Does |
 |---------|-------|-------------|
@@ -40,10 +40,29 @@
 | `/maestro rollback` | `/maestro rollback` | Revert changes from a story or feature |
 | `/maestro brain` | `/maestro brain` | Second brain — connect to Obsidian/Notion |
 | `/maestro help` | `/maestro help` | Contextual help and guided walkthroughs |
+| `/maestro sync-ide` | `/maestro sync-ide [--target <ide>] [--check]` | Generate IDE-specific files (.cursorrules, GEMINI.md, agents.md, copilot-instructions) |
+| `/maestro watch` | `/maestro watch [start\|stop\|status\|logs]` | Continuous project health monitoring — tests, types, lint, security. Auto-creates fix stories |
+| `/maestro observe` | `/maestro observe [live\|history\|agents\|costs]` | Agent observability dashboard — live dispatches, tokens, costs, QA iterations |
+| `/maestro aware` | `/maestro aware [check\|status\|history]` | Heartbeat-style proactive monitoring — quality gates, dependencies, conventions |
+| `/maestro retro` | `/maestro retro` | Self-improvement retrospective — meta-rules, rule scoring, lifecycle management |
+| `/maestro security-scan` | `/maestro security-scan` | Security vulnerability scan — SHA-256 drift, OWASP checks, dependency audit |
+| `/maestro squad` | `/maestro squad [list\|activate\|create]` | Team definition — activate one of 7 squad templates |
+| `/maestro schedule` | `/maestro schedule [add\|list\|remove]` | Cron-based task scheduling using Claude Code CronCreate |
+| `/maestro webhooks` | `/maestro webhooks` | Inbound event processing from GitHub, CI/CD, monitoring |
+| `/maestro workers` | `/maestro workers` | Background worker management for parallel agent execution |
+| `/maestro profile` | `/maestro profile [list\|set\|show]` | Specialist profile switching (backend, frontend, devops, security, etc.) |
+| `/maestro pair` | `/maestro pair` | Pair programming mode — collaborative step-by-step implementation |
+| `/maestro remote` | `/maestro remote` | Remote control via Telegram, Discord, or HTTP |
+| `/maestro dashboard` | `/maestro dashboard` | Project health dashboard with watch panel, cost, and progress |
+| `/maestro ci` | `/maestro ci` | Monitor GitHub Actions / GitLab CI pipeline status |
+| `/maestro soul` | `/maestro soul` | View and edit Maestro's core values and behavior constraints |
+| `/maestro content` | `/maestro content "topic"` | Content pipeline — blog posts, email campaigns, SEO optimization |
+| `/maestro marketing` | `/maestro marketing` | Marketing automation — ad copy, A/B frameworks, campaign tracking |
+| `/maestro preferences` | `/maestro preferences` | View and edit user preferences and workflow settings |
 
 ---
 
-## Orchestration Skills (74)
+## Orchestration Skills (128)
 
 ### Core Orchestration
 
@@ -76,10 +95,14 @@
 |-------|---------|
 | **memory** | Dual-sector memory with confidence scoring (0.0-1.0), salience decay, FTS search |
 | **retrospective** | Self-improvement with meta-rules, rule quality scoring (0-12), 5-stage lifecycle |
-| **self-correct** | Permanent learning from corrections — captures feedback, applies to101 skills/CLAUDE.md |
+| **self-correct** | Permanent learning from corrections — captures feedback, applies to all skills/CLAUDE.md |
 | **feature-registry** | Immutable JSON requirement registry surviving context resets for multi-session continuity |
 | **steering** | 4 persistent files (product.md, structure.md, tech.md, standards.md) as T1 context |
 | **audit-log** | Structured decision log — 8 decision types with confidence and outcome tracking |
+| **learning-loop** | Continuous token efficiency learning — reads high-iteration patterns, improves routing |
+| **knowledge-graph** | Structured knowledge graph for cross-session project intelligence |
+| **truth-verifier** | Verify factual claims and prevent hallucination in agent outputs |
+| **anti-drift** | Detect and correct behavioral drift in long-running agent sessions |
 
 ### Safety & Resilience
 
@@ -91,6 +114,9 @@
 | **index-health** | Validation and self-healing for all 7 Maestro indexes |
 | **speculative** | Reversible agent runs with forkSession + file checkpointing + rewindFiles() |
 | **rules-doctor** | Lint CLAUDE.md and skill configs for dead rules, broken references, misconfigs |
+| **error-recovery** | Structured recovery from agent failures — classify, retry, escalate, or abort |
+| **model-failover** | Automatic model failover when primary model is unavailable or rate-limited |
+| **story-validator** | Pre-flight validation of story files before delegation — catch malformed inputs early |
 
 ### Cost & Performance
 
@@ -106,12 +132,17 @@
 | Skill | Purpose |
 |-------|---------|
 | **kanban** | Bidirectional sync with Asana, Jira, Linear, GitHub Issues |
-| **squad** | Team definition with 4 templates (speed, quality, full, solo) |
+| **squad** | Team definition with 7 templates (speed, quality, full, solo, content, devops, research) |
+| **squad-registry** | Central registry for all squad definitions and active squad state |
 | **spec** | Spec-driven workflow — structured specs as shared context artifacts |
+| **spec-first** | Enforces spec-before-code gate — auto-generates and validates spec before any dev-loop |
 | **ship** | Final verification, PR creation, quality gates |
 | **living-docs** | Update .maestro state and roadmap after story/milestone completion |
 | **build-log** | Session replay with 4 export formats (HTML, blog, summary, JSON) |
-| **watch** | Continuous monitoring via CronCreate for tests, types, performance |
+| **watch** | Base continuous monitoring via CronCreate for tests, types, performance |
+| **maestro-watch** | Enhanced watch with auto-fix stories, Lighthouse, security audit, and dashboard integration |
+| **adr** | Architecture Decision Records — create, list, and supersede ADRs |
+| **readme-gen** | Auto-generate README and API docs after each story or milestone |
 
 ### Integrations & Automation
 
@@ -123,6 +154,11 @@
 | **notify** | Push notifications to Slack, Discord, Telegram, PagerDuty |
 | **scheduler** | Cron-based task scheduling using Claude Code CronCreate |
 | **awareness** | Heartbeat-style proactive monitoring for quality and dependencies |
+| **http-hooks** | HTTP-based webhook receiver for inbound event processing |
+| **team-hooks** | Hooks for team coordination events — teammate idle, task completed |
+| **telemetry** | Structured telemetry emission for dispatch timing and agent status events |
+| **background-workers** | Parallel worker pool management for concurrent agent execution |
+| **stream-chain** | Chain agent outputs as streaming inputs to downstream agents |
 
 ### Knowledge Work
 
@@ -149,6 +185,12 @@
 | **auto-docs** | Auto-generate README, API docs, changelog after each story |
 | **audio** | Audio alerts when Maestro needs attention — terminal bell, macOS sounds, Linux audio |
 | **visualize** | Generate Mermaid diagrams and ASCII dashboards for dependencies, architecture, roadmaps, and progress |
+| **pair-programming** | Collaborative pair mode — step-by-step implementation with explicit approval checkpoints |
+| **onboarding** | First-run onboarding flow — guided setup for new users and projects |
+| **dashboard** | Project health dashboard — phase, progress, costs, watch panel, active stories |
+| **pipeline-viz** | Visualize CI/CD pipeline structure and status as Mermaid diagrams |
+| **i18n** | Internationalization helpers — extract strings, generate locale files, validate translations |
+| **auto-init** | Auto-initialize Maestro state and config from project conventions without prompting |
 
 ### Platform & SDK
 
