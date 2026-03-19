@@ -1,0 +1,177 @@
+# Maestro Demo Data
+# Realistic sample data for a "SaaS analytics dashboard" project.
+# Used by demo-mode skill when /maestro demo runs or when real data is unavailable.
+
+project:
+  name: "SaaS Analytics Dashboard"
+  description: "Multi-tenant analytics platform with real-time event ingestion, customizable dashboards, and automated reporting."
+  tech_stack: "Next.js 14, TypeScript, Supabase, Recharts, Tailwind CSS"
+
+session:
+  active: true
+  feature: "Core Features"
+  mode: full_auto
+  layer: opus
+  started_at: "2026-03-18T09:14:00Z"
+  last_updated: "2026-03-18T11:47:00Z"
+
+milestones:
+  current: 3
+  total: 5
+  list:
+    - id: 1
+      name: "Project Setup & Auth"
+      status: complete
+      stories_done: 5
+      stories_total: 5
+    - id: 2
+      name: "Data Ingestion Pipeline"
+      status: complete
+      stories_done: 7
+      stories_total: 7
+    - id: 3
+      name: "Core Features"
+      status: in_progress
+      stories_done: 4
+      stories_total: 6
+    - id: 4
+      name: "Reporting & Exports"
+      status: pending
+      stories_done: 0
+      stories_total: 5
+    - id: 5
+      name: "Polish & Performance"
+      status: pending
+      stories_done: 0
+      stories_total: 4
+
+current_milestone:
+  id: 3
+  name: "Core Features"
+  stories_done: 4
+  stories_total: 6
+  current_phase: "QA Review"
+  stories:
+    - id: 1
+      title: "Dashboard grid layout with drag-and-drop widget placement"
+      status: complete
+      qa_passed_first_attempt: true
+      duration_minutes: 22
+    - id: 2
+      title: "Time range selector with preset and custom range support"
+      status: complete
+      qa_passed_first_attempt: true
+      duration_minutes: 18
+    - id: 3
+      title: "Metric cards with sparkline trend indicators"
+      status: complete
+      qa_passed_first_attempt: false
+      qa_iterations: 2
+      duration_minutes: 31
+    - id: 4
+      title: "Filterable data table with column sorting and CSV export"
+      status: complete
+      qa_passed_first_attempt: true
+      duration_minutes: 25
+    - id: 5
+      title: "Real-time event counter widget with WebSocket subscription"
+      status: in_progress
+      qa_passed_first_attempt: null
+      duration_minutes: null
+    - id: 6
+      title: "Dashboard sharing and permission controls"
+      status: pending
+      qa_passed_first_attempt: null
+      duration_minutes: null
+
+cost:
+  session_total_usd: 6.20
+  milestone_total_usd: 14.80
+  by_model:
+    haiku:
+      usd: 0.80
+      input_tokens: 210000
+      output_tokens: 48000
+    sonnet:
+      usd: 4.40
+      input_tokens: 95000
+      output_tokens: 22000
+    opus:
+      usd: 1.00
+      input_tokens: 8200
+      output_tokens: 1800
+  by_role:
+    orchestrator: 1.20
+    implementer: 3.10
+    qa_reviewer: 1.60
+    context_engine: 0.30
+
+qa_metrics:
+  total_reviews: 4
+  first_pass_count: 3
+  first_pass_rate_pct: 75
+  rework_stories:
+    - story_id: 3
+      title: "Metric cards with sparkline trend indicators"
+      iterations: 2
+      failure_reason: "Sparkline did not render correctly at sub-100px widths"
+
+agent_dispatch_history:
+  - dispatch_id: "d-0014"
+    timestamp: "2026-03-18T11:32:00Z"
+    role: "qa-reviewer"
+    model: sonnet
+    story: "Filterable data table with column sorting and CSV export"
+    outcome: APPROVED
+    cost_usd: 0.38
+    duration_seconds: 84
+  - dispatch_id: "d-0013"
+    timestamp: "2026-03-18T11:18:00Z"
+    role: "implementer"
+    model: sonnet
+    story: "Filterable data table with column sorting and CSV export"
+    outcome: DONE
+    cost_usd: 0.72
+    duration_seconds: 210
+  - dispatch_id: "d-0012"
+    timestamp: "2026-03-18T10:51:00Z"
+    role: "qa-reviewer"
+    model: haiku
+    story: "Metric cards with sparkline trend indicators"
+    outcome: APPROVED
+    cost_usd: 0.12
+    duration_seconds: 61
+  - dispatch_id: "d-0011"
+    timestamp: "2026-03-18T10:34:00Z"
+    role: "implementer"
+    model: sonnet
+    story: "Metric cards with sparkline trend indicators"
+    outcome: DONE_WITH_CONCERNS
+    cost_usd: 0.68
+    duration_seconds: 198
+  - dispatch_id: "d-0010"
+    timestamp: "2026-03-18T10:08:00Z"
+    role: "qa-reviewer"
+    model: haiku
+    story: "Metric cards with sparkline trend indicators"
+    outcome: CHANGES_REQUESTED
+    cost_usd: 0.09
+    duration_seconds: 47
+
+trust:
+  overall_score: 82
+  by_agent:
+    implementer:
+      score: 85
+      runs: 8
+      first_pass_rate_pct: 75
+    qa_reviewer:
+      score: 91
+      runs: 8
+      false_positive_rate_pct: 5
+  last_updated: "2026-03-18T11:32:00Z"
+
+eta:
+  avg_story_duration_minutes: 24
+  remaining_stories: 2
+  estimated_minutes_remaining: 48
