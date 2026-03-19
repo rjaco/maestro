@@ -1,47 +1,38 @@
 #!/usr/bin/env bash
 # Maestro Notification Hook
 # Fires when Claude needs user input during an active Maestro session.
-# Can trigger desktop notifications to bring attention back.
+# Triggers desktop notifications and forwards key events to scripts/notify.sh.
 
 set -euo pipefail
 
-STATE_FILE=".maestro/state.local.md"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+STATE_FILE="${PROJECT_DIR}/.maestro/state.local.md"
+NOTIFY_SCRIPT="${PROJECT_DIR}/scripts/notify.sh"
 
 # No state file? Not a Maestro session.
 if [[ ! -f "$STATE_FILE" ]]; then
   exit 0
 fi
 
-# Parse frontmatter
-frontmatter=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE" 2>/dev/null || true)
-
-yaml_val() {
-  local key="$1"
-  local line
-  line=$(printf '%s\n' "$frontmatter" | grep -E "^${key}:" | head -1)
-  [[ -z "$line" ]] && echo "" && return
-  local val="${line#*:}"
-  val="${val#"${val%%[![:space:]]*}"}"
-  val="${val%\"}" ; val="${val#\"}"
-  val="${val%\'}" ; val="${val#\'}"
-  printf '%s' "$val"
-}
-
-active=$(yaml_val "active")
+# Parse active status
+active=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | grep '^active:' | head -1 | sed 's/active:[[:space:]]*//' | xargs 2>/dev/null || echo "false")
 
 if [[ "$active" != "true" ]]; then
   exit 0
 fi
 
-feature=$(yaml_val "feature")
-phase=$(yaml_val "phase")
+# Parse feature and phase
+feature=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | grep '^feature:' | head -1 | sed 's/feature:[[:space:]]*//' | sed 's/^"\(.*\)"$/\1/' | xargs 2>/dev/null || echo "")
+phase=$(sed -n '/^---$/,/^---$/p' "$STATE_FILE" 2>/dev/null | grep '^phase:' | head -1 | sed 's/phase:[[:space:]]*//' | xargs 2>/dev/null || echo "")
 
-# Only notify on checkpoint/paused phases (when user action is needed)
+# Only act on checkpoint/paused phases (when user action is needed)
 case "$phase" in
   checkpoint|paused)
-    # Try desktop notification
     TITLE="Maestro needs your input"
     BODY="${feature:-Active session} — ${phase}"
+
+    # ── Desktop notifications ─────────────────────────────────────────────────
 
     # macOS
     if command -v osascript &>/dev/null; then
@@ -51,6 +42,27 @@ case "$phase" in
     # Linux (notify-send)
     if command -v notify-send &>/dev/null; then
       notify-send "$TITLE" "$BODY" 2>/dev/null || true
+    fi
+
+    # ── Remote notifications via notify.sh ────────────────────────────────────
+
+    if [[ -x "$NOTIFY_SCRIPT" ]]; then
+      case "$phase" in
+        paused)
+          EVENT="session_paused"
+          ;;
+        checkpoint)
+          EVENT="story_complete"
+          ;;
+        *)
+          EVENT="$phase"
+          ;;
+      esac
+
+      # Fire-and-forget — never block Claude Code's hook pipeline
+      "${NOTIFY_SCRIPT}" \
+        --event "$EVENT" \
+        --message "${TITLE}: ${BODY}" 2>/dev/null || true
     fi
     ;;
 esac
