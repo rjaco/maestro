@@ -1,13 +1,11 @@
 ---
 name: delegation
-description: "Dispatch protocol for agent assignment. Classifies tasks, selects models, invokes Context Engine for right-sized context, handles agent responses. Supports parallel dispatch for independent stories."
+description: "Dispatch protocol for agent assignment. Classifies tasks, selects models, invokes Context Engine for right-sized context, handles agent responses."
 ---
 
 # Delegation
 
 Handles every agent dispatch decision in Maestro. For each task that needs an agent, Delegation answers three questions: Who executes it, What model powers it, and What context it receives. It then dispatches, monitors the response, and routes the outcome.
-
-**Core principle:** The orchestrator NEVER implements directly. Every code change, content creation, and review goes through a dispatched agent. This is enforced by the PreToolUse hook (see hooks/hooks.json) — attempting to Edit/Write files directly during an active Maestro session will be blocked.
 
 ## Three Decisions Per Dispatch
 
@@ -15,68 +13,74 @@ Handles every agent dispatch decision in Maestro. For each task that needs an ag
 
 Select the agent type based on the task classification:
 
-| Task | Agent Type | Subagent Type | Context Tier |
-|------|-----------|---------------|-------------|
-| Write code for a story | `implementer` | `maestro:maestro-implementer` | T3 |
-| Review a code diff | `qa-reviewer` | `maestro:maestro-qa-reviewer` | T3 |
-| Fix a build/lint/type error | `fixer` | `maestro:maestro-fixer` | T4 |
-| Research market/competitors | `researcher` | `maestro:maestro-researcher` | T1 |
-| Synthesize strategy/positioning | `strategist` | `maestro:maestro-strategist` | T1 |
-| Scheduled monitoring/health | `proactive` | `maestro:maestro-proactive` | T4 |
+| Task | Agent Type | Context Tier |
+|------|-----------|-------------|
+| Write code for a story | `implementer` | T3 |
+| Review a code diff | `qa-reviewer` | T3 |
+| Fix a build/lint/type error | `self-heal` | T4 |
+| Design system architecture | `architect` | T2 |
+| Synthesize research findings | `strategist` | T1 |
+| Write content or copy | `copywriter` | T3 |
+| Audit security posture | `security-reviewer` | T3 |
+| Coordinate a milestone | `orchestrator` | T0 |
 
 If the task does not clearly map to one type, default to `implementer` with a T3 context package.
 
-**Agent capability mapping:**
-
-| Agent | Can Edit Files | Can Search Web | Can Run Bash | Isolation |
-|-------|---------------|----------------|-------------|-----------|
-| implementer | Yes | No (code) / Yes (knowledge) | Yes | worktree (mandatory) |
-| qa-reviewer | **NO** (read-only) | No | Yes (read commands) | none |
-| fixer | Yes | No | Yes | worktree (mandatory) |
-| researcher | No | Yes | No | none |
-| strategist | Yes (writes .maestro/ only) | No | No | none |
-| proactive | No | No | Yes (read commands) | none |
-
 ### Decision 2: What Model
 
-Select the model using a multi-signal scoring system. Each signal contributes a score; the sum determines the model.
+Select the model based on task complexity signals:
 
-#### Signal Scoring
+| Model | Cost | When to Use | Signals |
+|-------|------|-------------|---------|
+| `haiku` | Lowest | Boilerplate, config, simple CRUD, formatting, repetitive patterns | Single file, clear template to follow, no logic branching |
+| `sonnet` | Medium | Standard features, moderate logic, test writing, component building | 2-4 files, follows existing patterns, some conditionals |
+| `opus` | Highest | Novel architecture, complex algorithms, security-critical, subtle edge cases | 5+ files, new patterns, ambiguous requirements, high stakes |
 
-| Signal | haiku (+0) | sonnet (+1) | opus (+2) |
-|--------|-----------|-------------|-----------|
-| **File count** | 1 file | 2-4 files | 5+ files |
-| **Story type** | config, styling, boilerplate | standard feature, tests | architecture, security, novel |
-| **Pattern availability** | Clear template exists | Follows existing patterns | No existing pattern to follow |
-| **Logic complexity** | No branching | Some conditionals | Complex algorithms, edge cases |
-| **QA history** | First attempt | 1 prior rejection | 2+ prior rejections |
-| **Previous failures** | None on this task | 1 failure | 2+ failures |
+**Override rules:**
+- If the story specifies a `model` field, use that model regardless of signals.
+- If the user set a global `model_override` in state, use that for all dispatches.
+- If a `haiku` agent fails twice on the same task, escalate to `sonnet`.
+- If a `sonnet` agent fails twice, escalate to `opus`.
+- Never downgrade from a user-specified model.
 
-**Score → Model mapping:**
+### Decision 2b: Complexity Re-evaluation (Auto-Downgrade)
 
-| Total Score | Model | Rationale |
-|-------------|-------|-----------|
-| 0-3 | `haiku` | Simple, template-following work |
-| 4-7 | `sonnet` | Standard development work |
-| 8+ | `opus` | Complex, novel, or high-stakes work |
+After the initial model assignment, re-evaluate complexity at dispatch time using simplicity signals before invoking the agent. This prevents over-spending when a story turns out to be simpler than initial classification suggested.
 
-#### Override Rules
+**Simplicity signals — check each:**
 
-Priority order (highest wins):
+1. Story touches only 1 file
+2. Story follows an existing pattern exactly (the implementation is template-like)
+3. Story is purely additive — no refactoring, no deleted lines in non-test files
+4. Story is config or data only — no logic, no conditionals
+5. Story has a clear template in the codebase that can be lifted and adapted
 
-1. **User override**: If the story specifies a `model` field, use that model unconditionally.
-2. **Global override**: If `model_override` is set in `.maestro/state.local.md`, use that for all dispatches.
-3. **Escalation**: If agent failed 2+ times on the same task with current model, escalate one tier.
-4. **QA reviewer**: Always `opus` (QA accuracy is worth the cost — catching bugs saves re-dispatches).
-5. **Signal scoring**: Use the table above.
-6. **Never downgrade**: Once escalated, do not go back to a cheaper model for the same task.
+**Auto-downgrade rules:**
 
-#### Cost-Aware Routing
+| Signal Count | Action |
+|---|---|
+| 3 or more signals | Downgrade: `opus` → `sonnet`, or `sonnet` → `haiku` |
+| Exactly 2 signals | Log the observation; do not force a downgrade |
+| 0–1 signals | No change; keep the initially assigned model |
 
-Track cumulative cost per story. If a story's cost exceeds 3x its complexity estimate:
-- Log a warning to `.maestro/logs/cost-alerts.md`
-- Consider whether the story should be split into smaller pieces
-- Do NOT automatically escalate model (more expensive models on bad tasks = waste)
+**Safety constraints (always enforced):**
+
+- Never downgrade below the minimum model for the agent type. Each agent type has a floor: `orchestrator` and `architect` floor at `sonnet`; all others floor at `haiku`.
+- Never downgrade if the user explicitly specified a model (story `model` field or global `model_override`).
+- Never downgrade if the story is security-critical or has ambiguous requirements (those signals already push toward `opus`).
+
+**Logging requirement:**
+
+Every downgrade decision — forced or deferred — must be logged to `.maestro/state.local.md` with:
+- The model before and after the downgrade
+- Which simplicity signals fired
+- Whether the downgrade was applied or only noted
+
+Example log entry:
+```
+[Auto-downgrade] Story 07 | haiku (3 signals: single-file, additive, config-only) | sonnet → haiku applied
+[Auto-downgrade] Story 11 | 2 signals: single-file, additive | downgrade noted but not forced
+```
 
 ### Decision 3: What Context
 
@@ -85,108 +89,25 @@ Invoke the Context Engine to compose the right-sized context package:
 1. Pass the agent type, story spec, and task description to the Context Engine.
 2. Receive the composed context package with token count.
 3. Attach the context package to the agent prompt.
-4. Log the composition to `.maestro/context-log.md`.
 
 See `skills/context-engine/SKILL.md` for the full composition pipeline.
 
 ## Dispatch Protocol
 
-### Single Story Dispatch (Sequential)
+1. Log the dispatch decision to `.maestro/state.local.md`:
+   ```
+   Dispatching: Story 03 | Agent: implementer | Model: sonnet | Context: 3,412 tokens
+   ```
 
-For stories that have dependencies or are the only ready story:
+2. Compose the agent prompt:
+   - System prompt: The agent's skill definition (from skill-factory or built-in)
+   - Context block: The Context Engine's composed package
+   - Task block: Specific instructions for this dispatch (what to produce, where to write)
+   - Response format: Structured output the agent must return
 
-```
-Agent(
-  subagent_type: "maestro:maestro-implementer",
-  description: "Implement story NN: [title]",
-  isolation: "worktree",
-  run_in_background: true,
-  model: "[selected model]",
-  prompt: "[North Star + story spec + context package]"
-)
-```
+3. Invoke the agent via `claude --model <model> --prompt <composed_prompt>` or the SubAgent tool.
 
-**MANDATORY fields:**
-- `isolation: "worktree"` — Every implementer and fixer runs in an isolated worktree
-- `run_in_background: true` — Keeps the orchestrator responsive to user messages
-- `subagent_type` — Must match a registered Maestro agent
-- `model` — From Decision 2 model selection
-
-### Parallel Story Dispatch (Independent Stories)
-
-When decomposition marks multiple stories as `parallel_safe: true` with no mutual dependencies, dispatch them simultaneously in a SINGLE message with MULTIPLE Agent tool calls:
-
-```
-// In a single response, dispatch all independent stories at once:
-
-Agent(
-  subagent_type: "maestro:maestro-implementer",
-  description: "Implement story 02: [title]",
-  isolation: "worktree",
-  run_in_background: true,
-  model: "sonnet",
-  prompt: "[story 02 context]"
-)
-
-Agent(
-  subagent_type: "maestro:maestro-implementer",
-  description: "Implement story 03: [title]",
-  isolation: "worktree",
-  run_in_background: true,
-  model: "sonnet",
-  prompt: "[story 03 context]"
-)
-```
-
-**Parallel dispatch rules:**
-1. Only dispatch stories that have ALL dependencies met (all `depends_on` stories are DONE).
-2. Only dispatch stories marked `parallel_safe: true` together.
-3. Maximum 3 parallel agents at once (more causes context thrashing and merge conflicts).
-4. Each parallel story gets its own worktree — no shared state.
-5. After ALL parallel stories complete, run validation on each, then merge in dependency order.
-6. If any parallel story fails, the others' results are still valid (they're independent).
-
-### Merge Coordination for Parallel Stories
-
-When multiple parallel stories complete:
-
-1. Sort completed stories by their ID (lowest first).
-2. For each completed story in order:
-   a. Check for merge conflicts with the main working tree.
-   b. If clean: merge worktree, run validation, QA review, git craft.
-   c. If conflicts: attempt auto-resolve. If auto-resolve fails, PAUSE and ask user.
-3. After merging all parallel stories, run the FULL test suite once (catches cross-story integration issues).
-
-### QA Dispatch
-
-QA agents are dispatched differently — they do NOT need worktree isolation:
-
-```
-Agent(
-  subagent_type: "maestro:maestro-qa-reviewer",
-  description: "QA review story NN: [title]",
-  run_in_background: true,
-  model: "opus",
-  prompt: "[story spec + git diff + test output + project rules]"
-)
-```
-
-### Fix Dispatch
-
-Fix agents are laser-focused — minimal context, worktree isolation:
-
-```
-Agent(
-  subagent_type: "maestro:maestro-fixer",
-  description: "Fix: [error summary]",
-  isolation: "worktree",
-  run_in_background: false,   // Wait for fix before re-running checks
-  model: "sonnet",
-  prompt: "[error output + affected file content + fix pattern]"
-)
-```
-
-Note: `run_in_background: false` for fixers because the orchestrator needs the fix result immediately to re-run validation.
+4. Capture the agent's response.
 
 ## Response Handling
 
@@ -194,114 +115,126 @@ Every agent must return a structured response with a status field:
 
 | Status | Meaning | Action |
 |--------|---------|--------|
-| `DONE` | Task completed successfully | Accept output, advance to next phase |
-| `DONE_WITH_CONCERNS` | Completed with noted risks | Accept output, flag concerns for QA reviewer |
-| `NEEDS_CONTEXT` | Agent lacks information | Context Engine adaptive escalation |
-| `BLOCKED` | External dependency prevents completion | Log blocker, skip to next independent story, or escalate |
-| `FAILED` | Unrecoverable error | Dispatch fixer if build error, otherwise escalate to user |
+| `DONE` | Task completed successfully | Accept output, advance to next phase (QA or next story) |
+| `DONE_WITH_CONCERNS` | Completed but with noted risks | Accept output, flag concerns for QA reviewer, add concerns to QA context |
+| `NEEDS_CONTEXT` | Agent lacks information to proceed | Invoke Context Engine adaptive escalation (add items, bump tier, or ask user) |
+| `BLOCKED` | Cannot proceed due to external dependency | Log blocker, attempt re-dispatch with different approach, or escalate to user |
+| `FAILED` | Unrecoverable error during execution | Log failure, attempt self-heal dispatch if build/lint error, or escalate |
 
-### Response Parsing
+**Escalation chain for NEEDS_CONTEXT:**
+1. Context Engine adds next-relevance items (+30% budget) and re-dispatches.
+2. Context Engine bumps tier (T3 to T2) and recomposes full package.
+3. Surface to user with the agent's description of what it needs.
 
-The agent's final message contains its status. Parse it by searching for these patterns:
-
-```
-STATUS: DONE
-STATUS: DONE_WITH_CONCERNS
-STATUS: NEEDS_CONTEXT
-STATUS: BLOCKED
-```
-
-If no explicit status found, analyze the agent's output:
-- Contains "all tests passing" + files created/modified → treat as DONE
-- Contains "error" or "failed" + no resolution → treat as FAILED
-- Contains "missing" or "need" + question → treat as NEEDS_CONTEXT
-
-### Escalation Chain: NEEDS_CONTEXT
-
-1. **First attempt**: Context Engine adds next-relevance items (+30% budget). Re-dispatch at same tier.
-2. **Second attempt**: Context Engine bumps tier (T3→T2→T1). Recompose full package. Re-dispatch.
-3. **Third attempt**: Surface to user. Present what the agent needs. Ask user to provide missing context directly or point to files.
-
-Between escalations, log what was tried:
-```
-ESCALATION Story 03 | Attempt 1: Added cache-manager.ts, isr-config.ts (+1.2K tokens)
-ESCALATION Story 03 | Attempt 2: Bumped T3→T2, full recompose (8.1K tokens)
-ESCALATION Story 03 | Attempt 3: Surfacing to user — agent needs Supabase RLS policy context
-```
-
-### Escalation Chain: BLOCKED/FAILED
-
-1. If build/lint/type error: dispatch `fixer` agent (T4) with the error message + affected file.
-2. If fixer fails 3 times: escalate to user with full error context.
-3. If blocked on external dependency: mark story as BLOCKED, skip to next independent story, continue with others.
-4. If blocked story blocks downstream stories: log a warning and mark all downstream as BLOCKED.
+**Escalation chain for BLOCKED/FAILED:**
+1. If build/lint/type error: dispatch `self-heal` agent (T4) with the error.
+2. If self-heal fails 3 times: escalate to user with full error context.
+3. If blocked on external dependency: skip story, mark as blocked, continue with next independent story.
 
 ## Token Accounting
 
-After each dispatch, log the token spend to `.maestro/state.local.md`:
+After each dispatch, log the token spend:
+- Model used and token count (input + output)
+- Context package size
+- Running total for the session
 
-```yaml
-dispatches:
-  - story: "03-api-routes"
-    agent: implementer
-    model: sonnet
-    context_tokens: 3412
-    attempt: 1
-    status: DONE
-    timestamp: "2026-03-17T14:22:01Z"
+Feed this data to the `token-ledger` skill for budget tracking.
+
+## Cost Awareness
+
+Track cumulative spend per feature (a feature = one orchestration run or named milestone). At each checkpoint summary, include a cost delta line:
+
+| Spend vs. forecast | Action |
+|---|---|
+| More than 150% of forecast | Flag to user: "Spend is 50%+ over forecast — no auto-stop, but review model assignments" |
+| Within 50–150% of forecast | Normal; no action |
+| Below 50% of forecast | Note efficiency: "Spend is under half of forecast — consider whether scope changed" |
+
+**How to compute the forecast:**
+
+The `token-ledger` skill holds the per-story cost estimates produced at planning time. Sum estimates for all stories in the current milestone to get the forecast. Compare against actual running total.
+
+**Checkpoint summary format (cost delta line):**
+
+```
+Cost: $0.42 actual / $0.60 forecast (70% — on track)
 ```
 
-Aggregations tracked:
-- **Per story**: Total tokens across all dispatch attempts
-- **Per milestone**: Sum of all story tokens
-- **Per session**: Running total for budget tracking
-- **Per model**: Breakdown by haiku/sonnet/opus for cost analysis
+or, if over threshold:
 
-Feed this data to `token-ledger` for budget tracking and to `retrospective` for model selection optimization.
-
-## Progressive Trust
-
-Track agent reliability over time in `.maestro/trust.yaml`:
-
-```yaml
-trust:
-  implementer:
-    sonnet:
-      total_dispatches: 47
-      first_pass_qa: 38          # DONE on first QA review
-      first_pass_rate: 0.81
-      avg_qa_iterations: 1.2
-      avg_self_heal_cycles: 0.3
-    haiku:
-      total_dispatches: 12
-      first_pass_qa: 7
-      first_pass_rate: 0.58
-      avg_qa_iterations: 1.8
-      avg_self_heal_cycles: 0.8
-  qa-reviewer:
-    opus:
-      total_dispatches: 47
-      false_rejections: 3        # REJECTED but implementer was correct
-      false_approvals: 1         # APPROVED but milestone eval found issues
-      accuracy: 0.91
+```
+Cost: $0.91 actual / $0.60 forecast (152% — FLAG: over budget)
 ```
 
-**Trust-based adjustments (applied automatically):**
-- If `first_pass_rate` for haiku < 0.5: stop using haiku for this project, default to sonnet.
-- If `first_pass_rate` for sonnet > 0.85 for 10+ dispatches: try haiku for simple stories (save cost).
-- If QA `false_rejections` > 20%: lower confidence threshold to 85 (QA is too strict).
-- If QA `false_approvals` > 10%: raise confidence threshold to 75 (QA is too lenient).
+Do not halt execution based on cost alone. Flag and continue unless the user explicitly sets a budget ceiling in state.
 
-## Retry and Backoff
+## Model Routing Optimization
 
-When an agent fails, apply exponential context enrichment (not time delays):
+Use historical QA pass-rate data to progressively shift model assignments toward cheaper models when the project demonstrates they are sufficient.
 
-| Attempt | Context Change | Model Change |
-|---------|---------------|-------------|
-| 1st | Original package | Original model |
-| 2nd | +30% budget, add relevant items | Same model |
-| 3rd | Bump tier (T3→T2) | Same model |
-| 4th | Same tier | Escalate model (sonnet→opus) |
-| 5th | PAUSE and escalate to user | N/A |
+**Progressive downgrade patterns:**
 
-Never retry the exact same dispatch — each retry must change either the context, the model, or both.
+1. **Last-3 sonnet pattern:** If the last 3 stories dispatched to `sonnet` all received QA first-pass (no rework cycle), treat stories of similar complexity as candidates for `haiku` on next dispatch. Log the observation; apply on the next matching story.
+
+2. **Haiku 80% rule:** If `haiku` has achieved an 80%+ QA first-pass rate across all stories in this project so far, default `haiku` for any story initially classified as "standard" complexity (sonnet tier). Override still yields to user-specified models and the safety constraints from Decision 2b.
+
+**Tracking QA pass rates per model:**
+
+After each QA reviewer response, record in `.maestro/state.local.md`:
+```
+[QA result] Story 05 | model: sonnet | pass: true | first-pass: true
+[QA result] Story 06 | model: haiku  | pass: true | first-pass: false (1 rework cycle)
+```
+
+Compute running rates from these log lines when evaluating patterns above.
+
+**State fields to maintain:**
+
+```
+model_stats:
+  haiku:  { dispatched: 8, qa_first_pass: 7, rate: 0.875 }
+  sonnet: { dispatched: 5, qa_first_pass: 5, rate: 1.0 }
+  opus:   { dispatched: 1, qa_first_pass: 1, rate: 1.0 }
+```
+
+Reset per project (not per session). The orchestrator persists these in `.maestro/state.local.md`.
+
+## Effort-Level Routing
+
+Set the `--effort` flag based on agent tier before each dispatch:
+
+| Agent Tier | Effort | Rationale |
+|-----------|--------|-----------|
+| Planning (opus) | high | Maximum reasoning for architecture |
+| Implementation (sonnet) | medium | Balanced for coding tasks |
+| QA Review (sonnet/opus) | medium | Thorough but efficient |
+| Simple tasks (haiku) | low | Fast responses, minimal cost |
+| Background workers | low | Lightweight monitoring |
+
+When dispatching via Agent SDK or CLI, include `--effort {level}` flag.
+This reduces token usage without quality loss on routine tasks.
+
+## Token-Ledger Integration
+
+After each agent dispatch completes:
+
+1. Record actual token spend (input + output tokens, model, story ID) to the `token-ledger` skill.
+2. Retrieve the token-ledger's stored estimate for this story.
+3. Compute cost efficiency: `actual / estimate`. Values below 1.0 are under-budget; above 1.0 are over-budget.
+4. Feed the cost efficiency value back into model selection state:
+   - If efficiency < 0.6 for 3 consecutive stories at a given model tier: add one simplicity signal weight (lowers the threshold for future downgrades).
+   - If efficiency > 1.5 for any story: log a warning and flag the story's model assignment as a candidate for review.
+
+This feedback loop means Delegation becomes more conservative (cheaper) over time when stories are consistently under-budget, and more cautious when stories are regularly over-budget.
+
+**Token-ledger call pattern (after each dispatch):**
+```
+token-ledger record:
+  story_id: <id>
+  model: <model used>
+  input_tokens: <n>
+  output_tokens: <n>
+  estimated_tokens: <from planning>
+```
+
+See `skills/token-ledger/SKILL.md` for the full ledger protocol.

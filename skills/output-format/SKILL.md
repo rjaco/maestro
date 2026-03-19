@@ -1,11 +1,6 @@
 ---
 name: output-format
 description: "Maestro output formatting standard. Referenced by all commands and skills for consistent, readable terminal output."
-effort: low
-maxTurns: 2
-disallowedTools:
-  - Write
-  - Edit
 ---
 
 # Output Format Standard
@@ -22,7 +17,7 @@ All Maestro messages start with the `[maestro]` prefix:
 
 ## Section Boxes
 
-Use box-drawing characters for major status blocks. Inner width is 47 characters:
+Use box-drawing characters for major status blocks. Inner width is 47 characters (total line width 49 with `| |` borders):
 
 ```
 +---------------------------------------------+
@@ -31,6 +26,8 @@ Use box-drawing characters for major status blocks. Inner width is 47 characters
   Key          Value
   Key          Value
 ```
+
+The top and bottom borders are exactly `+---------------------------------------------+` (47 dashes between the `+` signs).
 
 ## Status Indicators
 
@@ -82,15 +79,38 @@ Show all phases on one line. Active phase in CAPS with brackets:
 
 Completed phases are lowercase. Upcoming phases are lowercase. Active phase is `[UPPERCASE]`.
 
+### Phase Name Display Mapping
+
+When displaying phase names, map internal values to display names as follows:
+
+| Internal | Display |
+|----------|---------|
+| `validate` | validate |
+| `delegate` | delegate |
+| `implement` | IMPLEMENT |
+| `self_heal` | self-heal |
+| `qa_review` | qa |
+| `git_craft` | git |
+| `checkpoint` | checkpoint |
+| `opus_executing` | executing |
+| `milestone_start` | milestone |
+
+When a phase is active, wrap it in brackets and use the display name in uppercase: `[IMPLEMENT]`, `[SELF-HEAL]`, `[QA]`, etc.
+
 ### Story Progress Bar
 
-ASCII progress bar with count:
+Use block-style progress bar with Unicode fill characters:
 
 ```
-  [======>       ] 4/10 stories
+  M2/7  S3/5  ████████░░░░  65%
 ```
 
-Width: 16 characters between brackets. `=` for completed. `>` for current position. Spaces for remaining.
+- `█` (U+2588) for completed portion
+- `░` (U+2591) for remaining portion
+- Show milestone count (M), story count (S), bar, and percentage
+- Bar width: 12 characters total
+
+Do NOT use `[===>  ]` style bars.
 
 ### One-Line Status
 
@@ -123,12 +143,13 @@ Use 2-space indent with aligned columns:
   Commit    feat(api): add user routes
   Tokens    34,200 (story) / 127,800 (total)
   Time      2m 14s (story) / 8m 41s (total)
-
-  [1] Continue to next story
-  [2] Review changes (git diff)
-  [3] Change mode for remaining stories
-  [4] Abort execution
 ```
+
+After the box, use AskUserQuestion for next actions:
+- Continue to next story
+- Review changes (git diff)
+- Change mode for remaining stories
+- Abort execution
 
 ## Feature Completion Summary
 
@@ -145,11 +166,12 @@ Use 2-space indent with aligned columns:
   Commits   5
 
   Trust     Apprentice (12 stories, 75% QA rate)
-
-  [1] Ship (create PR)
-  [2] Review all changes
-  [3] Run final verification
 ```
+
+After the box, use AskUserQuestion for next actions:
+- Ship (create PR)
+- Review all changes
+- Run final verification
 
 ## Error Display (at PAUSE)
 
@@ -168,11 +190,12 @@ Use 2-space indent with aligned columns:
   Suggested action:
     Check that the User model includes the 'profile' relation
     in the Prisma schema.
-
-  [1] I fixed it manually, continue
-  [2] Skip this story
-  [3] Abort execution
 ```
+
+After the box, use AskUserQuestion for next actions:
+- I fixed it manually, continue
+- Skip this story
+- Abort execution
 
 ## Forecast Display
 
@@ -187,9 +210,9 @@ Use 2-space indent with aligned columns:
   Mode       checkpoint
 
   (i) Tip: --yolo saves ~15% tokens
-
-  Proceed? [Y/n]
 ```
+
+After the box, use AskUserQuestion to confirm proceeding.
 
 ## Integration Status (in doctor/status)
 
@@ -205,10 +228,12 @@ Use 2-space indent with aligned columns:
 
 ## Rules
 
-1. Never use emoji in output. Text indicators only.
+1. Never use emoji in output. Text indicators only: `(ok)` `(!)` `(x)` `(i)` `--`
 2. Always use 2-space indent for content within sections.
-3. Box width is consistent at 47 inner characters.
-4. ALL user decisions MUST use AskUserQuestion tool (see below).
+3. Box width is consistent at 47 inner characters (49 total with borders).
+4. ALL user decisions MUST use AskUserQuestion tool (see above).
 5. One blank line between sections, no blank lines within sections.
 6. Keep lines under 60 characters when possible for terminal readability.
 7. Use `[maestro]` prefix for standalone messages, boxes for structured data.
+8. Progress bars use `████░░░░` style (█ for done, ░ for remaining). Never use `[===>  ]`.
+9. Phase names follow the display mapping table above.
