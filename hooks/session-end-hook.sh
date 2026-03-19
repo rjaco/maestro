@@ -9,6 +9,10 @@ STATE_FILE=".maestro/state.local.md"
 # Clean up temp files
 rm -f .maestro/locks/*.lock 2>/dev/null || true
 
+# --- Worktree Cleanup on Session End ---
+# Prune detached worktrees when session stops
+git worktree prune 2>/dev/null || true
+
 # Log session end
 if [[ -f "$STATE_FILE" ]]; then
   mkdir -p .maestro/logs

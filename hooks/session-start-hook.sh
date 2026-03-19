@@ -19,6 +19,48 @@ if [[ -n "$HOOK_INPUT" ]]; then
 fi
 CWD="${CWD:-$(pwd)}"
 
+# --- Worktree Orphan Cleanup ---
+# Clean stale maestro worktrees left by crashed agents
+cleanup_stale_worktrees() {
+  # Only run if we're in a git repo
+  git rev-parse --git-dir >/dev/null 2>&1 || return 0
+
+  # Prune worktrees with missing directories
+  git worktree prune 2>/dev/null || true
+
+  # Find maestro-related worktree branches older than 1 hour
+  local now
+  now=$(date +%s)
+
+  while IFS= read -r wt_line; do
+    [[ -z "$wt_line" ]] && continue
+    local wt_path
+    wt_path=$(echo "$wt_line" | awk '{print $1}')
+
+    # Only clean worktrees in the maestro temp pattern
+    [[ "$wt_path" == *"maestro"* || "$wt_path" == *"/tmp/"* ]] || continue
+
+    # Check if the worktree directory exists and is older than 1 hour
+    if [[ -d "$wt_path" ]]; then
+      local wt_mtime
+      wt_mtime=$(stat -c %Y "$wt_path" 2>/dev/null || stat -f %m "$wt_path" 2>/dev/null || echo "$now")
+      local age=$(( now - wt_mtime ))
+
+      if [[ $age -gt 3600 ]]; then
+        # Log the cleanup
+        local log_dir="$CWD/.maestro/logs"
+        mkdir -p "$log_dir" 2>/dev/null || true
+        echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] INFO: Removing stale worktree: $wt_path (age: ${age}s)" >> "$log_dir/worktree-cleanup.log" 2>/dev/null || true
+
+        # Remove the worktree
+        git worktree remove --force "$wt_path" 2>/dev/null || true
+      fi
+    fi
+  done < <(git worktree list --porcelain 2>/dev/null | grep '^worktree ' | sed 's/^worktree //')
+}
+
+cleanup_stale_worktrees 2>/dev/null || true
+
 DNA_FILE="$CWD/.maestro/dna.md"
 STATE_FILE="$CWD/.maestro/state.local.md"
 
