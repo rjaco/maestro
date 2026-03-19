@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-03-18
+
+### Added — OpenClaw-Inspired Intelligence
+- SOUL.md persistent orchestrator identity (decision principles, communication style, autonomy level)
+- Runtime skill authoring — autonomous gap detection and skill generation from repeated patterns
+- Durable memory with 3-tier decay model (facts/lessons/episodes, confidence scoring, auto-promotion)
+- Skill dependency gating — declarative `requires` frontmatter (tools, bins, env, mcp, os, plugins)
+- 4-tier skill precedence (workspace > runtime > global > bundled)
+- `/btw` side-question command — ask questions during sessions without disrupting orchestration
+- Token budget enforcement — pre-dispatch cost calculation with 90% threshold warnings
+- Publish-time security scanner — 433-line static + behavioral analysis (ClawHavoc defense)
+- Skill hot-reloading watcher — detects SKILL.md changes between sessions
+- Multi-language support (i18n) — EN, PT-BR, ES for skill descriptions and output
+- Multi-key rotation on 429 — round-robin API key rotation with sticky-on-success
+
+### Added — Ruflo-Inspired Autonomy
+- Context autopilot — 4-level threshold (80/90/95%/PostCompact), transparent recovery
+- CI/headless mode — MAESTRO_CI=true, JSON lines output, exit codes, GitHub Actions examples
+- ADR auto-generation — detects architectural decisions at milestone boundaries
+- Truth verification — verifies every claim in agent status reports before QA
+- Stream chaining — agent-to-agent output piping, eliminates file intermediaries
+- Agent team coordination — lead/worker/reviewer roles, TeammateIdle/TaskCompleted hooks
+- Multi-LLM failover — exponential backoff, tier escalation, 429 Retry-After awareness
+- 4-phase learning loop — RETRIEVE→JUDGE→DISTILL→CONSOLIDATE between milestones
+- Pair programming — `/maestro pair` for AI-human collaborative coding with test-first
+- 6 background autonomous workers — health, dependency audit, convention drift, memory decay, cleanup, cost
+- 6 swarm topologies — hierarchical, mesh, ring, star, pipeline, adaptive
+- 3-tier cost routing — free (bash), budget (haiku), premium (sonnet/opus)
+
+### Added — Infrastructure & Quality
+- 4 new squads (7 total): speed-dev, solo-dev, quality-gate, research-team
+- 7 profile config files (default, speed, quality, cost-saver, frontend, backend, content)
+- Plugin validator script (scripts/validate-plugin.sh) — 8-category structural checks
+- Plugin self-test script (scripts/self-test.sh) — 12 comprehensive tests, all passing
+- README auto-generator skill
+- MCP graceful degradation for kanban and brain providers
+- Skill loader with gate evaluation protocol
+
+### Fixed
+- Root .claude-plugin/plugin.json now has full metadata (was minimal)
+- Init command no longer creates [TODO] placeholders (actionable fallbacks instead)
+- Full mirror sync — 106 skills in both root and plugins/maestro/
+
 ## [1.3.0] — 2026-03-18
 
 ### Added
