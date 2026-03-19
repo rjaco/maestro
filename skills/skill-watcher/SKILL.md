@@ -1,267 +1,123 @@
 ---
 name: skill-watcher
-description: "Development-time watcher for skill file changes. Snapshots mtime at session start and detects edits to SKILL.md files. New sessions pick up changes automatically; active sessions log the change and continue safely."
+description: "Session-scoped SKILL.md change detector. Snapshots modification times at session start and tracks edits during the session. Reports loaded, modified, skipped, and shadowed skill counts via /maestro skills --check."
 ---
 
 # Skill Watcher
 
-Detects edits to `skills/*/SKILL.md` files during development. Takes a modification-time snapshot when a session starts, compares against it to surface stale-load warnings, and ensures new sessions always read the latest version of every skill.
+Monitors SKILL.md files for changes during a Maestro session. Takes a modification-time snapshot at session start and detects edits without polling — changes are noted and logged so the user knows which skills will behave differently next session.
 
-## Core Principle
+## Session-Scoped Snapshot
 
-Skills are loaded once per session. Mid-session hot-swap is intentionally disabled — a half-loaded skill could produce inconsistent behavior if it changes while an agent is mid-execution. Instead, the watcher surfaces a clear message and defers the reload to the next session start.
+### At Session Start
 
-```
-Session start                Session running              New session
-     │                             │                           │
-     ▼                             ▼                           ▼
-Snapshot all skill          Check mtime on each         Load all skills fresh
-mtime values into           skill access; emit          from disk — snapshot
-state.local.md              change notice if drift      taken at this point
-```
+When the Maestro session initializes, snapshot the mtime (last modification time) of every discovered SKILL.md file.
 
-## Snapshot Format
+**Step-by-step:**
 
-At session start, write the `skill_snapshot` field to `.maestro/state.local.md`:
-
-```yaml
-skill_snapshot:
-  taken_at: "2026-03-18T14:00:00Z"
-  skills:
-    delegation:    1742301600   # Unix mtime of skills/delegation/SKILL.md
-    model-router:  1742298000
-    dev-loop:      1742285400
-    # ... one entry per skill with a SKILL.md
-```
-
-Only skills with a `SKILL.md` at the top level of their directory are included. Reference documents (e.g., `skills/kanban/provider-github.md`) are not tracked.
-
-## Detection: Checking for Drift
-
-The skill-loader checks mtime before loading any skill. Compare the current mtime of `skills/<name>/SKILL.md` against the value in `skill_snapshot.skills.<name>`.
-
-| Comparison | Result |
-|------------|--------|
-| mtime == snapshot value | No change — load normally |
-| mtime > snapshot value | Changed since session start — emit notice |
-| snapshot entry missing | New skill added — emit notice |
-| file deleted | Skill removed — skip load, emit notice |
-
-### Emitting a Change Notice
-
-When drift is detected for a skill named `<name>`, emit this message before the skill's output:
+1. Collect the full list of active SKILL.md paths from the skill-loader (all three tiers, after precedence resolution, including skipped skills).
+2. For each path, record the mtime using `stat -c %Y <path>` (Linux) or `stat -f %m <path>` (macOS).
+3. Store the snapshot in memory for the duration of the session. The snapshot does not persist to disk — it is session-scoped only.
+4. Log a single line to `.maestro/logs/skill-watcher.log`:
 
 ```
-[skill-watcher] skills/<name>/SKILL.md changed since session start.
-                Reload takes effect next session. Current session uses the version loaded at start.
+[2026-03-18T14:00:01Z] SNAPSHOT 47 skill files captured at session start
 ```
 
-Do not block execution. Do not reload the skill. Continue with the snapshot version.
+### During the Session
 
-## Loader Integration
+After the snapshot is taken, the watcher checks for changes on each invocation of the skill-watcher (not on a polling schedule — triggered by `/maestro skills --check` or at session end).
 
-When skill-loader fetches a skill for dispatch:
+**Change detection algorithm:**
 
-1. Look up `<name>` in `skill_snapshot.skills`.
-2. Read current `stat().mtime` for `skills/<name>/SKILL.md`.
-3. If mtime differs, emit the change notice (see above).
-4. Proceed with the originally loaded skill content.
-
-This check is intentionally lightweight — it reads only `stat()` metadata, not the file contents.
-
-## Session Start Procedure
-
-On every session start (before any dispatch):
-
-1. Enumerate all directories under `skills/` that contain a `SKILL.md`.
-2. For each, record `stat().mtime` as a Unix timestamp.
-3. Write the snapshot block to `.maestro/state.local.md` under `skill_snapshot`.
-4. If a previous snapshot exists, compare the two and log any skills that changed between sessions:
+1. Re-stat every path in the snapshot.
+2. Compare the current mtime to the snapshotted mtime.
+3. If any file's mtime has advanced, it has been modified during the session.
+4. For each modified file, log an entry to `.maestro/logs/skill-watcher.log`:
 
 ```
-[skill-watcher] Skills updated since last session:
-  model-router — modified 2 minutes ago
-  dev-loop     — modified 1 hour ago
+[2026-03-18T14:05:00Z] MODIFIED skills/dev-loop/SKILL.md — changes will take effect next session
 ```
 
-This gives the developer immediate confirmation that their edits were picked up.
+Format: `[<ISO8601 timestamp>] MODIFIED <relative-path> — changes will take effect next session`
 
-## Developer Workflow
-
-```
-1. Edit  skills/my-skill/SKILL.md   ← save the file
-2. End current session               ← changes are NOT applied mid-session
-3. Start a new session               ← skill-watcher snapshots the new mtime
-4. Dispatch uses the updated skill   ← new version is active
-```
-
-No command needed — the watcher is automatic at every session start.
-
-## Commands
-
-| Command | Action |
-|---------|--------|
-| `skill-watcher status` | Show snapshot timestamp and list any skills that changed since it was taken |
-| `skill-watcher diff` | For each changed skill, show which fields differ (name, description, section headers) |
-| `skill-watcher snapshot refresh` | Force a new snapshot without restarting the session (for development use only — does NOT reload skill content) |
-
-## State Schema
-
-Fields written to `.maestro/state.local.md`:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `skill_snapshot.taken_at` | ISO 8601 string | When the snapshot was recorded |
-| `skill_snapshot.skills.<name>` | integer | Unix mtime of `skills/<name>/SKILL.md` at snapshot time |
-
-## mtime Comparison Algorithm
-
-The following pseudocode describes the full comparison logic executed at session start and on each skill access.
+5. Also detect new SKILL.md files that were not in the snapshot (added during the session):
 
 ```
-# --- Session Start ---
-function take_snapshot():
-  snapshot = {}
-  snapshot.taken_at = now_utc_iso()
-  for each directory D in skills/*/:
-    path = D + "/SKILL.md"
-    if file_exists(path):
-      snapshot.skills[basename(D)] = stat(path).mtime  # Unix timestamp
-
-  previous = read_skill_snapshot_from_state()
-  write_skill_snapshot_to_state(snapshot)
-
-  if previous exists:
-    for each name in union(previous.skills.keys, snapshot.skills.keys):
-      if name not in previous.skills:
-        log_event(NEW, name, snapshot.skills[name])
-      elif name not in snapshot.skills:
-        log_event(DELETED, name, previous.skills[name])
-      elif snapshot.skills[name] > previous.skills[name]:
-        log_event(CHANGED, name, snapshot.skills[name])
-  return snapshot
-
-# --- Per-Access Check (called by skill-loader) ---
-function check_drift(name, snapshot):
-  path = "skills/" + name + "/SKILL.md"
-
-  if not file_exists(path):
-    if name in snapshot.skills:
-      emit_change_notice(DELETED, name)
-    return DELETED
-
-  current_mtime = stat(path).mtime
-
-  if name not in snapshot.skills:
-    emit_change_notice(NEW, name)
-    return NEW
-
-  if current_mtime > snapshot.skills[name]:
-    emit_change_notice(CHANGED, name)
-    return CHANGED
-
-  return UNCHANGED
+[2026-03-18T14:06:00Z] ADDED skills/new-skill/SKILL.md — will be loaded next session
 ```
 
-## Deletion Handling
-
-When a `SKILL.md` file is removed from disk:
-
-1. `check_drift()` detects `file_exists(path) == false` and the name is still in the snapshot.
-2. A `DELETED` notice is emitted (see log format below).
-3. The skill-loader skips loading the skill — it is treated as unavailable for the remainder of the session.
-4. At the **next session start**, `take_snapshot()` does not find the directory, so the skill is absent from the new snapshot. The deletion is implicitly reconciled.
-5. A `skill_drift` event with type `DELETED` is written to the audit log (via `audit-log/SKILL.md`), including the skill name and the timestamp from the old snapshot entry.
-
-The snapshot itself is **not mutated mid-session** when a deletion is detected. The stale entry remains until the next session start rebuilds the snapshot from disk.
-
-## New Skill Detection Algorithm
-
-New skills are detected at session start by comparing the directory scan against the previous snapshot.
+6. Detect SKILL.md files that were in the snapshot but no longer exist:
 
 ```
-# During take_snapshot(), after writing the new snapshot:
-for each name in snapshot.skills:
-  if name not in previous.skills:
-    log "[skill-watcher] NEW skill detected: <name> (mtime: <ts>)"
-    write to skill-loader.md: "New skill <name> available as of session <session_id>"
+[2026-03-18T14:07:00Z] REMOVED skills/old-skill/SKILL.md — will be unloaded next session
 ```
 
-At **mid-session access** time, if skill-loader tries to load a skill whose name is absent from the snapshot (i.e., a directory appeared after session start), `check_drift()` returns `NEW` and emits a notice. The skill is still loaded — new skills do not have a stale-content risk because there is no previously loaded version to conflict with.
+All log entries use append-only writes to `.maestro/logs/skill-watcher.log`.
 
-## Snapshot Persistence Across Sessions
+## Command: `/maestro skills --check`
 
-The snapshot is stored in `.maestro/state.local.md` under the `skill_snapshot` key (see Snapshot Format above).
+When the user runs `/maestro skills --check`, display a formatted status report.
 
-**Write:** At the end of `take_snapshot()` (called during session start), the new snapshot is serialized as YAML and written to `state.local.md`. This file is not committed to git — it is local developer state only.
-
-**Read:** At the start of `take_snapshot()`, the previous snapshot is read from `state.local.md` before the new one is written. This enables inter-session diff reporting.
-
-**If `state.local.md` does not exist** (first-ever session or file was deleted): treat `previous` as empty — all skills on disk are logged as `NEW` for informational purposes only, with no error raised.
-
-**If the YAML is malformed:** Log a warning and proceed as if no previous snapshot exists. Do not crash.
-
-## Log Format
-
-All watcher events use a consistent line format. Examples for each event type:
-
-**CHANGED** — skill file was modified since the snapshot was taken:
-```
-[skill-watcher] CHANGED  delegation       mtime=1742305200  (was 1742301600, delta=+3600s)
-[skill-watcher] CHANGED  model-router     mtime=1742306000  (was 1742298000, delta=+8000s)
-```
-
-**DELETED** — skill directory or SKILL.md no longer exists on disk:
-```
-[skill-watcher] DELETED  old-feature-flag  last_seen=1742285400
-```
-
-**NEW** — skill directory appeared that was not in the previous snapshot:
-```
-[skill-watcher] NEW      payments          mtime=1742310000
-[skill-watcher] NEW      notifications     mtime=1742310045
-```
-
-**Session-start summary** (printed after all inter-session diffs are computed):
-```
-[skill-watcher] Snapshot taken at 2026-03-18T15:30:00Z (27 skills indexed)
-[skill-watcher] Skills updated since last session:
-  CHANGED  model-router     — 2 minutes ago
-  CHANGED  dev-loop         — 1 hour ago
-  NEW      payments         — just now
-```
-
-**Mid-session drift notice** (printed before the skill's output when drift is detected at access time):
-```
-[skill-watcher] skills/model-router/SKILL.md changed since session start.
-                Reload takes effect next session. Current session uses the version loaded at start.
-```
-
-## skill-loader Integration Trace
-
-The following trace shows the exact call sequence when skill-loader dispatches a skill.
+### Report Format
 
 ```
-User invokes: /maestro dev-loop
++---------------------------------------------+
+| Maestro Skills                              |
++---------------------------------------------+
 
-skill-loader.dispatch("dev-loop"):
-  1. watcher.check_drift("dev-loop", session_snapshot)
-       → stat("skills/dev-loop/SKILL.md").mtime = 1742306000
-       → snapshot["dev-loop"] = 1742285400
-       → 1742306000 > 1742285400  →  CHANGED
-       → emit "[skill-watcher] skills/dev-loop/SKILL.md changed since session start..."
-  2. load cached skill content (version from session start, not current disk state)
-  3. dispatch skill with cached content
-  4. audit-log writes: {event: "skill_drift", skill: "dev-loop", type: "CHANGED", ts: ...}
+  Loaded:    42 skills active this session
+  Skipped:    3 skills (dependency gates unmet)
+  Shadowed:   2 skills (overridden by higher-tier versions)
+
+  Modified since session start:
+    (!) skills/dev-loop/SKILL.md
+        Changes will take effect next session.
+    (!) skills/context-engine/SKILL.md
+        Changes will take effect next session.
+
+  Skipped skills:
+    (x) audio-encode      requires_bins 'ffmpeg' not found
+    (x) cloud-deploy      requires_env 'AWS_ACCESS_KEY_ID' not set
+    (x) video-encoder     requires_os 'darwin' (current: linux)
+
+  Shadowed skills:
+    (~) dev-loop          workspace ./skills/dev-loop shadows bundled
+    (~) context-engine    global ~/.maestro/skills/context-engine shadows bundled
+
+  ---- 42 loaded, 3 skipped, 2 shadowed, 2 modified ----
 ```
 
-For an unchanged skill, step 1 returns `UNCHANGED` with no output emitted and no audit entry written.
+### Section Rules
+
+- **Loaded** — Count of skills that passed gate evaluation and are active.
+- **Skipped** — Count of skills whose dependency gates were unmet. List each with the failing gate.
+- **Shadowed** — Count of skills suppressed by a higher-tier skill with the same name. List each with the winning path.
+- **Modified since session start** — Only shown if one or more SKILL.md files have changed since the snapshot. If no changes, omit this section.
+- If no skills were skipped, omit the Skipped section (or show `(ok) No skills skipped`).
+- If no skills were shadowed, omit the Shadowed section.
+
+## Log File
+
+All watcher events are appended to `.maestro/logs/skill-watcher.log`. Create `.maestro/logs/` if it does not exist.
+
+### Log Entry Types
+
+| Event | Format |
+|-------|--------|
+| Session snapshot | `[timestamp] SNAPSHOT <n> skill files captured at session start` |
+| Modified file | `[timestamp] MODIFIED <path> — changes will take effect next session` |
+| Added file | `[timestamp] ADDED <path> — will be loaded next session` |
+| Removed file | `[timestamp] REMOVED <path> — will be unloaded next session` |
+
+### Log Rotation
+
+Do not rotate the log file automatically. The log is human-readable and grows slowly. Users can truncate it manually. Entries older than 30 days may be pruned by `memory_maintenance()` if it is configured to manage log files.
 
 ## Integration Points
 
-| Skill / Component | Integration |
-|-------------------|-------------|
-| `skill-loader` (internal) | Calls `watcher.check_drift(name, snapshot)` before each skill load; emits change notice on drift; loads cached content regardless of result |
-| `delegation/SKILL.md` | Session-start hook triggers `watcher.take_snapshot()` before first dispatch; summary is printed to the session log |
-| `audit-log/SKILL.md` | CHANGED and DELETED events are logged as `skill_drift` audit entries with skill name, event type, and timestamp |
-| `rules-doctor/SKILL.md` | Reads `skill_snapshot.taken_at` to determine whether its own rules reflect the latest skill versions |
+- **Invoked by:** session start (to take the snapshot), `/maestro skills --check`
+- **Reads from:** skill-loader's active skill list + mtime data from the filesystem
+- **Writes to:** `.maestro/logs/skill-watcher.log` (append-only)
+- **Depends on:** `skill-loader` (must run first to provide the discovered skill list)
+- **Referenced by:** `/maestro doctor` (uses skipped/shadowed counts in its Skills section)

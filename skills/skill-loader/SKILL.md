@@ -1,180 +1,191 @@
 ---
 name: skill-loader
-description: "Declarative dependency gating and 4-tier skill precedence. Skills declare their requirements via frontmatter; the loader gates loading, logs skipped skills, and resolves name conflicts across workspace, runtime, global, and bundled tiers."
+description: "Skill loading engine with declarative dependency gating and three-tier precedence resolution. Skills declare OS, binary, and env requirements in frontmatter. Higher-tier workspace skills shadow bundled skills."
 ---
 
 # Skill Loader
 
-Governs how Maestro discovers, filters, and resolves skills at session start. Two responsibilities: gate skills whose dependencies are not satisfied, and apply the correct tier precedence when multiple definitions exist for the same skill name.
+Discovers, validates, and loads SKILL.md files at session start. Applies dependency gates so skills that lack required binaries, env vars, or OS support are skipped cleanly. Resolves name conflicts using a three-tier precedence hierarchy.
 
-## Dependency Gating
+## Frontmatter-Based Dependency Gating
 
-Skills declare requirements in their YAML frontmatter under a `requires` key. The loader evaluates every declared requirement before registering a skill. If any single requirement fails, the skill is skipped and the reason is logged to `.maestro/logs/skill-loader.md`.
+Skills can declare requirements in their YAML frontmatter. If any requirement is unmet at load time the skill is skipped and the reason is logged.
 
-### Frontmatter Schema
+### Supported Gate Fields
 
 ```yaml
 ---
 name: my-skill
-description: "..."
-requires:
-  tools: ["Bash", "WebSearch"]          # Claude Code tools needed
-  bins: ["gh", "node"]                   # CLI binaries that must be in PATH
-  env: ["GITHUB_TOKEN"]                  # Env vars (check existence, never log values)
-  mcp: ["mcp__playwright__"]             # MCP server prefixes (checked via ToolSearch)
-  os: ["linux", "darwin"]               # Operating systems (uname -s, lowercased)
-  plugins: ["feature-dev"]              # Other Claude Code plugins that must resolve
+description: "Does something"
+requires_os: linux          # Only load on Linux (values: linux, darwin, win32)
+requires_bins: [jq, curl]   # All must be available (checked via `command -v`)
+requires_env: [MY_API_KEY]  # All env vars must be set and non-empty
 ---
 ```
 
-All `requires` fields are optional. A skill with no `requires` block always loads.
+All gate fields are optional. A skill with no `requires_*` fields loads unconditionally (backwards compatible with all existing skills).
 
-### Gate Evaluation
+### Gate Evaluation Order
 
-Evaluate gates in this order. Stop at the first failure.
+At skill load time, evaluate gates in this order:
 
-#### `tools`
+1. **OS gate** — If `requires_os` is set, compare against the current platform (`linux`, `darwin`, `win32`). If it does not match, skip the skill.
+2. **Binary gate** — If `requires_bins` is set, run `command -v <bin>` for each entry. If any binary is missing, skip the skill.
+3. **Env gate** — If `requires_env` is set, check that each named env var is set and non-empty. If any is missing or empty, skip the skill.
 
-Check if each named tool is available in the current Claude Code session. The tool list comes from the active conversation context — if a tool appears in the available tools list, the check passes.
+Stop at the first failing gate — do not evaluate subsequent gates for a skipped skill.
 
-```
-tools: ["Bash", "WebSearch"]
-→ verify Bash is available
-→ verify WebSearch is available
-```
+### Skip Logging
 
-#### `bins`
-
-Run `which <bin>` for each declared binary. A non-zero exit or empty output means the binary is absent.
-
-```bash
-which gh 2>/dev/null
-which node 2>/dev/null
-```
-
-#### `env`
-
-Check existence only. Never read or log the value.
-
-```bash
-[ -n "$GITHUB_TOKEN" ]
-[ -n "$LINEAR_API_KEY" ]
-```
-
-A missing or empty variable fails the gate.
-
-#### `mcp`
-
-Use ToolSearch to probe for each declared prefix. If ToolSearch returns no results for the prefix, the MCP server is not present.
+Append a line to `.maestro/logs/skill-loader.log` whenever a skill is skipped:
 
 ```
-mcp: ["mcp__playwright__"]
-→ ToolSearch("mcp__playwright__") — must return at least one result
+[2026-03-18T14:00:00Z] SKIP my-skill: requires_bins 'ffmpeg' not found
+[2026-03-18T14:00:00Z] SKIP video-encoder: requires_os 'darwin' but current OS is 'linux'
+[2026-03-18T14:00:00Z] SKIP cloud-deploy: requires_env 'AWS_ACCESS_KEY_ID' not set
 ```
 
-#### `os`
+Format: `[<ISO8601 timestamp>] SKIP <skill-name>: <gate-type> '<value>' <reason>`
 
-Run `uname -s` and lowercase the result. Check against the declared list.
+Create `.maestro/logs/` if it does not exist.
 
-```bash
-uname -s | tr '[:upper:]' '[:lower:]'
-# linux, darwin, windows_nt, etc.
-```
+### Examples
 
-The skill loads only if the current OS matches one of the listed values.
+**Audio processing skill (macOS only, needs ffmpeg):**
 
-#### `plugins`
-
-Attempt to resolve each named plugin as a subagent type. If the resolution fails (plugin not installed or not active in this session), the gate fails.
-
-### Failure Logging
-
-When a skill is skipped, append to `.maestro/logs/skill-loader.md`:
-
-```markdown
-## [ISO timestamp] Skipped: <skill-name>
-
-- **Tier**: workspace | runtime | global | bundled
-- **Path**: .maestro/skills/<name>/SKILL.md
-- **Reason**: bins gate failed — `gh` not found in PATH
-```
-
-Log the specific gate that failed and which value was missing. Never log env var values, only var names.
-
-Create `.maestro/logs/` if it does not exist. If the log file grows beyond reasonable size, the loader appends regardless — log rotation is handled externally.
-
+```yaml
 ---
+name: audio-encode
+description: "Encode audio clips for the project"
+requires_os: darwin
+requires_bins: [ffmpeg, ffprobe]
+---
+```
 
-## Four-Tier Skill Precedence
+**Cloud deployment skill (needs AWS credentials):**
 
-When the same skill name is defined in multiple locations, the highest-priority tier wins. Lower tiers are ignored for that name.
+```yaml
+---
+name: cloud-deploy
+description: "Deploy to AWS"
+requires_bins: [aws]
+requires_env: [AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION]
+---
+```
 
-### Tier Order (highest to lowest)
+**Plain skill (no gates, always loads):**
+
+```yaml
+---
+name: git-craft
+description: "Git workflow automation"
+---
+```
+
+## Three-Tier Skill Precedence
+
+When the same skill name appears in multiple locations, a clear precedence order determines which version wins.
+
+### Precedence Tiers
 
 | Priority | Tier | Location | Purpose |
 |----------|------|----------|---------|
-| 1 | **Workspace** | `.maestro/skills/<name>/SKILL.md` | Project-specific overrides |
-| 2 | **Runtime** | `.maestro/runtime-skills/<name>/SKILL.md` | Auto-generated from gaps |
-| 3 | **Global** | `~/.claude/maestro-skills/<name>/SKILL.md` | User's personal skills |
-| 4 | **Bundled** | `skills/<name>/SKILL.md` | Ships with Maestro plugin |
+| 1 (highest) | Workspace | `./skills/` | Project-local skills, committed to the repo |
+| 2 | Global | `~/.maestro/skills/` | User-wide skills shared across all projects |
+| 3 (lowest) | Bundled | `plugins/maestro/skills/` | Shipped with Maestro, updated via plugin upgrades |
 
-### Resolution Algorithm
+### Resolution Rules
 
-At session start:
+- Skill identity is determined by the `name` field in the YAML frontmatter, not the directory name.
+- When two skills share the same `name`, the skill from the higher-tier location wins. The lower-tier skill is not loaded.
+- Workspace skills shadow global skills. Global skills shadow bundled skills.
+- This enables per-project skill customization: copy a bundled skill into `./skills/`, modify it, and it will take effect for that project without touching the plugin.
 
-1. Collect all skill directories from all four tiers.
-2. Index each skill by its `name` field (from frontmatter), not directory name. If the frontmatter `name` is absent, use the directory name.
-3. For each unique skill name, keep only the highest-tier version. Discard the rest silently.
-4. Run dependency gating on the surviving set.
-5. Register passing skills for use in this session.
+### Shadow Logging
 
-When a lower-tier skill is shadowed by a higher-tier one, do not log a warning — shadowing is expected behavior. Only log when a skill is skipped due to a failed gate.
+Append a line to `.maestro/logs/skill-loader.log` whenever a higher-tier skill shadows a lower-tier one:
 
-### Workspace Tier
+```
+[2026-03-18T14:00:00Z] SHADOW dev-loop: workspace ./skills/dev-loop/SKILL.md shadows bundled
+[2026-03-18T14:00:00Z] SHADOW context-engine: global ~/.maestro/skills/context-engine/SKILL.md shadows bundled
+```
 
-Skills in `.maestro/skills/` are project-specific customizations. They are committed to the project repo and take precedence over everything else. Use this tier to override a bundled skill's behavior for a particular project without modifying the plugin source.
+Format: `[<ISO8601 timestamp>] SHADOW <skill-name>: <winning-tier> <winning-path> shadows <losing-tier>`
 
-Example: override the bundled `ship` skill with a project-specific version that runs an additional security scan.
+### Discovery Order
 
-### Runtime Tier
+Scan skill directories in this order to build the candidate list:
 
-Skills in `.maestro/runtime-skills/` are auto-generated by the `runtime-author` skill when Maestro detects that a task has no good skill match. These are ephemeral and project-local. They are lower priority than workspace skills but higher than the user's global library.
+1. `plugins/maestro/skills/*/SKILL.md` (bundled — lowest priority, processed first)
+2. `~/.maestro/skills/*/SKILL.md` (global — overrides bundled)
+3. `./skills/*/SKILL.md` (workspace — overrides both)
 
-### Global Tier
+For each candidate:
+- Parse the YAML frontmatter to extract `name`.
+- If a skill with that `name` is already registered, log a SHADOW entry and skip the new candidate — keeping the higher-tier version that was registered later in the scan order.
 
-Skills in `~/.claude/maestro-skills/` are the user's personal library — skills they've built and reuse across all projects. Installing a skill here makes it available everywhere without committing it to any repo.
+Wait: the scan processes lower-priority tiers first, so each subsequent tier can replace the existing registration. Use a map keyed by `name`; later writes win (workspace > global > bundled).
 
-### Bundled Tier
+### Practical Example
 
-Skills in `skills/` ship with the Maestro plugin and represent the default capability set. They are always the fallback when no higher tier defines a skill by that name.
+```
+Candidate order (processed first to last, last write wins):
+  1. plugins/maestro/skills/dev-loop/SKILL.md    name: dev-loop  (bundled)
+  2. ~/.maestro/skills/dev-loop/SKILL.md          name: dev-loop  (global — shadows bundled)
+  3. ./skills/dev-loop/SKILL.md                   name: dev-loop  (workspace — shadows global)
 
----
+Result: ./skills/dev-loop/SKILL.md is loaded. Bundled and global versions are skipped.
+Log:
+  SHADOW dev-loop: global ~/.maestro/skills/dev-loop/SKILL.md shadows bundled
+  SHADOW dev-loop: workspace ./skills/dev-loop/SKILL.md shadows global
+```
+
+## Load Sequence
+
+At session start, the skill loader runs the following steps:
+
+1. **Discover** — Scan all three tier directories, build candidate list (bundled → global → workspace).
+2. **Resolve precedence** — Apply three-tier precedence, build the active skill map, log SHADOW events.
+3. **Evaluate gates** — For each active skill, evaluate `requires_os`, `requires_bins`, `requires_env`. Remove skipped skills from the active map, log SKIP events.
+4. **Report** — Log a summary line to `.maestro/logs/skill-loader.log`:
+   ```
+   [2026-03-18T14:00:01Z] LOADED 42 skills (3 skipped, 2 shadowed)
+   ```
+
+## Doctor Integration
+
+`/maestro doctor` performs a skill gate audit as part of its diagnostic run. For each skill in the active skill map, re-evaluate its gates and report any that are unsatisfied.
+
+### Doctor Output Section
+
+```
+  Skills:
+    (ok) skill-loader      loaded (42 active, 3 skipped, 2 shadowed)
+    (!)  audio-encode       SKIPPED — requires_bins 'ffmpeg' not found
+    (!)  cloud-deploy       SKIPPED — requires_env 'AWS_ACCESS_KEY_ID' not set
+    (!)  video-encoder      SKIPPED — requires_os 'darwin' (current: linux)
+```
+
+- `(ok)` — skill loaded successfully
+- `(!)` — skill skipped; show the gate that failed and the missing value
+
+The doctor section is titled **Skills** and appears after the **Hooks** section in the diagnostic output. Include a count line in the Summary:
+
+```
+  ---- Summary: 8 passed, 0 warnings, 3 skills skipped ----
+```
+
+### Doctor Recommendations
+
+| Condition | Recommendation |
+|-----------|----------------|
+| Skill skipped due to missing binary | `brew install <bin>` or `apt install <bin>` based on OS |
+| Skill skipped due to missing env var | Set `<VAR>` in your shell profile or `.env` |
+| Skill skipped due to OS mismatch | Informational only — no action needed |
 
 ## Integration Points
 
-### Called By
-
-- **Session init** — runs once at the start of every Maestro session, before any skill is dispatched
-- **`/maestro doctor`** — shows which skills are loaded, which are skipped, and which tier each comes from
-- **`skill-validator`** — can invoke the loader in dry-run mode to validate a skill before committing it
-
-### Output to Session State
-
-After loading completes, write the resolved skill registry to `.maestro/state.local.md` under a `skills` section:
-
-```yaml
-skills:
-  loaded:
-    - name: ship
-      tier: bundled
-      path: skills/ship/SKILL.md
-    - name: git-craft
-      tier: workspace
-      path: .maestro/skills/git-craft/SKILL.md
-  skipped:
-    - name: kanban
-      tier: bundled
-      reason: bins gate failed — `gh` not found in PATH
-```
-
-This allows the orchestrator to know at a glance what is available before attempting dispatch.
+- **Invoked by:** session start (dev-loop, auto-init)
+- **Reads from:** `./skills/*/SKILL.md`, `~/.maestro/skills/*/SKILL.md`, `plugins/maestro/skills/*/SKILL.md`
+- **Writes to:** `.maestro/logs/skill-loader.log` (append-only)
+- **Used by:** `skill-watcher` (provides the initial snapshot), `/maestro doctor` (gate audit)
