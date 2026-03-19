@@ -1,6 +1,6 @@
 # Maestro — Complete Feature Guide
 
-> The most comprehensive Claude Code orchestration plugin. 75 skills, 23 commands, 11 scripts, 6 agents, 11 specialist profiles.
+> The most comprehensive Claude Code orchestration plugin. 89 skills, 25 commands, 6 agents, 3 squads, 11 specialist profiles, 10 templates.
 
 ---
 
