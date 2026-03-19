@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Maestro Branch Guard Hook (PreToolUse)
 # Prevents direct commits and pushes to main branch.
-# All work happens on 'development' branch. Main is only updated via launch/release.
+# All work happens on 'development' branch or 'maestro/*' instance branches.
+# Main is only updated via launch/release.
 #
 # Install in hooks.json under "PreToolUse":
 #   { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/branch-guard.sh" }
@@ -41,16 +42,26 @@ if echo "$COMMAND" | grep -qE 'git\s+push.*\b(main|origin\s+main)\b'; then
   # Allow if it's creating a tag (release)
   if ! echo "$COMMAND" | grep -qE 'git\s+push.*--tags'; then
     BLOCKED=true
-    REASON="Direct push to main is blocked. Work on 'development' branch. Use /maestro ship to merge to main when ready to launch."
+    REASON="[MAESTRO] Direct push to main is blocked."
+    REASON="$REASON Cause: main is a protected branch — it only receives changes via /maestro ship at release time."
+    REASON="$REASON Fix: switch to the development branch with 'git checkout development' and push there instead."
   fi
 fi
 
 # Block: git commit on main branch (check current branch)
+# Allowed branches: development, maestro/* (parallel instance branches)
 if echo "$COMMAND" | grep -qE 'git\s+commit'; then
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
   if [[ "$CURRENT_BRANCH" == "main" ]]; then
     BLOCKED=true
-    REASON="Cannot commit directly to main. Switch to 'development': git checkout development"
+    REASON="[MAESTRO] Cannot commit directly to main."
+    REASON="$REASON Cause: main is a protected branch — all development work must happen on 'development' or a 'maestro/*' instance branch."
+    REASON="$REASON Fix: run 'git checkout development' to switch branches, then commit there."
+  elif [[ "$CURRENT_BRANCH" != "development" ]] && ! echo "$CURRENT_BRANCH" | grep -qE '^maestro/'; then
+    BLOCKED=true
+    REASON="[MAESTRO] Cannot commit on branch '$CURRENT_BRANCH'."
+    REASON="$REASON Cause: commits are only allowed on 'development' or 'maestro/*' instance branches."
+    REASON="$REASON Fix: switch to 'development' or your assigned 'maestro/{session_id}/{story_slug}' branch."
   fi
 fi
 
@@ -62,7 +73,9 @@ if echo "$COMMAND" | grep -qE 'git\s+merge.*\bmain\b'; then
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
   if [[ "$CURRENT_BRANCH" == "main" ]]; then
     BLOCKED=true
-    REASON="Cannot merge into main directly. Use 'development' branch for all work. Merge to main only via /maestro ship."
+    REASON="[MAESTRO] Cannot merge into main directly."
+    REASON="$REASON Cause: main is a protected branch — merges are managed by Maestro's release process to ensure quality gates pass."
+    REASON="$REASON Fix: work on 'development' and use '/maestro ship' when ready to promote to main."
   fi
 fi
 
