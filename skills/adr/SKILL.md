@@ -142,3 +142,192 @@ ADRs: .maestro/adrs/NNNN-title.md (and any others)
 The ADR skill must not generate noise. If in doubt about whether a change is significant enough, do not generate an ADR. The bar is: "Would a new engineer need to know this decision existed to understand the codebase architecture?" If yes, write it. If no, skip it.
 
 Maximum ADRs per milestone: 5. If more than 5 signals are detected, cluster aggressively. If clustering cannot reduce below 5, surface the top 5 by architectural impact and log a note that minor decisions were omitted.
+
+## Decision Tree: Is This ADR-Worthy?
+
+Use this tree before writing any ADR. Start at the top and follow the first matching branch.
+
+```
+Is the change in the diff purely within existing files (no new files, no dependency changes)?
+  YES → Does it change how a core system boundary works (auth, data flow, external contract)?
+          YES → ADR warranted (architectural refactor)
+          NO  → Skip. Not ADR-worthy.
+  NO  →
+    Is a new dependency being added?
+      YES → Is it replacing an existing dependency, or is it the first of its kind?
+              Replacing → ADR warranted (framework/library swap)
+              First of kind → ADR warranted (new external dependency)
+              Patch/minor version bump → Skip.
+    Is a new file in migrations/, schema/, or equivalent?
+      YES → Does it create a new table or materially change a table's structure?
+              YES → ADR warranted (new DB schema decision)
+              NO (additive column, index) → Skip.
+    Is a new route prefix or API namespace added (/api/v2/, /admin/, /webhooks/)?
+      YES → ADR warranted (new API surface)
+    Is a new environment variable introduced?
+      YES → Does it gate a new integration or runtime behavior?
+              YES → ADR warranted (new config contract)
+              NO (logging verbosity, feature flag) → Skip.
+    Is there a new Dockerfile, Terraform resource, or CI pipeline file?
+      YES → ADR warranted (infrastructure decision)
+    None of the above matched → Skip. Not ADR-worthy.
+```
+
+**Rule of thumb:** If you can describe the change in a single verb ("added a column", "renamed a variable", "fixed a typo"), it is not ADR-worthy. If you need a sentence that includes *why* and *instead of what*, it is.
+
+## Clustering: Grouping Related Signals Into One ADR
+
+When multiple signals belong to the same root decision, write one ADR — not one per signal.
+
+**Example: Adding OAuth authentication in one milestone**
+
+Signals detected:
+- New dependency: `passport` in `package.json`
+- New dependency: `passport-google-oauth20` in `package.json`
+- New migration: `create_oauth_accounts_table`
+- New env var: `GOOGLE_CLIENT_ID`
+- New env var: `GOOGLE_CLIENT_SECRET`
+- New route file: `routes/auth/google.ts`
+
+This is **one decision** — "Adopt Google OAuth via Passport.js" — not six. The ADR title is `0004-google-oauth-passport.md`. All six signals are mentioned in the Context section.
+
+**Clustering rule:** If signals share the same capability noun (auth, payments, notifications, search), cluster them. If they serve unrelated capabilities, write separate ADRs.
+
+**Counter-example — do not cluster these:**
+- New dependency: `stripe` (payments)
+- New migration: `create_sessions_table` (session management)
+
+These serve different capabilities. Write two ADRs even though they appeared in the same milestone.
+
+## Prioritization When > 5 Signals Detected
+
+When clustering cannot reduce the candidate ADR count below 5, apply this ranking to select which 5 to write. Rank from highest to lowest architectural impact:
+
+| Rank | Category | Reason |
+|------|----------|--------|
+| 1 | Framework or runtime change | Affects every file; hardest to reverse |
+| 2 | New external service integration | Introduces a new failure domain and cost center |
+| 3 | New database table or schema | Defines a permanent data contract |
+| 4 | New API namespace or surface | Creates a versioning commitment |
+| 5 | New environment variable with behavioral effect | Changes runtime contract |
+| 6+ | Additional dependencies, minor infra changes | Lower impact; omit if over limit |
+
+When omitting, append this note to the last ADR in the set:
+
+```
+**Note:** Additional minor decisions were detected in this milestone diff but omitted
+to stay within the 5-ADR limit. See the semantic-diff summary for full signal list.
+```
+
+## Concrete Example ADRs
+
+### ADR-0001: Adopt Supabase over raw PostgreSQL
+
+```markdown
+# 0001 — Adopt Supabase over Raw PostgreSQL
+
+**Status:** Accepted
+**Date:** 2026-01-15
+**Milestone:** 1 — Data Layer Setup
+**Diff range:** abc1234..def5678
+
+## Context
+
+The project requires a managed Postgres database with built-in auth, row-level security,
+and a real-time subscription layer. Operating raw PostgreSQL would require separate
+setup for connection pooling, auth tables, and a websocket layer — significant
+undifferentiated infrastructure work.
+
+## Decision
+
+Adopt Supabase as the database platform instead of self-managed PostgreSQL. The
+`@supabase/supabase-js` client replaces direct `pg` queries. Considered PlanetScale
+(MySQL, no RLS) and Neon (Postgres-only, no auth layer) — both rejected for missing
+the auth + RLS requirement.
+
+## Consequences
+
+**Positive:**
+- Auth, RLS, and real-time subscriptions available with no additional services.
+- Supabase migrations toolchain integrates with existing CI.
+
+**Negative / Trade-offs:**
+- Vendor lock-in on auth layer; migrating away requires rewriting auth tables and RLS policies.
+- Local development requires `supabase start` (Docker); adds ~2 min to cold-start.
+
+**Follow-up actions required:**
+- Add `supabase start` to the dev onboarding script.
+- Document RLS policy conventions in `docs/database.md`.
+```
+
+### ADR-0002: Use App Router over Pages Router
+
+```markdown
+# 0002 — Use Next.js App Router over Pages Router
+
+**Status:** Accepted
+**Date:** 2026-01-22
+**Milestone:** 2 — Frontend Scaffolding
+**Diff range:** def5678..9ab0123
+
+## Context
+
+Next.js 14 ships two routing paradigms. The Pages Router is stable and widely
+documented. The App Router is the recommended path forward with React Server
+Components, nested layouts, and streaming built in. The project's dashboard views
+require nested persistent layouts that are cumbersome to implement in Pages Router.
+
+## Decision
+
+Use the App Router (`app/` directory) exclusively. No `pages/` directory will be
+created. Considered starting with Pages Router for stability and migrating later —
+rejected because incremental migration is high-friction and the project has no
+legacy Pages Router code to preserve.
+
+## Consequences
+
+**Positive:**
+- React Server Components reduce client bundle size for data-heavy dashboard views.
+- Nested layouts eliminate repeated header/sidebar rendering.
+
+**Negative / Trade-offs:**
+- App Router ecosystem is less mature; some third-party libraries require client
+  component wrappers.
+- Team familiarity is lower — Pages Router muscle memory causes early confusion.
+
+**Follow-up actions required:**
+- Add an `app/` vs `pages/` note to CONTRIBUTING.md.
+- Pin Next.js to 14.x until App Router APIs stabilize.
+```
+
+## Integration with semantic-diff
+
+The semantic-diff skill categorizes changes before ADR runs. Use its "Change Categories Detected" table as the primary signal source — this avoids re-scanning the diff manually.
+
+**Mapping from semantic-diff categories to ADR triggers:**
+
+| semantic-diff category | Maps to ADR signal | ADR warranted? |
+|------------------------|--------------------|----------------|
+| `dependency-added` | New dependency | Yes — always evaluate |
+| `dependency-changed` (major version) | Framework change | Yes if major; skip minor/patch |
+| `schema-migration` | New database table | Yes if new table; evaluate column adds |
+| `api-surface-added` | New API endpoint namespace | Yes |
+| `env-var-added` | New environment variable | Yes if behavioral |
+| `infra-file-added` | Infrastructure change | Yes |
+| `integration-call-added` | New integration point | Yes |
+| `refactor` | Internal restructure | No — only if it changes a system boundary |
+| `test-added` | Test file added | No |
+| `docs-changed` | Documentation update | No |
+| `style-change` | Formatting/linting | No |
+
+**Workflow:**
+
+```
+1. semantic-diff runs → produces Change Categories table
+2. adr skill reads that table
+3. For each row with a "Yes" in the ADR column, evaluate further with the decision tree above
+4. Cluster related signals
+5. Write ADRs for surviving candidates
+```
+
+If semantic-diff was not run before ADR (e.g., manual invocation), fall back to Step 2 of the Analysis Protocol (bash scan).
