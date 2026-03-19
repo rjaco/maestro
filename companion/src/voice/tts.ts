@@ -1,16 +1,41 @@
 import { config } from '../config.js'
 import { logger } from '../logger.js'
 
+function prepareForTTS(text: string): string {
+  // Strip markdown formatting (TTS reads it literally)
+  let clean = text
+    .replace(/```[\s\S]*?```/g, '[code block]')    // code blocks
+    .replace(/`([^`]+)`/g, '$1')                    // inline code
+    .replace(/\*\*(.+?)\*\*/g, '$1')                // bold
+    .replace(/\*(.+?)\*/g, '$1')                    // italic
+    .replace(/~~(.+?)~~/g, '$1')                    // strikethrough
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')        // links
+    .replace(/^#+\s/gm, '')                          // headings
+    .replace(/^[-*]\s/gm, '')                        // list markers
+
+  // Truncate at sentence boundary near 500 chars
+  if (clean.length > 500) {
+    const sentenceEnd = clean.lastIndexOf('.', 500)
+    if (sentenceEnd > 200) {
+      clean = clean.slice(0, sentenceEnd + 1)
+    } else {
+      clean = clean.slice(0, 500) + '...'
+    }
+  }
+
+  return clean.trim()
+}
+
 export async function synthesizeSpeech(text: string): Promise<Buffer> {
-  // Truncate for TTS (voice sounds better short)
-  const truncated = text.length > 1000 ? text.slice(0, 1000) + '...' : text
+  // Split at sentence boundaries for natural-sounding TTS
+  const prepared = prepareForTTS(text)
 
   if (config.elevenlabsApiKey && config.elevenlabsVoiceId) {
-    return synthesizeWithElevenLabs(truncated)
+    return synthesizeWithElevenLabs(prepared)
   }
 
   // Fallback: edge-tts via CLI (free, no API key needed)
-  return synthesizeWithEdgeTts(truncated)
+  return synthesizeWithEdgeTts(prepared)
 }
 
 async function synthesizeWithElevenLabs(text: string): Promise<Buffer> {

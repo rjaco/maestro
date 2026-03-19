@@ -36,12 +36,21 @@ describe('isBuildRequest', () => {
     expect(isBuildRequest('implement the login flow')).toBe(true)
   })
 
-  it('detects "fix" as a build request', () => {
-    expect(isBuildRequest('fix the broken test')).toBe(true)
+  it('does not flag a single "fix" keyword as a build request (false positive prevention)', () => {
+    expect(isBuildRequest('fix the broken test')).toBe(false)
   })
 
-  it('detects "create" as a build request', () => {
-    expect(isBuildRequest('create a new component')).toBe(true)
+  it('does not flag a single "create" keyword as a build request (false positive prevention)', () => {
+    expect(isBuildRequest('create a new component')).toBe(false)
+  })
+
+  it('detects 2+ build keywords as a build request', () => {
+    expect(isBuildRequest('fix and refactor the broken test')).toBe(true)
+    expect(isBuildRequest('create and implement a new component')).toBe(true)
+  })
+
+  it('detects /build command prefix', () => {
+    expect(isBuildRequest('/build a REST API for me')).toBe(true)
   })
 
   it('does not flag a casual greeting as a build request', () => {

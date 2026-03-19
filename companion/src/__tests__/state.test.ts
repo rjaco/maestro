@@ -20,7 +20,7 @@ vi.mock('../config.js', () => ({
 }))
 
 // Import after mock is set up
-import { readState, readHeartbeat, formatStatus } from '../state.js'
+import { readState, readHeartbeat, formatStatus, listCurrentStories } from '../state.js'
 
 function writeMaestroDir(): void {
   mkdirSync(resolve(tmpRoot, '.maestro', 'logs'), { recursive: true })
@@ -154,5 +154,54 @@ describe('formatStatus', () => {
     writeStateFile(SAMPLE_STATE)
     const result = formatStatus()
     expect(result).toContain('12345')
+  })
+})
+
+describe('listCurrentStories', () => {
+  it('returns empty string when stories directory does not exist', () => {
+    expect(listCurrentStories()).toBe('')
+  })
+
+  it('returns empty string when stories directory has no .md files', () => {
+    mkdirSync(resolve(tmpRoot, '.maestro', 'stories'), { recursive: true })
+    expect(listCurrentStories()).toBe('')
+  })
+
+  it('lists story files sorted alphabetically', () => {
+    const storiesDir = resolve(tmpRoot, '.maestro', 'stories')
+    mkdirSync(storiesDir, { recursive: true })
+    writeFileSync(resolve(storiesDir, 'S02-story-two.md'), '', 'utf-8')
+    writeFileSync(resolve(storiesDir, 'S01-story-one.md'), '', 'utf-8')
+    writeFileSync(resolve(storiesDir, 'S03-story-three.md'), '', 'utf-8')
+
+    const result = listCurrentStories()
+    expect(result).toContain('S01-story-one')
+    expect(result).toContain('S02-story-two')
+    expect(result).toContain('S03-story-three')
+    expect(result.indexOf('S01')).toBeLessThan(result.indexOf('S02'))
+    expect(result.indexOf('S02')).toBeLessThan(result.indexOf('S03'))
+  })
+
+  it('excludes non-.md files from the list', () => {
+    const storiesDir = resolve(tmpRoot, '.maestro', 'stories')
+    mkdirSync(storiesDir, { recursive: true })
+    writeFileSync(resolve(storiesDir, 'story.md'), '', 'utf-8')
+    writeFileSync(resolve(storiesDir, 'notes.txt'), '', 'utf-8')
+    writeFileSync(resolve(storiesDir, 'data.json'), '', 'utf-8')
+
+    const result = listCurrentStories()
+    expect(result).toContain('story')
+    expect(result).not.toContain('notes.txt')
+    expect(result).not.toContain('data.json')
+  })
+
+  it('strips .md extension from displayed story names', () => {
+    const storiesDir = resolve(tmpRoot, '.maestro', 'stories')
+    mkdirSync(storiesDir, { recursive: true })
+    writeFileSync(resolve(storiesDir, 'S01-my-story.md'), '', 'utf-8')
+
+    const result = listCurrentStories()
+    expect(result).toContain('S01-my-story')
+    expect(result).not.toContain('.md')
   })
 })

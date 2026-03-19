@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { config } from './config.js'
 
@@ -60,6 +60,14 @@ export function readHeartbeat(): { timestamp: string; age: number } | null {
   const timestamp = readFileSync(hbPath, 'utf-8').trim()
   const age = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000)
   return { timestamp, age }
+}
+
+export function listCurrentStories(): string {
+  const storiesDir = resolve(config.projectRoot, '.maestro', 'stories')
+  if (!existsSync(storiesDir)) return ''
+  const files = readdirSync(storiesDir).filter(f => f.endsWith('.md')).sort()
+  if (files.length === 0) return ''
+  return '📋 Stories:\n' + files.map(f => `  • ${f.replace('.md', '')}`).join('\n')
 }
 
 export function formatStatus(): string {

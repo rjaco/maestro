@@ -11,7 +11,8 @@ import { TelegramAdapter } from './channels/telegram.js'
 import { initMemoryTables, saveMemory, buildMemoryContext, runDecaySweep } from './memory.js'
 import { processVoiceInput, synthesizeResponse, isVoiceAvailable } from './voice/pipeline.js'
 import { isBuildRequest, handleBuildRequest } from './workers/coordinator.js'
-import { formatStatus } from './state.js'
+import { formatStatus, listCurrentStories } from './state.js'
+import { getWorkerStats } from './workers/pool.js'
 
 // --- Banner ---
 console.log(`
@@ -94,6 +95,29 @@ channel.onMessage(async (msg) => {
   }
   if (text === '/status') {
     await channel.send({ chatId, text: formatStatus() })
+    return
+  }
+  if (text === '/cost') {
+    const stats = getWorkerStats()
+    await channel.send({ chatId, text: `💰 Session Cost\n\nTotal: $${stats.totalCost.toFixed(4)}\nWorkers: ${stats.completed} complete, ${stats.running} running, ${stats.failed} failed` })
+    return
+  }
+  if (text === '/stories') {
+    const storyList = listCurrentStories()
+    await channel.send({ chatId, text: storyList || 'No stories found.' })
+    return
+  }
+  if (text === '/help') {
+    await channel.send({ chatId, text:
+      '📋 Maestro Companion Commands\n\n' +
+      '/status — Current build progress\n' +
+      '/cost — Cumulative spend\n' +
+      '/stories — List milestone stories\n' +
+      '/voice — Toggle voice replies\n' +
+      '/newchat — Fresh conversation\n' +
+      '/build <desc> — Explicit build request\n' +
+      '/help — This message',
+    })
     return
   }
   if (text === '/voice') {

@@ -1,10 +1,18 @@
 import { logger } from '../logger.js'
 import { spawnWorker, getWorkerStats } from './pool.js'
 
-const BUILD_KEYWORDS = /\b(build|create|implement|develop|make|code|fix|refactor|deploy|ship)\b/i
+// Require explicit build verbs OR 2+ keywords in context
+const EXPLICIT_BUILD = /^(build|implement|develop|deploy|ship)\b/i
+const BUILD_CONTEXT = /\b(build|create|implement|develop|code|fix|refactor|deploy|ship)\b/gi
 
 export function isBuildRequest(text: string): boolean {
-  return BUILD_KEYWORDS.test(text)
+  // Explicit command always triggers
+  if (text.startsWith('/build ')) return true
+  // Single explicit build verb at start of message
+  if (EXPLICIT_BUILD.test(text)) return true
+  // Need 2+ build keywords in the same message for implicit detection
+  const matches = text.match(BUILD_CONTEXT)
+  return (matches?.length ?? 0) >= 2
 }
 
 export async function handleBuildRequest(

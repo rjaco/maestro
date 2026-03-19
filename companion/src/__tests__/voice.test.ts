@@ -132,7 +132,7 @@ describe('synthesizeSpeech', () => {
     vi.unstubAllGlobals()
   })
 
-  it('truncates text longer than 1000 chars for TTS', async () => {
+  it('truncates text longer than 500 chars for TTS at sentence boundary', async () => {
     vi.doMock('../config.js', () => ({
       config: {
         elevenlabsApiKey: 'el-key',
@@ -155,8 +155,68 @@ describe('synthesizeSpeech', () => {
     await synthesizeSpeech(longText)
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body as string)
-    expect(body.text.length).toBe(1003) // 1000 + '...'
+    // No sentence boundary in 'aaa...', so falls back to 500 chars + '...'
+    expect(body.text.length).toBe(503) // 500 + '...'
     expect(body.text.endsWith('...')).toBe(true)
+
+    vi.unstubAllGlobals()
+  })
+
+  it('strips markdown formatting before TTS synthesis', async () => {
+    vi.doMock('../config.js', () => ({
+      config: {
+        elevenlabsApiKey: 'el-key',
+        elevenlabsVoiceId: 'voice-id',
+        uploadDir: '/tmp',
+      },
+    }))
+    vi.doMock('../logger.js', () => ({
+      logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+    }))
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new ArrayBuffer(8),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { synthesizeSpeech } = await import('../voice/tts.js')
+    await synthesizeSpeech('**Bold text** and `inline code` and [a link](https://example.com)')
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string)
+    expect(body.text).toBe('Bold text and inline code and a link')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('truncates at sentence boundary when available', async () => {
+    vi.doMock('../config.js', () => ({
+      config: {
+        elevenlabsApiKey: 'el-key',
+        elevenlabsVoiceId: 'voice-id',
+        uploadDir: '/tmp',
+      },
+    }))
+    vi.doMock('../logger.js', () => ({
+      logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+    }))
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new ArrayBuffer(8),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { synthesizeSpeech } = await import('../voice/tts.js')
+    // Build a sentence that ends past position 200 (so sentenceEnd > 200 check passes),
+    // then add more text to push total over 500 chars
+    const sentence = 'x'.repeat(250) + '.'   // ends at index 250 (sentenceEnd = 250 > 200)
+    const overflow = 'y'.repeat(300)           // total = 551 chars > 500
+    await synthesizeSpeech(sentence + overflow)
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body as string)
+    expect(body.text.endsWith('.')).toBe(true)
+    expect(body.text.length).toBe(251) // slice(0, 251) = 250 x's + '.'
 
     vi.unstubAllGlobals()
   })

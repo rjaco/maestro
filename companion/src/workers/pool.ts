@@ -68,7 +68,21 @@ export async function spawnWorker(
       maxTurns: 50,
       maxBudgetUsd: 5.0,
     }
+    let lastProgressAt = Date.now()
+    const PROGRESS_INTERVAL_MS = 30_000
     for await (const event of query({ prompt, options })) {
+      if (event.type === 'assistant' && onProgress) {
+        // Extract brief status from assistant messages
+        const content = (event as any).message?.content
+        if (typeof content === 'string' && content.length > 20) {
+          const now = Date.now()
+          // Send a brief update every ~30 seconds
+          if (now - lastProgressAt >= PROGRESS_INTERVAL_MS) {
+            onProgress(workerId, `working: ${content.slice(0, 80)}...`)
+            lastProgressAt = now
+          }
+        }
+      }
       if (event.type === 'result') {
         const r = event as SDKResultMessage
         worker.costUsd = r.total_cost_usd
